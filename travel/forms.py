@@ -1,4 +1,3 @@
-from django import medical
 from django import forms
 from .models import Trip, Event, Day
 
