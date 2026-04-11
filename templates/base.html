@@ -1,0 +1,35 @@
+{% load i18n %}{% load static %}{% load pwa %}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}{% trans "TRAVEL_HUB_TITLE" %}{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <script src="https://unpkg.com/htmx.org@1.9.11"></script>
+    {% progressive_web_app_meta %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <header class="navbar">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; color: var(--accent-gold);">
+                {% trans "TRAVEL_HUB_NAME" %}
+            </span>
+            <div id="nav-actions">
+                <!-- Actions like Sync Status or Profile -->
+            </div>
+        </div>
+    </header>
+
+    <main id="main-content" class="container">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    {% block extra_js %}
+    {% endblock %}
+</body>
+</html>
