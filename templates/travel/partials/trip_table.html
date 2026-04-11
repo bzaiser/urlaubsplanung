@@ -1,59 +1,92 @@
 {% load i18n %}{% load static %}
 <div class="premium-card" style="padding: 0; overflow: hidden;">
     <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
             <thead>
                 <tr style="background: rgba(255, 255, 255, 0.05); color: var(--accent-gold); text-align: left;">
-                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_DATE" %}</th>
-                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_LOCATION" %}</th>
-                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_HOTEL" %}</th>
-                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_TRANSPORT" %}</th>
-                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_STATUS" %}</th>
+                    <th style="padding: 12px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_DATE" %}</th>
+                    <th style="padding: 12px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_LOCATION" %}</th>
+                    <th style="padding: 12px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_HOTEL" %}</th>
+                    <th style="padding: 12px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_TRANSPORT" %}</th>
+                    <th style="padding: 12px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_DETAILS" %}</th>
+                    <th style="padding: 12px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_VIA" %}</th>
+                    <th style="padding: 12px; border-bottom: 1px solid var(--glass-border); text-align: center;">{% trans "COL_PAID" %}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for station in active_trip.grouped_stations %}
                     <!-- Station Row -->
                     <tr style="background: rgba(197, 160, 89, 0.05);">
-                        <td colspan="5" style="padding: 10px 15px; font-weight: 600; color: var(--accent-gold); border-bottom: 1px solid var(--glass-border);">
+                        <td colspan="7" style="padding: 10px 15px; font-weight: 600; color: var(--accent-gold); border-bottom: 1px solid var(--glass-border);">
                            📍 {{ station.location }} ({{ station.nights }} {% if station.nights > 1 %}{% trans "LABEL_NIGHTS" %}{% else %}{% trans "LABEL_NIGHT" %}{% endif %})
                         </td>
                     </tr>
                     
                     {% for day in station.days %}
-                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='none'">
-                        <td style="padding: 15px; white-space: nowrap; padding-left: 30px;">
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <td style="padding: 10px; white-space: nowrap;">
                             <span style="display: block; font-weight: 600;">{{ day.date|date:"d. M" }}</span>
-                            <span style="font-size: 0.75rem; color: var(--text-secondary);">{{ day.date|date:"l" }}</span>
+                            <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ day.date|date:"l" }}</span>
                         </td>
-                        <td style="padding: 15px;">
-                            {{ day.location }}
+                        <td style="padding: 8px;">
+                            <input type="text" value="{{ day.location }}" 
+                                   style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px;"
+                                   onfocus="this.style.border='1px solid var(--accent-gold)'"
+                                   onblur="this.style.border='1px transparent solid'">
                         </td>
-                        <td style="padding: 15px;">
+                        <td style="padding: 8px;">
                             {% if day.hotel %}
-                                <span style="color: var(--text-primary);">{{ day.hotel.title }}</span>
+                                <input type="text" value="{{ day.hotel.title }}"
+                                       hx-post="{% url 'travel:event_inline_update' day.hotel.id %}"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-target="#dashboard-refresh"
+                                       style="background: none; border: none; color: var(--text-primary); width: 100%; padding: 4px;">
                             {% else %}
-                                <span style="color: rgba(255, 69, 58, 0.5); font-style: italic; font-size: 0.8rem;">
-                                    {% trans "MISSING_HOTEL" %}
-                                </span>
+                                <button hx-get="{% url 'travel:event_create' day.id %}" hx-target="#modal-container" 
+                                        style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; border-radius: 4px; cursor: pointer;">
+                                    + {% trans "ADD_HOTEL" %}
+                                </button>
                             {% endif %}
                         </td>
-                        <td style="padding: 15px;">
+                        <td style="padding: 8px;">
                             {% if day.flight %}
-                                <div style="color: var(--accent-teal); font-size: 0.8rem;">
-                                    ✈ {{ day.flight.title }} 
-                                    ({{ day.flight.time|time:"H:i" }}{% if day.flight.duration %} - {{ day.flight.duration }}{% endif %})
-                                </div>
-                            {% endif %}
-                            {% if day.transport %}
-                                <div style="color: var(--text-primary); font-size: 0.8rem;">
-                                    🚗 {{ day.transport.title }}
-                                    ({{ day.transport.time|time:"H:i" }}{% if day.transport.duration %} - {{ day.transport.duration }}{% endif %})
-                                </div>
+                                <input type="text" value="{{ day.flight.title }}"
+                                       hx-post="{% url 'travel:event_inline_update' day.flight.id %}"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-target="#dashboard-refresh"
+                                       style="background: none; border: none; color: var(--accent-teal); width: 100%; padding: 4px;">
+                            {% elif day.transport %}
+                                <input type="text" value="{{ day.transport.title }}"
+                                       hx-post="{% url 'travel:event_inline_update' day.transport.id %}"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-target="#dashboard-refresh"
+                                       style="background: none; border: none; color: var(--text-primary); width: 100%; padding: 4px;">
+                            {% else %}
+                                <button hx-get="{% url 'travel:event_create' day.id %}" hx-target="#modal-container"
+                                        style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; border-radius: 4px; cursor: pointer;">
+                                    + {% trans "ADD_TRANSPORT" %}
+                                </button>
                             {% endif %}
                         </td>
-                        <td style="padding: 15px; text-align: center;">
-                            {% if day.hotel.is_paid or day.flight.is_paid %}
+                        <td style="padding: 8px;">
+                            {% with first_event=day.events.first %}
+                            {% if first_event %}
+                                <input type="text" value="{{ first_event.detail_info }}" placeholder="---"
+                                       hx-post="{% url 'travel:event_inline_update' first_event.id %}"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "detail_info"}' hx-target="#dashboard-refresh"
+                                       style="background: none; border: none; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.8rem;">
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td style="padding: 8px;">
+                            {% with first_event=day.events.first %}
+                            {% if first_event %}
+                                <input type="text" value="{{ first_event.booking_via }}" placeholder="Booking, GYG..."
+                                       hx-post="{% url 'travel:event_inline_update' first_event.id %}"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "booking_via"}' hx-target="#dashboard-refresh"
+                                       style="background: none; border: none; color: var(--accent-gold); width: 100%; padding: 4px; font-size: 0.8rem;">
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td style="padding: 10px; text-align: center;">
+                            {% if day.hotel.is_paid or day.flight.is_paid or day.transport.is_paid %}
                                 <span style="color: var(--accent-teal);">✓</span>
                             {% else %}
                                 <span style="color: var(--text-secondary);">--</span>
@@ -61,8 +94,24 @@
                         </td>
                     </tr>
                     {% endfor %}
+                    
+                    <!-- Quick Add Row for Station -->
+                    <tr>
+                        <td colspan="7" style="padding: 10px 15px; background: rgba(255, 255, 255, 0.02);">
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <span style="color: var(--text-secondary); font-size: 0.8rem;">快速-追加:</span>
+                                <input type="text" placeholder="{% trans 'QUICK_ADD_PLACEHOLDER' %}"
+                                       hx-post="{% url 'travel:event_quick_add' station.days.0.id %}"
+                                       hx-trigger="keyup[key=='Enter']" name="title" hx-target="#dashboard-refresh"
+                                       style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 4px 10px; border-radius: 4px; flex-grow: 1;">
+                            </div>
+                        </td>
+                    </tr>
                 {% endfor %}
             </tbody>
+        </table>
+    </div>
+</div>
         </table>
     </div>
 </div>

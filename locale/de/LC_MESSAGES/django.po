@@ -37,10 +37,28 @@ msgid "COL_HOTEL"
 msgstr "Unterkunft / Hotel"
 
 msgid "COL_TRANSPORT"
-msgstr "Flug / Transport"
+msgstr "Transport / Flug"
+
+msgid "COL_DETAILS"
+msgstr "Details (Flug-Nr, Term...)"
+
+msgid "COL_VIA"
+msgstr "Gebucht über"
+
+msgid "COL_PAID"
+msgstr "Bezahlt"
 
 msgid "COL_STATUS"
 msgstr "Status"
+
+msgid "QUICK_ADD_PLACEHOLDER"
+msgstr "Einfach tippen und Enter drücken (z.B. Hotel Royal, Flug EK222)..."
+
+msgid "ADD_HOTEL"
+msgstr "Hotel"
+
+msgid "ADD_TRANSPORT"
+msgstr "Transport"
 
 msgid "LABEL_NIGHT"
 msgstr "Nacht"

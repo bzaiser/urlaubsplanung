@@ -119,3 +119,31 @@ def event_delete(request, pk):
             return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
         return redirect('travel:dashboard')
     return HttpResponse(status=405)
+
+def event_inline_update(request, pk):
+    """Updates a single field of an event via HTMX."""
+    event = get_object_or_404(Event, pk=pk)
+    field = request.POST.get('field')
+    value = request.POST.get('value')
+    
+    if hasattr(event, field):
+        setattr(event, field, value)
+        event.save()
+        
+    return render(request, 'travel/partials/trip_list.html', {'active_trip': event.day.trip})
+
+def event_quick_add(request, day_id):
+    """Quickly adds an activity/event just by title."""
+    day = get_object_or_404(Day, pk=day_id)
+    title = request.POST.get('title')
+    if title:
+        # Check if it's a hotel or flight based on keywords for smart defaults
+        type_choice = 'ACTIVITY'
+        if 'hotel' in title.lower() or 'unterkunft' in title.lower():
+            type_choice = 'HOTEL'
+        elif 'flug' in title.lower() or 'flight' in title.lower():
+            type_choice = 'FLIGHT'
+            
+        Event.objects.create(day=day, title=title, type=type_choice)
+        
+    return render(request, 'travel/partials/trip_list.html', {'active_trip': day.trip})
