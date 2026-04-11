@@ -147,16 +147,24 @@ def event_inline_create(request, day_id):
         return HttpResponse("")
         
     type_choice = 'ACTIVITY'
-    if 'hotel' in field:
+    if field in ['hotel_title', 'cost_per_person', 'cost_total'] or 'hotel' in field:
         type_choice = 'HOTEL'
-    elif 'transport' in field or 'flight' in field:
+    elif 'transport' in field or 'flight' in field or field in ['time', 'end_time']:
         type_choice = 'TRANSPORT'
         
-    event = Event.objects.create(day=day, title=value, type=type_choice)
-    # Since we created it, the table cell needs to know the ID for future updates
-    # For now, we return the value, but a full refresh might be cleaner on first creation
-    # Let's return the whole list for the FIRST creation to get the IDs right
-    return render(request, 'travel/partials/trip_list.html', {'active_trip': day.trip})
+    event = Event.objects.create(day=day, title="Planung", type=type_choice)
+    
+    # If the user specifically set a field other than title, update it
+    if field and field != 'title' and field != 'hotel_title':
+        if hasattr(event, field):
+            setattr(event, field, value)
+            event.save()
+    elif field == 'title' or field == 'hotel_title':
+        event.title = value
+        event.save()
+            
+    return render(request, 'travel/partials/trip_list.html', {'active_trip': day.trip, 'view_type': 'table'})
+
 
 def event_quick_add(request, day_id):
     """Quickly adds an activity/event just by title."""
