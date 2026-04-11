@@ -1,0 +1,52 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-04-11 18:35+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "TRAVEL_HUB_TITLE"
+msgstr "Urlaubsplaner - Premium Travel Hub"
+
+msgid "TRAVEL_HUB_NAME"
+msgstr "Travel Hub"
+
+msgid "DASHBOARD_TITLE"
+msgstr "Dashboard"
+
+msgid "NO_ENTRIES_YET"
+msgstr "Noch keine Einträge für diesen Tag."
+
+msgid "NO_DAYS_PLANNED"
+msgstr "Noch keine Tage für diese Reise geplant."
+
+msgid "BTN_CREATE_TIMELINE"
+msgstr "Zeitplan erstellen"
+
+msgid "WELCOME_MESSAGE"
+msgstr "Willkommen im Travel Hub"
+
+msgid "START_BY_CREATING_TRIP"
+msgstr "Beginne damit, deine erste Reise anzulegen."
+
+msgid "BTN_NEW_TRIP"
+msgstr "Neue Reise anlegen"
+
+msgid "EDIT_TRIP"
+msgstr "Reise bearbeiten"
+
+msgid "NEW_TRIP"
+msgstr "Neue Reise"
+
+msgid "BTN_SAVE"
+msgstr "Speichern"
+
+msgid "BTN_EDIT"
+msgstr "Bearbeiten"

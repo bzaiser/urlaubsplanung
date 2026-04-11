@@ -1,8 +1,4 @@
-{% extends "base.html" %}{% load i18n %}{% load static %}
-
-{% block title %}{% trans "DASHBOARD_TITLE" %}{% endblock %}
-
-{% block content %}
+{% load i18n %}{% load static %}
 <section id="trip-overview">
     {% if active_trip %}
     <div class="premium-card">
@@ -84,10 +80,3 @@
     </div>
     {% endif %}
 </section>
-
-<button class="fab" 
-        hx-get="{% url 'travel:trip_create' %}"
-        hx-target="#modal-container">
-    +
-</button>
-{% endblock %}
