@@ -156,3 +156,29 @@ input:focus {
     width: 100%;
     margin-top: 10px;
 }
+
+/* Flatpickr Customization */
+.flatpickr-calendar {
+    background: var(--bg-color) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--shadow) !important;
+}
+
+.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
+    background: var(--accent-gold) !important;
+    border-color: var(--accent-gold) !important;
+    color: var(--bg-color) !important;
+}
+
+.flatpickr-day:hover {
+    background: rgba(197, 160, 89, 0.2) !important;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+    background: var(--bg-color) !important;
+}
+
+.numInputWrapper span {
+    border-color: var(--glass-border) !important;
+}

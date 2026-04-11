@@ -9,7 +9,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://unpkg.com/htmx.org@1.9.11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/de.js"></script>
     {% progressive_web_app_meta %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
@@ -52,6 +56,31 @@
         // Close modal on escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeModal();
+        });
+
+        function initPickers() {
+            flatpickr('input[type="date"]', {
+                locale: 'de',
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd.m.Y',
+                disableMobile: "true"
+            });
+            flatpickr('input[type="time"]', {
+                enableTime: true,
+                noCalendar: true,
+                dateFormat: 'H:i',
+                time_24hr: true,
+                disableMobile: "true"
+            });
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', initPickers);
+
+        // Re-initialize after HTMX content swap
+        document.body.addEventListener('htmx:afterOnLoad', (e) => {
+            initPickers();
         });
     </script>
     {% endblock %}
