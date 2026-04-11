@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import TripDashboardView, trip_create, trip_edit, event_create, event_edit, event_delete, event_inline_update, event_quick_add, event_inline_create, day_bulk_edit
+from .views import TripDashboardView, trip_create, trip_edit, event_create, event_edit, event_delete, event_inline_update, event_quick_add, event_inline_create, day_bulk_edit, day_inline_update
 
 app_name = 'travel'
 
