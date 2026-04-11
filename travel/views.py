@@ -150,10 +150,18 @@ def event_inline_create(request, day_id):
     return render(request, 'travel/partials/day_row.html', {'day': day})
 
 def event_inline_update(request, pk=None, day_id=None):
-    """Updates or creates an event field. Returns 204 to ensure no DOM interference."""
+    """Updates or creates an event field. Returns 204 or OOB duration update."""
     field = request.POST.get('field')
     value = request.POST.get('value')
     event_type = request.POST.get('type')
+    
+    # Auto-format "10" to "10:00" for time fields
+    if field in ['time', 'end_time'] and value and ':' not in value:
+        if value.isdigit():
+            if len(value) <= 2:
+                value = f"{value.zfill(2)}:00"
+            elif len(value) == 4:
+                value = f"{value[:2]}:{value[2:]}"
     
     if pk:
         event = get_object_or_404(Event, pk=pk)
@@ -176,6 +184,12 @@ def event_inline_update(request, pk=None, day_id=None):
         else:
             setattr(event, field, value)
         event.save()
+        
+    # Re-enable OOB duration update
+    if field in ['time', 'end_time']:
+        duration_val = event.duration or "--"
+        oob_html = f'<td id="duration-{event.day.id}" hx-swap-oob="innerHTML">{duration_val}</td>'
+        return HttpResponse(oob_html)
         
     return HttpResponse(status=204)
 

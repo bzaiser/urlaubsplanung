@@ -117,9 +117,9 @@ class Event(models.Model):
     def duration(self):
         """Calculates duration between time and end_time."""
         if self.time and self.end_time:
-            from datetime import datetime, combine, date
-            d1 = combine(date.min, self.time)
-            d2 = combine(date.min, self.end_time)
+            from datetime import datetime, date
+            d1 = datetime.combine(date.min, self.time)
+            d2 = datetime.combine(date.min, self.end_time)
             diff = d2 - d1
             if diff.total_seconds() < 0:
                 return None # Overnight not handled yet simple
