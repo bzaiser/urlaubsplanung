@@ -60,6 +60,9 @@ msgstr "Hotel"
 msgid "ADD_TRANSPORT"
 msgstr "Transport"
 
+msgid "CURRENT_VOUCHER"
+msgstr "Aktueller Beleg / Datei"
+
 msgid "LABEL_NIGHT"
 msgstr "Nacht"
 

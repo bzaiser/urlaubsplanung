@@ -85,6 +85,7 @@ class Event(models.Model):
     notes = models.TextField(_("Notizen"), blank=True)
     booking_reference = models.CharField(_("Buchungsnummer"), max_length=100, blank=True)
     booking_via = models.CharField(_("Gebucht über"), max_length=100, blank=True)
+    booking_url = models.URLField(_("Buchungs-Link"), max_length=500, blank=True)
     detail_info = models.CharField(_("Details (Flug-Nr, Terminal, etc.)"), max_length=255, blank=True)
     voucher = models.FileField(_("Voucher/Anhang"), upload_to="vouchers/", null=True, blank=True)
     

@@ -70,6 +70,9 @@
                                 </span>
                                 <span>
                                     {{ event.title }}
+                                    {% if event.voucher %}
+                                        <a href="{{ event.voucher.url }}" target="_blank" title="Beleg öffnen" style="text-decoration: none; margin-left: 5px;">📄</a>
+                                    {% endif %}
                                     {% if event.duration %}
                                         <small style="color: var(--text-secondary); margin-left: 5px;">({{ event.duration }})</small>
                                     {% endif %}

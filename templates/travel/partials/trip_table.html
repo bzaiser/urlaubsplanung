@@ -78,10 +78,18 @@
                         <td style="padding: 8px;">
                             {% with first_event=day.events.first %}
                             {% if first_event %}
-                                <input type="text" value="{{ first_event.booking_via }}" placeholder="Booking, GYG..."
-                                       hx-post="{% url 'travel:event_inline_update' first_event.id %}"
-                                       hx-trigger="change" name="value" hx-vals='{"field": "booking_via"}' hx-target="#dashboard-refresh"
-                                       style="background: none; border: none; color: var(--accent-gold); width: 100%; padding: 4px; font-size: 0.8rem;">
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <input type="text" value="{{ first_event.booking_via }}" placeholder="Booking, GYG..."
+                                           hx-post="{% url 'travel:event_inline_update' first_event.id %}"
+                                           hx-trigger="change" name="value" hx-vals='{"field": "booking_via"}' hx-target="#dashboard-refresh"
+                                           style="background: none; border: none; color: var(--accent-gold); width: 100%; padding: 4px; font-size: 0.8rem;">
+                                    {% if first_event.booking_url %}
+                                        <a href="{{ first_event.booking_url }}" target="_blank" title="Link öffnen" style="color: var(--accent-gold); text-decoration: none; font-size: 0.9rem;">🔗</a>
+                                    {% endif %}
+                                    {% if first_event.voucher %}
+                                        <a href="{{ first_event.voucher.url }}" target="_blank" title="Beleg öffnen" style="color: var(--text-primary); text-decoration: none; font-size: 0.9rem;">📄</a>
+                                    {% endif %}
+                                </div>
                             {% endif %}
                             {% endwith %}
                         </td>

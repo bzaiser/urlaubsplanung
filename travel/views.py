@@ -139,7 +139,8 @@ def event_quick_add(request, day_id):
     if title:
         # Check if it's a hotel or flight based on keywords for smart defaults
         type_choice = 'ACTIVITY'
-        if 'hotel' in title.lower() or 'unterkunft' in title.lower():
+        hotel_keywords = ['hotel', 'unterkunft', 'bungalow', 'camping', 'stellplatz', 'raststätte', 'zimmer', 'guesthouse']
+        if any(kw in title.lower() for kw in hotel_keywords):
             type_choice = 'HOTEL'
         elif 'flug' in title.lower() or 'flight' in title.lower():
             type_choice = 'FLIGHT'

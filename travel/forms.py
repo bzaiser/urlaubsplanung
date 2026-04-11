@@ -13,7 +13,7 @@ class TripForm(forms.ModelForm):
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
-        fields = ['title', 'type', 'time', 'end_time', 'notes', 'booking_reference', 'cost_local', 'is_paid']
+        fields = ['title', 'type', 'time', 'end_time', 'notes', 'booking_reference', 'booking_via', 'booking_url', 'cost_local', 'is_paid']
         widgets = {
             'time': forms.TimeInput(attrs={'type': 'time', 'class': 'flatpickr-time'}),
             'end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'flatpickr-time'}),
