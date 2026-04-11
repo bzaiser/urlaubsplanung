@@ -121,16 +121,21 @@ def event_delete(request, pk):
     return HttpResponse(status=405)
 
 def event_inline_update(request, pk):
-    """Updates a single field of an event via HTMX. Returns only the field value to avoid full page refresh."""
+    """Updates a single field of an event via HTMX. Returns only the field value."""
     event = get_object_or_404(Event, pk=pk)
     field = request.POST.get('field')
     value = request.POST.get('value')
     
     if hasattr(event, field):
+        # Handle numeric fields if necessary (but DecimalField handles strings okay in save)
         setattr(event, field, value)
         event.save()
         
-    return HttpResponse(getattr(event, field))
+    # Return formatted value for specific fields
+    saved_val = getattr(event, field)
+    if 'cost' in field:
+        return HttpResponse(f"{saved_val:.2f}")
+    return HttpResponse(saved_val)
 
 def event_inline_create(request, day_id):
     """Creates a new event inline from a table cell. Returns only the value to avoid full refresh."""
@@ -176,6 +181,8 @@ def day_bulk_edit(request):
         day_ids = request.POST.getlist('day_ids')
         location = request.POST.get('location')
         hotel_title = request.POST.get('hotel_title')
+        # Preserve view type
+        view_type = request.GET.get('view', 'table')
         
         days = Day.objects.filter(id__in=day_ids)
         if location:
@@ -192,6 +199,9 @@ def day_bulk_edit(request):
                     Event.objects.create(day=day, title=hotel_title, type='HOTEL')
         
         if days.exists():
-            return render(request, 'travel/partials/trip_list.html', {'active_trip': days.first().trip})
+            return render(request, 'travel/partials/trip_list.html', {
+                'active_trip': days.first().trip,
+                'view_type': view_type
+            })
             
     return HttpResponse(status=400)

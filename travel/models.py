@@ -89,9 +89,20 @@ class Event(models.Model):
     detail_info = models.CharField(_("Details (Flug-Nr, Terminal, etc.)"), max_length=255, blank=True)
     voucher = models.FileField(_("Voucher/Anhang"), upload_to="vouchers/", null=True, blank=True)
     
-    # Financials
-    cost_local = models.DecimalField(_("Kosten lokal"), max_digits=12, decimal_places=2, default=0)
-    cost_base = models.DecimalField(_("Kosten Basis (EUR)"), max_digits=12, decimal_places=2, default=0)
+    # Financials and Info from Excel
+    meals_info = models.CharField(_("Essen"), max_length=255, blank=True)
+    activities_info = models.CharField(_("Ausflüge und Eintritt"), max_length=255, blank=True)
+    
+    cost_booked = models.DecimalField(_("Preis gebucht"), max_digits=12, decimal_places=2, default=0)
+    cost_estimated = models.DecimalField(_("Kosten geschätzt"), max_digits=12, decimal_places=2, default=0)
+    cost_per_person = models.DecimalField(_("Pro Nase"), max_digits=12, decimal_places=2, default=0)
+    cost_total = models.DecimalField(_("Summe"), max_digits=12, decimal_places=2, default=0)
+    cost_actual = models.DecimalField(_("Kosten tatsächlich"), max_digits=12, decimal_places=2, default=0)
+    
+    # Legacy fields
+    cost_local = models.DecimalField(_("Kosten lokal (legacy)"), max_digits=12, decimal_places=2, default=0)
+    cost_base = models.DecimalField(_("Kosten Basis EUR (legacy)"), max_digits=12, decimal_places=2, default=0)
+    
     is_paid = models.BooleanField(_("Bezahlt"), default=False)
     
     class Meta:

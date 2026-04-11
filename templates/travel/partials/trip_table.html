@@ -1,112 +1,108 @@
 {% load i18n %}{% load static %}
-<form id="bulk-edit-form" hx-post="{% url 'travel:day_bulk_edit' %}" hx-target="#dashboard-refresh" hx-on::after-request="this.reset(); updateSelection();">
+<form id="bulk-edit-form" hx-post="{% url 'travel:day_bulk_edit' %}?view=table" hx-target="#dashboard-refresh" hx-on::after-request="this.reset(); updateSelection();">
     {% csrf_token %}
     <div class="premium-card" style="padding: 0; overflow: hidden; position: relative;">
         <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: fixed;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; table-layout: fixed; min-width: 1600px;">
                 <thead>
                     <tr style="background: rgba(255, 255, 255, 0.05); color: var(--accent-gold); text-align: left;">
-                        <th style="padding: 12px; border-bottom: 1px solid var(--glass-border); width: 40px; text-align: center;">
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 40px; text-align: center;">
                             <input type="checkbox" onclick="toggleAll(this)" style="cursor: pointer;">
                         </th>
-                        <th style="padding: 12px; border-bottom: 1px solid var(--glass-border); width: 80px;">{% trans "COL_DATE" %}</th>
-                        <th style="padding: 12px; border-bottom: 1px solid var(--glass-border); width: 140px;">{% trans "COL_LOCATION" %}</th>
-                        <th style="padding: 12px; border-bottom: 1px solid var(--glass-border); width: 180px;">{% trans "COL_HOTEL" %}</th>
-                        <th style="padding: 12px; border-bottom: 1px solid var(--glass-border); width: 180px;">{% trans "COL_TRANSPORT" %}</th>
-                        <th style="padding: 12px; border-bottom: 1px solid var(--glass-border); width: 150px;">{% trans "COL_DETAILS" %}</th>
-                        <th style="padding: 12px; border-bottom: 1px solid var(--glass-border); width: 150px;">{% trans "COL_VIA" %}</th>
-                        <th style="padding: 12px; border-bottom: 1px solid var(--glass-border); width: 60px; text-align: center;">{% trans "COL_PAID" %}</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 60px;">{% trans "COL_DAY" %}</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 100px;">{% trans "COL_DATE" %}</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 160px;">{% trans "COL_LOCATION" %}</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 80px;">Abfahrt</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 80px;">Ankunft</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 100px;">Dauer</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 220px;">Hotel / Unterkunft</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 160px;">Essen</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 120px;">Preis geb.</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 120px;">Schätzung</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 100px;">Pro Nase</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 120px;">Summe</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 200px;">Ausflüge & Sonstiges</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 60px; text-align: center;">Bez.</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for station in active_trip.grouped_stations %}
                         <tr style="background: rgba(197, 160, 89, 0.05);">
-                            <td colspan="8" style="padding: 10px 15px; font-weight: 600; color: var(--accent-gold); border-bottom: 1px solid var(--glass-border);">
+                            <td colspan="15" style="padding: 10px 15px; font-weight: 600; color: var(--accent-gold); border-bottom: 1px solid var(--glass-border);">
                                📍 {{ station.location }} ({{ station.nights }} {% if station.nights > 1 %}{% trans "LABEL_NIGHTS" %}{% else %}{% trans "LABEL_NIGHT" %}{% endif %})
                             </td>
                         </tr>
                         
                         {% for day in station.days %}
                         <tr class="day-row" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-                            <td style="padding: 10px; text-align: center;">
+                            <td style="padding: 8px; text-align: center;">
                                 <input type="checkbox" name="day_ids" value="{{ day.id }}" onchange="updateSelection()" style="cursor: pointer;">
                             </td>
-                            <td style="padding: 10px; white-space: nowrap;">
-                                <span style="display: block; font-weight: 600;">{{ day.date|date:"d. M" }}</span>
-                                <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ day.date|date:"l" }}</span>
+                            <td style="padding: 8px; color: var(--text-secondary);">Tag {{ forloop.parentloop.counter0|add:forloop.counter }}</td>
+                            <td style="padding: 8px; white-space: nowrap;">
+                                <span style="display: block; font-weight: 600;">{{ day.date|date:"d.m." }}</span>
+                                <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ day.date|date:"D" }}</span>
                             </td>
-                            <td style="padding: 8px;">
-                                <input type="text" value="{{ day.location }}" 
-                                       style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px;"
-                                       onfocus="this.style.border='1px solid var(--accent-gold)'"
-                                       onblur="this.style.border='1px transparent solid'">
+                            <td style="padding: 6px;">
+                                <input type="text" value="{{ day.location }}" hx-post="{% url 'travel:day_inline_update' day.id %}" hx-trigger="change" name="location" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; outline: none;" onfocus="this.style.border='1px solid var(--accent-gold)'" onblur="this.style.border='1px transparent solid'">
                             </td>
-                            <td style="padding: 8px;">
-                                {% if day.hotel %}
-                                    <input type="text" value="{{ day.hotel.title }}"
-                                           hx-post="{% url 'travel:event_inline_update' day.hotel.id %}"
-                                           hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-swap="none"
-                                           style="background: none; border: none; color: var(--text-primary); width: 100%; padding: 4px;">
-                                {% else %}
-                                    <input type="text" placeholder="{% trans 'ADD_HOTEL' %}"
-                                           hx-post="{% url 'travel:event_inline_create' day.id %}"
-                                           hx-trigger="change" name="value" hx-vals='{"field": "hotel_title"}' hx-target="#dashboard-refresh"
-                                           style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; border-radius: 4px;">
-                                {% endif %}
+                            {% with main_event=day.flight|default:day.transport %}
+                            <td style="padding: 6px;">
+                                <input type="text" value="{{ main_event.time|time:'H:i'|default:'' }}" 
+                                       {% if main_event %}hx-post="{% url 'travel:event_inline_update' main_event.id %}"{% else %}hx-post="{% url 'travel:event_quick_add' day.id %}?type=TRANSPORT"{% endif %} 
+                                       hx-trigger="change" name="{% if main_event %}value{% else %}time{% endif %}" 
+                                       {% if main_event %}hx-vals='{"field": "time"}'{% endif %}
+                                       placeholder="--:--" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; text-align: center;">
                             </td>
-                            <td style="padding: 8px;">
-                                {% if day.flight %}
-                                    <input type="text" value="{{ day.flight.title }}"
-                                           hx-post="{% url 'travel:event_inline_update' day.flight.id %}"
-                                           hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-swap="none"
-                                           style="background: none; border: none; color: var(--accent-teal); width: 100%; padding: 4px;">
-                                {% elif day.transport %}
-                                    <input type="text" value="{{ day.transport.title }}"
-                                           hx-post="{% url 'travel:event_inline_update' day.transport.id %}"
-                                           hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-swap="none"
-                                           style="background: none; border: none; color: var(--text-primary); width: 100%; padding: 4px;">
-                                {% else %}
-                                    <input type="text" placeholder="{% trans 'ADD_TRANSPORT' %}"
-                                           hx-post="{% url 'travel:event_inline_create' day.id %}"
-                                           hx-trigger="change" name="value" hx-vals='{"field": "transport_title"}' hx-target="#dashboard-refresh"
-                                           style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; border-radius: 4px;">
-                                {% endif %}
+                            <td style="padding: 6px;">
+                                <input type="text" value="{{ main_event.end_time|time:'H:i'|default:'' }}" 
+                                       {% if main_event %}hx-post="{% url 'travel:event_inline_update' main_event.id %}" hx-vals='{"field": "end_time"}' hx-trigger="change" name="value"{% endif %}
+                                       placeholder="--:--" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; text-align: center;">
                             </td>
-                            <td style="padding: 8px;">
-                                {% with first_event=day.events.first %}
-                                {% if first_event %}
-                                    <input type="text" value="{{ first_event.detail_info }}" placeholder="---"
-                                           hx-post="{% url 'travel:event_inline_update' first_event.id %}"
-                                           hx-trigger="change" name="value" hx-vals='{"field": "detail_info"}' hx-swap="none"
-                                           style="background: none; border: none; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.8rem;">
-                                {% endif %}
-                                {% endwith %}
+                            <td style="padding: 8px; text-align: center; color: var(--text-secondary);">
+                                {{ main_event.duration|default:"--" }}
                             </td>
-                            <td style="padding: 8px;">
-                                {% with first_event=day.events.first %}
-                                {% if first_event %}
-                                    <div style="display: flex; align-items: center; gap: 5px;">
-                                        <input type="text" value="{{ first_event.booking_via }}" placeholder="Booking, GYG..."
-                                               hx-post="{% url 'travel:event_inline_update' first_event.id %}"
-                                               hx-trigger="change" name="value" hx-vals='{"field": "booking_via"}' hx-swap="none"
-                                               style="background: none; border: none; color: var(--accent-gold); width: 100%; padding: 4px; font-size: 0.8rem;">
-                                        {% if first_event.booking_url %}
-                                            <a href="{{ first_event.booking_url }}" target="_blank" title="Link öffnen" style="color: var(--accent-gold); text-decoration: none; font-size: 0.9rem;">🔗</a>
-                                        {% endif %}
-                                        {% if first_event.voucher %}
-                                            <a href="{{ first_event.voucher.url }}" target="_blank" title="Beleg öffnen" style="color: var(--text-primary); text-decoration: none; font-size: 0.9rem;">📄</a>
-                                        {% endif %}
-                                    </div>
-                                {% endif %}
-                                {% endwith %}
+                            <td style="padding: 6px;">
+                                <input type="text" value="{{ day.hotel.title|default:'' }}" 
+                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "title"}' hx-trigger="change" name="value"{% else %}hx-post="{% url 'travel:event_quick_add' day.id %}?type=HOTEL" hx-trigger="change" name="title"{% endif %}
+                                       placeholder="Unterkunft..." style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px;">
                             </td>
-                            <td style="padding: 10px; text-align: center;">
-                                {% if day.hotel.is_paid or day.flight.is_paid or day.transport.is_paid %}
-                                    <span style="color: var(--accent-teal);">✓</span>
-                                {% else %}
-                                    <span style="color: var(--text-secondary);">--</span>
-                                {% endif %}
+                            <td style="padding: 6px;">
+                                <input type="text" value="{{ main_event.meals_info|default:day.hotel.meals_info|default:'' }}" 
+                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "meals_info"}' hx-trigger="change" name="value"{% endif %}
+                                       placeholder="Essen..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
                             </td>
+                            <td style="padding: 6px;">
+                                <input type="number" step="0.01" value="{{ day.hotel.cost_booked|default:main_event.cost_booked|default:'0.00' }}" 
+                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "cost_booked"}' hx-trigger="change" name="value"{% endif %}
+                                       style="background: none; border: 1px transparent solid; color: var(--accent-gold); width: 100%; padding: 4px; text-align: right;">
+                            </td>
+                            <td style="padding: 6px;">
+                                <input type="number" step="0.01" value="{{ day.hotel.cost_estimated|default:main_event.cost_estimated|default:'0.00' }}" 
+                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "cost_estimated"}' hx-trigger="change" name="value"{% endif %}
+                                       style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; text-align: right;">
+                            </td>
+                            <td style="padding: 6px;">
+                                <input type="number" step="0.01" value="{{ day.hotel.cost_per_person|default:'0.00' }}" 
+                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "cost_per_person"}' hx-trigger="change" name="value"{% endif %}
+                                       style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; text-align: right;">
+                            </td>
+                            <td style="padding: 6px;">
+                                <input type="number" step="0.01" value="{{ day.hotel.cost_total|default:'0.00' }}" 
+                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "cost_total"}' hx-trigger="change" name="value"{% endif %}
+                                       style="background: none; border: 1px transparent solid; color: var(--accent-gold); width: 100%; padding: 4px; text-align: right; font-weight: 600;">
+                            </td>
+                            <td style="padding: 6px;">
+                                <input type="text" value="{{ day.hotel.activities_info|default:day.flight.activities_info|default:'' }}" 
+                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "activities_info"}' hx-trigger="change" name="value"{% endif %}
+                                       placeholder="Ausflüge..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
+                            </td>
+                            <td style="padding: 8px; text-align: center;">
+                                <input type="checkbox" {% if day.hotel.is_paid %}checked{% endif %} 
+                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "is_paid"}' hx-trigger="change" name="value" value="true"{% endif %}
+                                       style="cursor: pointer;">
+                            </td>
+                            {% endwith %}
                         </tr>
                         {% endfor %}
                     {% endfor %}
@@ -116,13 +112,13 @@
     </div>
     
     <!-- Floating Toolbar -->
-    <div id="bulk-toolbar" class="bulk-toolbar-hidden" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(10, 25, 47, 0.85); backdrop-filter: blur(15px); border: 1px solid var(--accent-gold); padding: 15px 30px; border-radius: 50px; display: flex; gap: 15px; align-items: center; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-        <span style="color: var(--accent-gold); font-weight: 600; white-space: nowrap;"><span id="selection-count">0</span> Zeilen markiert</span>
-        <div style="height: 25px; width: 1px; background: rgba(255,255,255,0.1);"></div>
-        <input type="text" name="location" placeholder="Ort (z.B. Bangkok)" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 8px 15px; border-radius: 20px; outline: none;">
-        <input type="text" name="hotel_title" placeholder="Unterkunft" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 8px 15px; border-radius: 20px; outline: none;">
-        <button type="submit" class="btn-primary" style="padding: 10px 25px; font-size: 0.8rem;">Station festlegen</button>
-        <button type="button" onclick="clearSelection()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.2rem;">&times;</button>
+    <div id="bulk-toolbar" class="bulk-toolbar-hidden" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(10, 25, 47, 0.9); backdrop-filter: blur(20px); border: 2px solid var(--accent-gold); padding: 15px 40px; border-radius: 60px; display: flex; gap: 20px; align-items: center; z-index: 1000; box-shadow: 0 15px 50px rgba(0,0,0,0.6); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <span style="color: var(--accent-gold); font-weight: 600; white-space: nowrap;"><span id="selection-count">0</span> Tage gewählt</span>
+        <div style="height: 30px; width: 1px; background: rgba(255,255,255,0.2);"></div>
+        <input type="text" name="location" placeholder="Ort (z.B. Koh Kood)" style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 10px 20px; border-radius: 25px; outline: none; width: 180px;">
+        <input type="text" name="hotel_title" placeholder="Stamm-Unterkunft" style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 10px 20px; border-radius: 25px; outline: none; width: 220px;">
+        <button type="submit" class="btn-primary" style="padding: 10px 30px; font-size: 0.9rem; margin-top: 0; width: auto; border-radius: 25px;">Station festlegen</button>
+        <button type="button" onclick="clearSelection()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem;">&times;</button>
     </div>
 </form>
 
@@ -140,7 +136,7 @@ function updateSelection() {
         document.querySelectorAll('.day-row').forEach(row => {
             const cb = row.querySelector('input[type="checkbox"]');
             if (cb && cb.checked) {
-                row.style.background = 'rgba(197, 160, 89, 0.1)';
+                row.style.background = 'rgba(197, 160, 89, 0.15)';
             } else {
                 row.style.background = 'none';
             }
@@ -170,14 +166,21 @@ function clearSelection() {
 <style>
 .bulk-toolbar-hidden {
     opacity: 0;
-    bottom: -100px !important;
+    bottom: -120px !important;
     pointer-events: none;
+    transform: translateX(-50%) scale(0.9) !important;
 }
 .bulk-toolbar-show {
     opacity: 1;
     bottom: 30px !important;
+    transform: translateX(-50%) scale(1) !important;
 }
 .day-row:hover {
-    background: rgba(255,255,255,0.02) !important;
+    background: rgba(255,255,255,0.03) !important;
+}
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
 }
 </style>
