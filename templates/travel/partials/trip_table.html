@@ -111,7 +111,7 @@
                             <td style="padding: 6px;">
                                 {% with hotel=day.hotel activity=day.events.first %}{% if hotel or activity %}
                                 <input type="text" value="{% if hotel %}{{ hotel.activities_info }}{% else %}{{ activity.activities_info }}{% endif %}" 
-                                       hx-post="{% url 'travel:event_inline_update' %}{% if hotel %}{{ hotel.id }}{% else %}{{ activity.id }}{% endif %}/inline-update/" hx-vals='{"field": "activities_info"}' hx-trigger="change" name="value"
+                                       hx-post="{% if hotel %}{% url 'travel:event_inline_update' hotel.id %}{% else %}{% url 'travel:event_inline_update' activity.id %}{% endif %}" hx-vals='{"field": "activities_info"}' hx-trigger="change" name="value"
                                        placeholder="Ausflüge..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
                                 {% else %}
                                 <span style="font-size: 0.7rem; color: var(--text-secondary); opacity: 0.3;">--</span>
