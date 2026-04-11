@@ -99,6 +99,24 @@ class Event(models.Model):
     def __str__(self):
         return f"{self.get_type_display()}: {self.title}"
 
+    @property
+    def duration(self):
+        """Calculates duration between time and end_time."""
+        if self.time and self.end_time:
+            from datetime import datetime, combine, date
+            d1 = combine(date.min, self.time)
+            d2 = combine(date.min, self.end_time)
+            diff = d2 - d1
+            if diff.total_seconds() < 0:
+                return None # Overnight not handled yet simple
+            
+            hours, remainder = divmod(int(diff.total_seconds()), 3600)
+            minutes = remainder // 60
+            if hours > 0:
+                return f"{hours}h {minutes}m"
+            return f"{minutes}m"
+        return None
+
 class DiaryEntry(models.Model):
     day = models.OneToOneField(Day, on_delete=models.CASCADE, related_name="diary")
     text = models.TextField(_("Tagebuch Text"), blank=True)

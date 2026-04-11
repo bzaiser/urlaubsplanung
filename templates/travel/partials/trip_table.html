@@ -40,10 +40,16 @@
                         </td>
                         <td style="padding: 15px;">
                             {% if day.flight %}
-                                <div style="color: var(--accent-teal); font-size: 0.8rem;">✈ {{ day.flight.title }}</div>
+                                <div style="color: var(--accent-teal); font-size: 0.8rem;">
+                                    ✈ {{ day.flight.title }} 
+                                    ({{ day.flight.time|time:"H:i" }}{% if day.flight.duration %} - {{ day.flight.duration }}{% endif %})
+                                </div>
                             {% endif %}
                             {% if day.transport %}
-                                <div style="color: var(--text-primary); font-size: 0.8rem;">🚗 {{ day.transport.title }}</div>
+                                <div style="color: var(--text-primary); font-size: 0.8rem;">
+                                    🚗 {{ day.transport.title }}
+                                    ({{ day.transport.time|time:"H:i" }}{% if day.transport.duration %} - {{ day.transport.duration }}{% endif %})
+                                </div>
                             {% endif %}
                         </td>
                         <td style="padding: 15px; text-align: center;">

@@ -69,6 +69,9 @@
                                 </span>
                                 <span>
                                     {{ event.title }}
+                                    {% if event.duration %}
+                                        <small style="color: var(--text-secondary); margin-left: 5px;">({{ event.duration }})</small>
+                                    {% endif %}
                                 </span>
                                 {% if event.is_paid %}
                                 <span style="color: var(--accent-teal);">✓</span>
