@@ -120,25 +120,8 @@ def event_delete(request, pk):
         return redirect('travel:dashboard')
     return HttpResponse(status=405)
 
-def event_inline_update(request, pk):
-    """Updates a single field of an event via HTMX. Returns only the field value."""
-    event = get_object_or_404(Event, pk=pk)
-    field = request.POST.get('field')
-    value = request.POST.get('value')
-    
-    if hasattr(event, field):
-        # Handle numeric fields if necessary (but DecimalField handles strings okay in save)
-        setattr(event, field, value)
-        event.save()
-        
-    # Return formatted value for specific fields
-    saved_val = getattr(event, field)
-    if 'cost' in field:
-        return HttpResponse(f"{saved_val:.2f}")
-    return HttpResponse(saved_val)
-
 def event_inline_create(request, day_id):
-    """Creates a new event inline from a table cell. Returns only the value to avoid full refresh."""
+    """Creates a new event inline and returns the new full row to refresh IDs."""
     day = get_object_or_404(Day, pk=day_id)
     field = request.POST.get('field')
     value = request.POST.get('value')
@@ -147,14 +130,13 @@ def event_inline_create(request, day_id):
         return HttpResponse("")
         
     type_choice = 'ACTIVITY'
-    if field in ['hotel_title', 'cost_per_person', 'cost_total'] or 'hotel' in field:
+    if field in ['hotel_title', 'cost_per_person', 'cost_total', 'meals_info'] or 'hotel' in field:
         type_choice = 'HOTEL'
     elif 'transport' in field or 'flight' in field or field in ['time', 'end_time']:
         type_choice = 'TRANSPORT'
         
     event = Event.objects.create(day=day, title="Planung", type=type_choice)
     
-    # If the user specifically set a field other than title, update it
     if field and field != 'title' and field != 'hotel_title':
         if hasattr(event, field):
             setattr(event, field, value)
@@ -163,7 +145,35 @@ def event_inline_create(request, day_id):
         event.title = value
         event.save()
             
-    return render(request, 'travel/partials/trip_list.html', {'active_trip': day.trip, 'view_type': 'table'})
+    # Calculate initial duration if times were provided
+    # Return the full row
+    return render(request, 'travel/partials/day_row.html', {'day': day})
+
+def event_inline_update(request, pk):
+    """Updates an event field and returns OOB update for duration if needed."""
+    event = get_object_or_404(Event, pk=pk)
+    field = request.POST.get('field')
+    value = request.POST.get('value')
+    
+    if field and hasattr(event, field):
+        if field == 'is_paid':
+            event.is_paid = (value == 'true')
+        else:
+            setattr(event, field, value)
+        event.save()
+        
+    # If time/end_time was updated, return an OOB update for duration
+    response_html = ""
+    if field in ['time', 'end_time']:
+        duration_val = event.duration or "--"
+        response_html = f'<td id="duration-{event.day.id}" hx-swap-oob="innerHTML">{duration_val}</td>'
+        
+    if response_html:
+        return HttpResponse(response_html)
+    
+    # Otherwise return nothing to preserve focus (hx-swap="none" in template handles this)
+    return HttpResponse(status=204)
+
 
 
 def event_quick_add(request, day_id):
