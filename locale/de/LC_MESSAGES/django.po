@@ -45,6 +45,9 @@ msgstr "Details (Flug-Nr, Term...)"
 msgid "COL_VIA"
 msgstr "Gebucht über"
 
+msgid "COL_DAY"
+msgstr "Tag"
+
 msgid "COL_PAID"
 msgstr "Bezahlt"
 
