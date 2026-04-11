@@ -86,3 +86,9 @@
     </div>
     {% endif %}
 </section>
+
+<button class="fab" 
+        hx-get="{% url 'travel:trip_create' %}"
+        hx-target="#modal-container">
+    +
+</button>
