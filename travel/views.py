@@ -169,3 +169,29 @@ def event_quick_add(request, day_id):
         Event.objects.create(day=day, title=title, type=type_choice)
         
     return render(request, 'travel/partials/trip_list.html', {'active_trip': day.trip})
+
+def day_bulk_edit(request):
+    """Updates multiple days (location, hotel) at once. Returns full list to refresh stations."""
+    if request.method == 'POST':
+        day_ids = request.POST.getlist('day_ids')
+        location = request.POST.get('location')
+        hotel_title = request.POST.get('hotel_title')
+        
+        days = Day.objects.filter(id__in=day_ids)
+        if location:
+            days.update(location=location)
+        
+        if hotel_title:
+            for day in days:
+                # Update existing hotel or create new one
+                hotel = day.events.filter(type='HOTEL').first()
+                if hotel:
+                    hotel.title = hotel_title
+                    hotel.save()
+                else:
+                    Event.objects.create(day=day, title=hotel_title, type='HOTEL')
+        
+        if days.exists():
+            return render(request, 'travel/partials/trip_list.html', {'active_trip': days.first().trip})
+            
+    return HttpResponse(status=400)
