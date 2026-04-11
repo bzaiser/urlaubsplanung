@@ -149,20 +149,38 @@ def event_inline_create(request, day_id):
     # Return the full row
     return render(request, 'travel/partials/day_row.html', {'day': day})
 
-def event_inline_update(request, pk):
-    """Updates an event field and returns OOB update for duration if needed."""
-    event = get_object_or_404(Event, pk=pk)
+def event_inline_update(request, pk=None, day_id=None):
+    """Updates or creates an event field. Supports stable (ID-less) updates via day_id."""
     field = request.POST.get('field')
     value = request.POST.get('value')
+    event_type = request.POST.get('type')
+    
+    if pk:
+        event = get_object_or_404(Event, pk=pk)
+    elif day_id:
+        day = get_object_or_404(Day, pk=day_id)
+        # Identify or create event of requested type
+        if not event_type:
+            # Infer type from field if not provided
+            if field in ['hotel_title', 'cost_booked', 'cost_estimated', 'cost_per_person', 'cost_total', 'is_paid'] or 'hotel' in field:
+                event_type = 'HOTEL'
+            else:
+                event_type = 'TRANSPORT'
+        
+        event, created = Event.objects.get_or_create(day=day, type=event_type, defaults={'title': 'Planung'})
+    else:
+        return HttpResponse(status=400)
     
     if field and hasattr(event, field):
         if field == 'is_paid':
             event.is_paid = (value == 'true')
+        elif field == 'hotel_title':
+            event.title = value
         else:
             setattr(event, field, value)
         event.save()
         
-    # If time/end_time was updated, return an OOB update for duration
+    # Return OOB update for duration if time changed
     response_html = ""
     if field in ['time', 'end_time']:
         duration_val = event.duration or "--"
@@ -171,7 +189,6 @@ def event_inline_update(request, pk):
     if response_html:
         return HttpResponse(response_html)
     
-    # Otherwise return nothing to preserve focus (hx-swap="none" in template handles this)
     return HttpResponse(status=204)
 
 

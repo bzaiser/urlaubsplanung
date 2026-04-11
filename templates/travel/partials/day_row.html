@@ -13,134 +13,82 @@
     </td>
     <td style="padding: 6px;">
         <input type="text" value="{% if main_event %}{{ main_event.time|time:'H:i' }}{% endif %}" 
-               {% if main_event %}hx-post="{% url 'travel:event_inline_update' main_event.id %}" hx-swap="none"{% else %}hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "time"}' hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"{% endif %} 
-               hx-trigger="change" name="value" 
-               {% if main_event %}hx-vals='{"field": "time"}'{% endif %}
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "time", "type": "TRANSPORT"}' hx-trigger="change" name="value" hx-swap="none"
                placeholder="--:--" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; text-align: center;">
     </td>
     <td style="padding: 6px;">
         <input type="text" value="{% if main_event %}{{ main_event.end_time|time:'H:i' }}{% endif %}" 
-               {% if main_event %}hx-post="{% url 'travel:event_inline_update' main_event.id %}" hx-vals='{"field": "end_time"}' hx-trigger="change" name="value" hx-swap="none"{% else %}hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "end_time"}' hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"{% endif %}
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "end_time", "type": "TRANSPORT"}' hx-trigger="change" name="value" hx-swap="none"
                placeholder="--:--" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; text-align: center;">
     </td>
     <td id="duration-{{ day.id }}" style="padding: 8px; text-align: center; color: var(--text-secondary);">
         {% if main_event %}{{ main_event.duration|default:"--" }}{% else %}--{% endif %}
     </td>
     <td style="padding: 6px;">
-        {% if main_event %}
-        <input type="text" value="{{ main_event.detail_info|default:'' }}" 
-               hx-post="{% url 'travel:event_inline_update' main_event.id %}" hx-vals='{"field": "detail_info"}' hx-trigger="change" name="value" hx-swap="none"
-               placeholder="Flug-Nr, Terminal..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
-        {% else %}
-        <input type="text" placeholder="Info..." 
-               hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "detail_info"}' hx-trigger="change" name="value" hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"
-               style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
-        {% endif %}
+        <input type="text" value="{% if main_event %}{{ main_event.detail_info|default:'' }}{% endif %}" 
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "detail_info", "type": "TRANSPORT"}' hx-trigger="change" name="value" hx-swap="none"
+               placeholder="Flug-Nr..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
     </td>
     <td style="padding: 6px;">
         {% with hotel=day.hotel %}
         <input type="text" value="{% if hotel %}{{ hotel.title }}{% endif %}" 
-               {% if hotel %}hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "title"}' hx-trigger="change" name="value" hx-swap="none"{% else %}hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "hotel_title"}' hx-trigger="change" name="value" hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"{% endif %}
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "hotel_title", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
                placeholder="Unterkunft..." style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px;">
         {% endwith %}
     </td>
     <td style="padding: 6px;">
         {% with hotel=day.hotel %}
         <input type="text" value="{% if main_event %}{{ main_event.meals_info }}{% elif hotel %}{{ hotel.meals_info }}{% endif %}" 
-               {% if hotel %}hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "meals_info"}' hx-trigger="change" name="value" hx-swap="none"{% else %}hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "meals_info"}' hx-trigger="change" name="value" hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"{% endif %}
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "meals_info", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
                placeholder="Essen..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
         {% endwith %}
     </td>
     <td style="padding: 6px;">
-        {% with hotel=day.hotel %}{% if hotel %}
-        <input type="number" step="0.01" value="{{ hotel.cost_booked|default:'0.00' }}" 
-               hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "cost_booked"}' hx-trigger="change" name="value" hx-swap="none"
+        <input type="number" step="0.01" value="{{ day.hotel.cost_booked|default:'0.00' }}" 
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_booked", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
                style="background: none; border: 1px transparent solid; color: var(--accent-gold); width: 100%; padding: 4px; text-align: right;">
-        {% else %}
-        <input type="number" step="0.01" value="0.00" 
-               hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "cost_booked"}' hx-trigger="change" name="value" hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"
-               style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; text-align: right; opacity: 0.6;">
-        {% endif %}{% endwith %}
     </td>
     <td style="padding: 6px;">
-        {% with hotel=day.hotel %}{% if hotel %}
-        <input type="number" step="0.01" value="{{ hotel.cost_estimated|default:'0.00' }}" 
-               hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "cost_estimated"}' hx-trigger="change" name="value" hx-swap="none"
+        <input type="number" step="0.01" value="{{ day.hotel.cost_estimated|default:'0.00' }}" 
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_estimated", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
                style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; text-align: right;">
-        {% else %}
-        <input type="number" step="0.01" value="0.00" 
-               hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "cost_estimated"}' hx-trigger="change" name="value" hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"
-               style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; text-align: right; opacity: 0.6;">
-        {% endif %}{% endwith %}
     </td>
     <td style="padding: 6px;">
-        {% with hotel=day.hotel %}{% if hotel %}
-        <input type="number" step="0.01" value="{{ hotel.cost_per_person|default:'0.00' }}" 
-               hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "cost_per_person"}' hx-trigger="change" name="value" hx-swap="none"
+        <input type="number" step="0.01" value="{{ day.hotel.cost_per_person|default:'0.00' }}" 
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_per_person", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
                style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; text-align: right;">
-        {% else %}
-        <input type="number" step="0.01" value="0.00" 
-               hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "cost_per_person"}' hx-trigger="change" name="value" hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"
-               style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; text-align: right; opacity: 0.6;">
-        {% endif %}{% endwith %}
     </td>
     <td style="padding: 6px;">
-        {% with hotel=day.hotel %}{% if hotel %}
-        <input type="number" step="0.01" value="{{ hotel.cost_total|default:'0.00' }}" 
-               hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "cost_total"}' hx-trigger="change" name="value" hx-swap="none"
+        <input type="number" step="0.01" value="{{ day.hotel.cost_total|default:'0.00' }}" 
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_total", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
                style="background: none; border: 1px transparent solid; color: var(--accent-gold); width: 100%; padding: 4px; text-align: right; font-weight: 600;">
-        {% else %}
-        <input type="number" step="0.01" value="0.00" 
-               hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "cost_total"}' hx-trigger="change" name="value" hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"
-               style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; text-align: right; opacity: 0.6;">
-        {% endif %}{% endwith %}
     </td>
     <td style="padding: 6px;">
-        {% with hotel=day.hotel activity=day.events.first %}{% if hotel or activity %}
-        <input type="text" value="{% if hotel %}{{ hotel.activities_info }}{% else %}{{ activity.activities_info }}{% endif %}" 
-               hx-post="{% if hotel %}{% url 'travel:event_inline_update' hotel.id %}{% else %}{% url 'travel:event_inline_update' activity.id %}{% endif %}" hx-vals='{"field": "activities_info"}' hx-trigger="change" name="value" hx-swap="none"
+        <input type="text" value="{% with hotel=day.hotel %}{% if hotel %}{{ hotel.activities_info }}{% else %}{{ day.events.first.activities_info }}{% endif %}{% endwith %}" 
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "activities_info", "type": "ACTIVITY"}' hx-trigger="change" name="value" hx-swap="none"
                placeholder="Ausflüge..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
-        {% else %}
-        <input type="text" placeholder="Ausflüge..." 
-               hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "activities_info"}' hx-trigger="change" name="value" hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"
-               style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
-        {% endif %}{% endwith %}
     </td>
     <td style="padding: 6px;">
-        {% with hotel=day.hotel activity=day.events.first %}
-        {% with target=hotel|default:activity %}
-        {% if target %}
-        <input type="text" value="{{ target.booking_via|default:'' }}" 
-               hx-post="{% url 'travel:event_inline_update' target.id %}" hx-vals='{"field": "booking_via"}' hx-trigger="change" name="value" hx-swap="none"
-               placeholder="Booking, GYG..." style="background: none; border: 1px transparent solid; color: var(--accent-teal); width: 100%; padding: 4px; font-size: 0.75rem;">
-        {% else %}
-        <input type="text" placeholder="Booking..." 
-               hx-post="{% url 'travel:event_inline_create' day.id %}" hx-vals='{"field": "booking_via"}' hx-trigger="change" name="value" hx-target="#day-row-{{ day.id }}" hx-swap="outerHTML"
-               style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
-        {% endif %}{% endwith %}{% endwith %}
+        <input type="text" value="{% with hotel=day.hotel target=hotel|default:day.events.first %}{{ target.booking_via|default:'' }}{% endwith %}" 
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "booking_via", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
+               placeholder="Booking..." style="background: none; border: 1px transparent solid; color: var(--accent-teal); width: 100%; padding: 4px; font-size: 0.75rem;">
     </td>
     <td style="padding: 4px; text-align: center;">
-        {% with hotel=day.hotel activity=day.events.first %}
-        {% with target=hotel|default:activity %}
+        {% with target=day.hotel|default:day.events.first %}
         <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
             {% if target.booking_url %}
                 <a href="{{ target.booking_url }}" target="_blank" title="Link öffnen" style="text-decoration: none; font-size: 0.9rem;">🔗</a>
             {% endif %}
-            {% if target.voucher %}
-                <a href="{{ target.voucher.url }}" target="_blank" title="Beleg öffnen" style="text-decoration: none; font-size: 0.9rem;">📄</a>
-            {% endif %}
-            {% if not target.booking_url and not target.voucher %}
-                <span style="opacity: 0.1;">--</span>
-            {% endif %}
+            {% if target.voucher %}<a href="{{ target.voucher.url }}" target="_blank" title="Beleg öffnen" style="text-decoration: none; font-size: 0.9rem;">📄</a>{% endif %}
+            {% if not target.booking_url and not target.voucher %}<span style="opacity: 0.1;">--</span>{% endif %}
         </div>
-        {% endwith %}{% endwith %}
+        {% endwith %}
     </td>
     <td style="padding: 8px; text-align: center;">
-        {% with hotel=day.hotel %}
-        <input type="checkbox" {% if hotel.is_paid %}checked{% endif %} 
-               {% if hotel %}hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "is_paid"}' hx-trigger="change" name="value" value="true" hx-swap="none"{% endif %}
+        <input type="checkbox" {% if day.hotel.is_paid %}checked{% endif %} 
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "is_paid", "type": "HOTEL"}' hx-trigger="change" name="value" value="true" hx-swap="none"
                style="cursor: pointer;">
-        {% endwith %}
     </td>
 </tr>
 {% endwith %}
+
