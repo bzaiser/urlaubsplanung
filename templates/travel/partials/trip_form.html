@@ -5,7 +5,7 @@
         <button type="button" onclick="closeModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;">&times;</button>
     </div>
     
-    <form hx-post="{{ request.path }}" hx-target="#main-content" hx-on::after-request="if(event.detail.successful) closeModal()">
+    <form hx-post="{{ request.path }}" hx-target="#trip-overview" hx-on::after-request="if(event.detail.successful) closeModal()">
         {% csrf_token %}
         {{ form.as_p }}
         

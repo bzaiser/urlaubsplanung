@@ -3,7 +3,22 @@ from django.views.generic import ListView
 from django.http import HttpResponse
 from datetime import timedelta
 from .models import Trip, Day
-from .forms import TripForm
+from .forms import TripForm, EventForm
+
+def _generate_days(trip):
+    """Utility to generate Day objects for the trip duration."""
+    if not trip.start_date or not trip.end_date:
+        return
+    
+    current_date = trip.start_date
+    while current_date <= trip.end_date:
+        # get_or_create ensures we don't duplicate days or lose existing ones
+        Day.objects.get_or_create(
+            trip=trip, 
+            date=current_date, 
+            defaults={'location': 'Planung läuft...'}
+        )
+        current_date += timedelta(days=1)
 
 class TripDashboardView(ListView):
     model = Trip
@@ -17,22 +32,9 @@ class TripDashboardView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['active_trip'] = Trip.objects.first() # Simplification for now
+        # Always pick the most recently edited or first trip as active for now
+        context['active_trip'] = Trip.objects.first() 
         return context
-
-def _generate_days(trip):
-    """Utility to generate Day objects for the trip duration."""
-    if not trip.start_date or not trip.end_date:
-        return
-    
-    current_date = trip.start_date
-    while current_date <= trip.end_date:
-        Day.objects.get_or_create(
-            trip=trip, 
-            date=current_date, 
-            defaults={'location': 'Planung läuft...'}
-        )
-        current_date += timedelta(days=1)
 
 def trip_create(request):
     if request.method == 'POST':
@@ -41,7 +43,8 @@ def trip_create(request):
             trip = form.save()
             _generate_days(trip)
             if request.htmx:
-                return redirect('travel:dashboard')
+                # Return the updated list to be swapped into the dashboard
+                return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
             return redirect('travel:dashboard')
     else:
         form = TripForm()
@@ -55,6 +58,8 @@ def trip_edit(request, pk):
         if form.is_valid():
             trip = form.save()
             _generate_days(trip) # Refresh days if dates changed
+            if request.htmx:
+                return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
             return redirect('travel:dashboard')
     else:
         form = TripForm(instance=trip)
@@ -72,6 +77,8 @@ def event_create(request, day_id):
             event = form.save(commit=False)
             event.day = day
             event.save()
+            if request.htmx:
+                return render(request, 'travel/partials/trip_list.html', {'active_trip': day.trip})
             return redirect('travel:dashboard')
     else:
         form = EventForm()
@@ -87,6 +94,8 @@ def event_edit(request, pk):
         form = EventForm(request.POST, request.FILES, instance=event)
         if form.is_valid():
             form.save()
+            if request.htmx:
+                return render(request, 'travel/partials/trip_list.html', {'active_trip': event.day.trip})
             return redirect('travel:dashboard')
     else:
         form = EventForm(instance=event)
@@ -99,7 +108,10 @@ def event_edit(request, pk):
 
 def event_delete(request, pk):
     event = get_object_or_404(Event, pk=pk)
+    trip = event.day.trip
     if request.method == 'POST':
         event.delete()
+        if request.htmx:
+            return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
         return redirect('travel:dashboard')
     return HttpResponse(status=405)

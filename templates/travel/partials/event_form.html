@@ -9,7 +9,7 @@
     </div>
     
     <form hx-post="{{ request.path }}" 
-          hx-target="#main-content" 
+          hx-target="#trip-overview" 
           hx-on::after-request="if(event.detail.successful) closeModal()"
           enctype="multipart/form-data">
         {% csrf_token %}
@@ -23,7 +23,7 @@
             <button type="button" 
                     hx-post="{% url 'travel:event_delete' form.instance.id %}"
                     hx-confirm="{% trans 'CONFIRM_DELETE' %}"
-                    hx-target="#main-content"
+                    hx-target="#trip-overview"
                     hx-on::after-request="if(event.detail.successful) closeModal()"
                     class="btn-secondary" 
                     style="flex: 1; background: rgba(255, 69, 58, 0.1); color: #ff453a; border: 1px solid rgba(255, 69, 58, 0.3); border-radius: 8px;">
