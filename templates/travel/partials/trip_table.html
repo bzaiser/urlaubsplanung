@@ -1,0 +1,53 @@
+{% load i18n %}{% load static %}
+<div class="premium-card" style="padding: 0; overflow: hidden;">
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: rgba(255, 255, 255, 0.05); color: var(--accent-gold); text-align: left;">
+                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_DATE" %}</th>
+                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_LOCATION" %}</th>
+                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_HOTEL" %}</th>
+                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_TRANSPORT" %}</th>
+                    <th style="padding: 15px; border-bottom: 1px solid var(--glass-border);">{% trans "COL_STATUS" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in active_trip.days.all %}
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='none'">
+                    <td style="padding: 15px; white-space: nowrap;">
+                        <span style="display: block; font-weight: 600;">{{ day.date|date:"d. M" }}</span>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">{{ day.date|date:"l" }}</span>
+                    </td>
+                    <td style="padding: 15px;">
+                        {{ day.location }}
+                    </td>
+                    <td style="padding: 15px;">
+                        {% if day.hotel %}
+                            <span style="color: var(--text-primary);">{{ day.hotel.title }}</span>
+                        {% else %}
+                            <span style="color: rgba(255, 69, 58, 0.5); font-style: italic; font-size: 0.8rem;">
+                                {% trans "MISSING_HOTEL" %}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px;">
+                        {% if day.flight %}
+                            <div style="color: var(--accent-teal); font-size: 0.8rem;">✈ {{ day.flight.title }}</div>
+                        {% endif %}
+                        {% if day.transport %}
+                            <div style="color: var(--text-primary); font-size: 0.8rem;">🚗 {{ day.transport.title }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px; text-align: center;">
+                        {% if day.hotel.is_paid or day.flight.is_paid %}
+                            <span style="color: var(--accent-teal);">✓</span>
+                        {% else %}
+                            <span style="color: var(--text-secondary);">--</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

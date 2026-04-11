@@ -28,6 +28,18 @@ class Day(models.Model):
     def __str__(self):
         return f"{self.date}: {self.location}"
 
+    @property
+    def hotel(self):
+        return self.events.filter(type='HOTEL').first()
+
+    @property
+    def flight(self):
+        return self.events.filter(type='FLIGHT').first()
+
+    @property
+    def transport(self):
+        return self.events.filter(type='TRANSPORT').first()
+
 class Event(models.Model):
     TYPE_CHOICES = [
         ('FLIGHT', _('Flug')),

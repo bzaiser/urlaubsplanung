@@ -1,15 +1,28 @@
 {% load i18n %}{% load static %}
 <section id="trip-overview">
-    {% if active_trip %}
     <div class="premium-card">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-                <h1 style="margin: 0;">
+                <h1 style="margin: 0; font-size: 1.5rem;">
                     {{ active_trip.name }}
                 </h1>
-                <p style="color: var(--text-secondary); margin-top: 5px;">
+                <p style="color: var(--text-secondary); margin-top: 5px; font-size: 0.9rem;">
                     {{ active_trip.start_date|date:"d. M" }} - {{ active_trip.end_date|date:"d. M Y" }}
                 </p>
+                
+                <!-- View Switcher -->
+                <div style="margin-top: 15px; display: flex; gap: 8px;">
+                    <button hx-get="{% url 'travel:dashboard' %}?view=timeline" 
+                            hx-target="#dashboard-refresh"
+                            style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--glass-border); background: {% if view_type == 'timeline' %}rgba(197, 160, 89, 0.2){% else %}none{% endif %}; color: {% if view_type == 'timeline' %}var(--accent-gold){% else %}var(--text-secondary){% endif %}; cursor: pointer; font-size: 0.75rem; transition: all 0.2s;">
+                        🕒 {% trans "VIEW_TIMELINE" %}
+                    </button>
+                    <button hx-get="{% url 'travel:dashboard' %}?view=table" 
+                            hx-target="#dashboard-refresh"
+                            style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--glass-border); background: {% if view_type == 'table' %}rgba(197, 160, 89, 0.2){% else %}none{% endif %}; color: {% if view_type == 'table' %}var(--accent-gold){% else %}var(--text-secondary){% endif %}; cursor: pointer; font-size: 0.75rem; transition: all 0.2s;">
+                        📊 {% trans "VIEW_TABLE" %}
+                    </button>
+                </div>
             </div>
             <button class="btn-edit" 
                     hx-get="{% url 'travel:trip_edit' active_trip.id %}"
@@ -20,9 +33,12 @@
         </div>
     </div>
 
-    <div class="timeline">
-        {% for day in active_trip.days.all %}
-        <div class="timeline-item">
+    {% if view_type == 'table' %}
+        {% include 'travel/partials/trip_table.html' %}
+    {% else %}
+        <div class="timeline">
+            {% for day in active_trip.days.all %}
+            <div class="timeline-item">
             <div class="timeline-dot"></div>
             <div class="premium-card">
                 <div style="display: flex; justify-content: space-between; align-items: baseline;">
@@ -68,7 +84,8 @@
             </p>
         </div>
         {% endfor %}
-    </div>
+        </div>
+    {% endif %}
     {% else %}
     <div class="premium-card" style="text-align: center; padding: 60px;">
         <h2>

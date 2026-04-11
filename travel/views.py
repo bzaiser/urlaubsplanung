@@ -32,7 +32,11 @@ class TripDashboardView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Always pick the most recently edited or first trip as active for now
+        # Handle view type (timeline/table)
+        view_type = self.request.GET.get('view', self.request.session.get('view_type', 'timeline'))
+        self.request.session['view_type'] = view_type
+        
+        context['view_type'] = view_type
         context['active_trip'] = Trip.objects.first() 
         return context
 

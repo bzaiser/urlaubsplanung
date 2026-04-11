@@ -19,7 +19,31 @@ msgid "TRAVEL_HUB_NAME"
 msgstr "Travel Hub"
 
 msgid "DASHBOARD_TITLE"
-msgstr "Dashboard"
+msgstr "Reise-Zentrale"
+
+msgid "VIEW_TIMELINE"
+msgstr "Zeitplan"
+
+msgid "VIEW_TABLE"
+msgstr "Tabellen-Ansicht"
+
+msgid "COL_DATE"
+msgstr "Datum"
+
+msgid "COL_LOCATION"
+msgstr "Ort"
+
+msgid "COL_HOTEL"
+msgstr "Unterkunft / Hotel"
+
+msgid "COL_TRANSPORT"
+msgstr "Flug / Transport"
+
+msgid "COL_STATUS"
+msgstr "Status"
+
+msgid "MISSING_HOTEL"
+msgstr "Noch kein Hotel gebucht"
 
 msgid "NO_ENTRIES_YET"
 msgstr "Noch keine Einträge für diesen Tag."
