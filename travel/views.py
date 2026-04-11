@@ -205,3 +205,11 @@ def day_bulk_edit(request):
             })
             
     return HttpResponse(status=400)
+def day_inline_update(request, pk):
+    """Updates the location of a day via HTMX."""
+    day = get_object_or_404(Day, pk=pk)
+    location = request.POST.get('location')
+    if location:
+        day.location = location
+        day.save()
+    return HttpResponse(day.location)

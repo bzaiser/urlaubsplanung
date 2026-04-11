@@ -13,5 +13,6 @@ urlpatterns = [
     path('event/<int:pk>/inline-update/', event_inline_update, name='event_inline_update'),
     path('day/<int:day_id>/quick-add/', event_quick_add, name='event_quick_add'),
     path('day/<int:day_id>/inline-create/', event_inline_create, name='event_inline_create'),
+    path('day/<int:pk>/inline-update/', day_inline_update, name='day_inline_update'),
     path('day/bulk-edit/', day_bulk_edit, name='day_bulk_edit'),
 ]
