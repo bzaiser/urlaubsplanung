@@ -79,7 +79,30 @@
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', initPickers);
+
+        // Feedback Toast Logic
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.xhr.status >= 200 && evt.detail.xhr.status < 300) {
+                showToast("✓ Gespeichert");
+            }
+        });
+
+        function showToast(message) {
+            let toast = document.getElementById('status-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'status-toast';
+                toast.style = 'position: fixed; top: 20px; right: 20px; background: var(--accent-teal); color: white; padding: 10px 20px; border-radius: 8px; z-index: 9999; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transform: translateY(-100px); transition: transform 0.3s ease;';
+                document.body.appendChild(toast);
+            }
+            toast.innerText = message;
+            toast.style.transform = 'translateY(0)';
+            setTimeout(() => {
+                toast.style.transform = 'translateY(-100px)';
+            }, 2000);
+        }
     </script>
+
 
     {% endblock %}
 </body>
