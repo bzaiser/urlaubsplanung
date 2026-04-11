@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import TripDashboardView, trip_create, trip_edit, event_create, event_edit, event_delete, event_inline_update, event_quick_add
+from .views import TripDashboardView, trip_create, trip_edit, event_create, event_edit, event_delete, event_inline_update, event_quick_add, event_inline_create
 
 app_name = 'travel'
 
@@ -12,4 +12,5 @@ urlpatterns = [
     path('event/<int:pk>/delete/', event_delete, name='event_delete'),
     path('event/<int:pk>/inline-update/', event_inline_update, name='event_inline_update'),
     path('day/<int:day_id>/quick-add/', event_quick_add, name='event_quick_add'),
+    path('day/<int:day_id>/inline-create/', event_inline_create, name='event_inline_create'),
 ]

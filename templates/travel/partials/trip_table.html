@@ -21,48 +21,47 @@
                            📍 {{ station.location }} ({{ station.nights }} {% if station.nights > 1 %}{% trans "LABEL_NIGHTS" %}{% else %}{% trans "LABEL_NIGHT" %}{% endif %})
                         </td>
                     </tr>
-                    
-                    {% for day in station.days %}
+                                      {% for day in station.days %}
                     <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-                        <td style="padding: 10px; white-space: nowrap;">
+                        <td style="padding: 10px; white-space: nowrap; width: 80px;">
                             <span style="display: block; font-weight: 600;">{{ day.date|date:"d. M" }}</span>
                             <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ day.date|date:"l" }}</span>
                         </td>
-                        <td style="padding: 8px;">
+                        <td style="padding: 8px; width: 140px;">
                             <input type="text" value="{{ day.location }}" 
                                    style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px;"
                                    onfocus="this.style.border='1px solid var(--accent-gold)'"
                                    onblur="this.style.border='1px transparent solid'">
                         </td>
-                        <td style="padding: 8px;">
+                        <td style="padding: 8px; width: 180px;">
                             {% if day.hotel %}
                                 <input type="text" value="{{ day.hotel.title }}"
                                        hx-post="{% url 'travel:event_inline_update' day.hotel.id %}"
-                                       hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-target="#dashboard-refresh"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-swap="none"
                                        style="background: none; border: none; color: var(--text-primary); width: 100%; padding: 4px;">
                             {% else %}
-                                <button hx-get="{% url 'travel:event_create' day.id %}" hx-target="#modal-container" 
-                                        style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; border-radius: 4px; cursor: pointer;">
-                                    + {% trans "ADD_HOTEL" %}
-                                </button>
+                                <input type="text" placeholder="{% trans 'ADD_HOTEL' %}"
+                                       hx-post="{% url 'travel:event_inline_create' day.id %}"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "hotel_title"}' hx-target="#dashboard-refresh"
+                                       style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; border-radius: 4px;">
                             {% endif %}
                         </td>
-                        <td style="padding: 8px;">
+                        <td style="padding: 8px; width: 180px;">
                             {% if day.flight %}
                                 <input type="text" value="{{ day.flight.title }}"
                                        hx-post="{% url 'travel:event_inline_update' day.flight.id %}"
-                                       hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-target="#dashboard-refresh"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-swap="none"
                                        style="background: none; border: none; color: var(--accent-teal); width: 100%; padding: 4px;">
                             {% elif day.transport %}
                                 <input type="text" value="{{ day.transport.title }}"
                                        hx-post="{% url 'travel:event_inline_update' day.transport.id %}"
-                                       hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-target="#dashboard-refresh"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "title"}' hx-swap="none"
                                        style="background: none; border: none; color: var(--text-primary); width: 100%; padding: 4px;">
                             {% else %}
-                                <button hx-get="{% url 'travel:event_create' day.id %}" hx-target="#modal-container"
-                                        style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; border-radius: 4px; cursor: pointer;">
-                                    + {% trans "ADD_TRANSPORT" %}
-                                </button>
+                                <input type="text" placeholder="{% trans 'ADD_TRANSPORT' %}"
+                                       hx-post="{% url 'travel:event_inline_create' day.id %}"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "transport_title"}' hx-target="#dashboard-refresh"
+                                       style="background: none; border: 1px dashed var(--glass-border); color: var(--text-secondary); width: 100%; padding: 4px; border-radius: 4px;">
                             {% endif %}
                         </td>
                         <td style="padding: 8px;">
@@ -70,7 +69,7 @@
                             {% if first_event %}
                                 <input type="text" value="{{ first_event.detail_info }}" placeholder="---"
                                        hx-post="{% url 'travel:event_inline_update' first_event.id %}"
-                                       hx-trigger="change" name="value" hx-vals='{"field": "detail_info"}' hx-target="#dashboard-refresh"
+                                       hx-trigger="change" name="value" hx-vals='{"field": "detail_info"}' hx-swap="none"
                                        style="background: none; border: none; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.8rem;">
                             {% endif %}
                             {% endwith %}
@@ -81,7 +80,7 @@
                                 <div style="display: flex; align-items: center; gap: 5px;">
                                     <input type="text" value="{{ first_event.booking_via }}" placeholder="Booking, GYG..."
                                            hx-post="{% url 'travel:event_inline_update' first_event.id %}"
-                                           hx-trigger="change" name="value" hx-vals='{"field": "booking_via"}' hx-target="#dashboard-refresh"
+                                           hx-trigger="change" name="value" hx-vals='{"field": "booking_via"}' hx-swap="none"
                                            style="background: none; border: none; color: var(--accent-gold); width: 100%; padding: 4px; font-size: 0.8rem;">
                                     {% if first_event.booking_url %}
                                         <a href="{{ first_event.booking_url }}" target="_blank" title="Link öffnen" style="color: var(--accent-gold); text-decoration: none; font-size: 0.9rem;">🔗</a>
@@ -93,7 +92,7 @@
                             {% endif %}
                             {% endwith %}
                         </td>
-                        <td style="padding: 10px; text-align: center;">
+                        <td style="padding: 10px; text-align: center; width: 60px;">
                             {% if day.hotel.is_paid or day.flight.is_paid or day.transport.is_paid %}
                                 <span style="color: var(--accent-teal);">✓</span>
                             {% else %}
@@ -120,6 +119,6 @@
         </table>
     </div>
 </div>
-        </table>
+e>
     </div>
 </div>
