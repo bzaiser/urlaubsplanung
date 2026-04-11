@@ -48,29 +48,33 @@
                             </td>
                             {% with main_event=day.flight|default:day.transport %}
                             <td style="padding: 6px;">
-                                <input type="text" value="{{ main_event.time|time:'H:i'|default:'' }}" 
+                                <input type="text" value="{% if main_event %}{{ main_event.time|time:'H:i' }}{% endif %}" 
                                        {% if main_event %}hx-post="{% url 'travel:event_inline_update' main_event.id %}"{% else %}hx-post="{% url 'travel:event_quick_add' day.id %}?type=TRANSPORT"{% endif %} 
                                        hx-trigger="change" name="{% if main_event %}value{% else %}time{% endif %}" 
                                        {% if main_event %}hx-vals='{"field": "time"}'{% endif %}
                                        placeholder="--:--" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; text-align: center;">
                             </td>
                             <td style="padding: 6px;">
-                                <input type="text" value="{{ main_event.end_time|time:'H:i'|default:'' }}" 
+                                <input type="text" value="{% if main_event %}{{ main_event.end_time|time:'H:i' }}{% endif %}" 
                                        {% if main_event %}hx-post="{% url 'travel:event_inline_update' main_event.id %}" hx-vals='{"field": "end_time"}' hx-trigger="change" name="value"{% endif %}
                                        placeholder="--:--" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; text-align: center;">
                             </td>
                             <td style="padding: 8px; text-align: center; color: var(--text-secondary);">
-                                {{ main_event.duration|default:"--" }}
+                                {% if main_event %}{{ main_event.duration|default:"--" }}{% else %}--{% endif %}
                             </td>
                             <td style="padding: 6px;">
-                                <input type="text" value="{{ day.hotel.title|default:'' }}" 
-                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "title"}' hx-trigger="change" name="value"{% else %}hx-post="{% url 'travel:event_quick_add' day.id %}?type=HOTEL" hx-trigger="change" name="title"{% endif %}
+                                {% with hotel=day.hotel %}
+                                <input type="text" value="{% if hotel %}{{ hotel.title }}{% endif %}" 
+                                       {% if hotel %}hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "title"}' hx-trigger="change" name="value"{% else %}hx-post="{% url 'travel:event_quick_add' day.id %}?type=HOTEL" hx-trigger="change" name="title"{% endif %}
                                        placeholder="Unterkunft..." style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px;">
+                                {% endwith %}
                             </td>
                             <td style="padding: 6px;">
-                                <input type="text" value="{{ main_event.meals_info|default:day.hotel.meals_info|default:'' }}" 
-                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "meals_info"}' hx-trigger="change" name="value"{% endif %}
+                                {% with hotel=day.hotel %}
+                                <input type="text" value="{% if main_event %}{{ main_event.meals_info }}{% elif hotel %}{{ hotel.meals_info }}{% endif %}" 
+                                       {% if hotel %}hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "meals_info"}' hx-trigger="change" name="value"{% endif %}
                                        placeholder="Essen..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
+                                {% endwith %}
                             </td>
                             <td style="padding: 6px;">
                                 {% with hotel=day.hotel %}{% if hotel %}
@@ -118,9 +122,11 @@
                                 {% endif %}{% endwith %}
                             </td>
                             <td style="padding: 8px; text-align: center;">
-                                <input type="checkbox" {% if day.hotel.is_paid %}checked{% endif %} 
-                                       {% if day.hotel %}hx-post="{% url 'travel:event_inline_update' day.hotel.id %}" hx-vals='{"field": "is_paid"}' hx-trigger="change" name="value" value="true"{% endif %}
+                                {% with hotel=day.hotel %}
+                                <input type="checkbox" {% if hotel.is_paid %}checked{% endif %} 
+                                       {% if hotel %}hx-post="{% url 'travel:event_inline_update' hotel.id %}" hx-vals='{"field": "is_paid"}' hx-trigger="change" name="value" value="true"{% endif %}
                                        style="cursor: pointer;">
+                                {% endwith %}
                             </td>
                             {% endwith %}
                         </tr>
