@@ -1,3 +1,4 @@
+{% load i18n %}{% load static %}
 <form id="bulk-edit-form" hx-post="{% url 'travel:day_bulk_edit' %}" hx-target="#dashboard-refresh" hx-on::after-request="this.reset(); updateSelection();">
     {% csrf_token %}
     <div class="premium-card" style="padding: 0; overflow: hidden; position: relative;">
