@@ -60,3 +60,46 @@ def trip_edit(request, pk):
         form = TripForm(instance=trip)
     
     return render(request, 'travel/partials/trip_form.html', {'form': form})
+
+# Event Management Views
+from .models import Event
+
+def event_create(request, day_id):
+    day = get_object_or_404(Day, pk=day_id)
+    if request.method == 'POST':
+        form = EventForm(request.POST, request.FILES)
+        if form.is_valid():
+            event = form.save(commit=False)
+            event.day = day
+            event.save()
+            return redirect('travel:dashboard')
+    else:
+        form = EventForm()
+    
+    return render(request, 'travel/partials/event_form.html', {
+        'form': form,
+        'day': day
+    })
+
+def event_edit(request, pk):
+    event = get_object_or_404(Event, pk=pk)
+    if request.method == 'POST':
+        form = EventForm(request.POST, request.FILES, instance=event)
+        if form.is_valid():
+            form.save()
+            return redirect('travel:dashboard')
+    else:
+        form = EventForm(instance=event)
+    
+    return render(request, 'travel/partials/event_form.html', {
+        'form': form,
+        'event': event,
+        'day': event.day
+    })
+
+def event_delete(request, pk):
+    event = get_object_or_404(Event, pk=pk)
+    if request.method == 'POST':
+        event.delete()
+        return redirect('travel:dashboard')
+    return HttpResponse(status=405)

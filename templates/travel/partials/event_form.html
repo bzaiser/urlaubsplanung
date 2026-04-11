@@ -1,0 +1,35 @@
+{% load i18n %}
+<div class="premium-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">
+            {% if form.instance.id %}{% trans "EDIT_EVENT" %}{% else %}{% trans "ADD_EVENT" %}{% endif %} 
+            ({{ day.date|date:"d. M" }})
+        </h2>
+        <button type="button" onclick="closeModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;">&times;</button>
+    </div>
+    
+    <form hx-post="{{ request.path }}" 
+          hx-target="#main-content" 
+          hx-on::after-request="if(event.detail.successful) closeModal()"
+          enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="btn-primary" style="flex: 2;">
+                {% trans "BTN_SAVE" %}
+            </button>
+            {% if form.instance.id %}
+            <button type="button" 
+                    hx-post="{% url 'travel:event_delete' form.instance.id %}"
+                    hx-confirm="{% trans 'CONFIRM_DELETE' %}"
+                    hx-target="#main-content"
+                    hx-on::after-request="if(event.detail.successful) closeModal()"
+                    class="btn-secondary" 
+                    style="flex: 1; background: rgba(255, 69, 58, 0.1); color: #ff453a; border: 1px solid rgba(255, 69, 58, 0.3); border-radius: 8px;">
+                {% trans "BTN_DELETE" %}
+            </button>
+            {% endif %}
+        </div>
+    </form>
+</div>

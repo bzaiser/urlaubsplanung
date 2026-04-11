@@ -29,11 +29,20 @@
                     <h2 style="margin: 0; font-size: 1.1rem;">
                         {{ day.date|date:"d. M" }} - {{ day.location }}
                     </h2>
+                    <button class="btn-add-mini" 
+                            hx-get="{% url 'travel:event_create' day.id %}"
+                            hx-target="#modal-container"
+                            style="background: rgba(197, 160, 89, 0.1); color: var(--accent-gold); border: 1px solid rgba(197, 160, 89, 0.3); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">
+                        + {% trans "BTN_ADD" %}
+                    </button>
                 </div>
                 
                 <div class="events" style="margin-top: 15px;">
                     {% for event in day.events.all %}
-                    <div class="event-row" style="display: flex; gap: 10px; margin-bottom: 8px; font-size: 0.9rem;">
+                    <div class="event-row" 
+                         hx-get="{% url 'travel:event_edit' event.id %}"
+                         hx-target="#modal-container"
+                         style="display: flex; gap: 10px; margin-bottom: 8px; font-size: 0.9rem; cursor: pointer; padding: 5px; border-radius: 5px; transition: background 0.2s;">
                         <span style="color: var(--accent-gold); min-width: 45px;">
                             {{ event.time|time:"H:i" }}
                         </span>

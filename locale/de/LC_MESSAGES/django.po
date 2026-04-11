@@ -50,3 +50,18 @@ msgstr "Speichern"
 
 msgid "BTN_EDIT"
 msgstr "Bearbeiten"
+
+msgid "EDIT_EVENT"
+msgstr "Aktivität bearbeiten"
+
+msgid "ADD_EVENT"
+msgstr "Aktivität hinzufügen"
+
+msgid "BTN_DELETE"
+msgstr "Löschen"
+
+msgid "CONFIRM_DELETE"
+msgstr "Möchtest du diesen Eintrag wirklich löschen?"
+
+msgid "BTN_ADD"
+msgstr "Hinzufügen"
