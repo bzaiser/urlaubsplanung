@@ -42,8 +42,11 @@ msgstr "Flug / Transport"
 msgid "COL_STATUS"
 msgstr "Status"
 
-msgid "MISSING_HOTEL"
-msgstr "Noch kein Hotel gebucht"
+msgid "LABEL_NIGHT"
+msgstr "Nacht"
+
+msgid "LABEL_NIGHTS"
+msgstr "Nächte"
 
 msgid "NO_ENTRIES_YET"
 msgstr "Noch keine Einträge für diesen Tag."

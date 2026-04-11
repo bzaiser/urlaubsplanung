@@ -37,53 +37,53 @@
         {% include 'travel/partials/trip_table.html' %}
     {% else %}
         <div class="timeline">
-            {% for day in active_trip.days.all %}
-            <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="premium-card">
-                <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                    <h2 style="margin: 0; font-size: 1.1rem;">
-                        {{ day.date|date:"d. M" }} - {{ day.location }}
-                    </h2>
-                    <button class="btn-add-mini" 
-                            hx-get="{% url 'travel:event_create' day.id %}"
-                            hx-target="#modal-container"
-                            style="background: rgba(197, 160, 89, 0.1); color: var(--accent-gold); border: 1px solid rgba(197, 160, 89, 0.3); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">
-                        + {% trans "BTN_ADD" %}
-                    </button>
+            {% for station in active_trip.grouped_stations %}
+                <div class="station-header" style="padding: 10px 15px; margin: 20px 0 10px 0; background: rgba(197, 160, 89, 0.1); border-left: 3px solid var(--accent-gold); border-radius: 0 8px 8px 0; color: var(--accent-gold); font-weight: 600; font-size: 0.9rem;">
+                    📍 {{ station.location }} ({{ station.nights }} {% if station.nights > 1 %}{% trans "LABEL_NIGHTS" %}{% else %}{% trans "LABEL_NIGHT" %}{% endif %})
                 </div>
                 
-                <div class="events" style="margin-top: 15px;">
-                    {% for event in day.events.all %}
-                    <div class="event-row" 
-                         hx-get="{% url 'travel:event_edit' event.id %}"
-                         hx-target="#modal-container"
-                         style="display: flex; gap: 10px; margin-bottom: 8px; font-size: 0.9rem; cursor: pointer; padding: 5px; border-radius: 5px; transition: background 0.2s;">
-                        <span style="color: var(--accent-gold); min-width: 45px;">
-                            {{ event.time|time:"H:i" }}
-                        </span>
-                        <span>
-                            {{ event.title }}
-                        </span>
-                        {% if event.is_paid %}
-                        <span style="color: var(--accent-teal);">✓</span>
-                        {% endif %}
+                {% for day in station.days %}
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="premium-card">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <h2 style="margin: 0; font-size: 1.1rem;">
+                                {{ day.date|date:"d. M" }} - {{ day.location }}
+                            </h2>
+                            <button class="btn-add-mini" 
+                                    hx-get="{% url 'travel:event_create' day.id %}"
+                                    hx-target="#modal-container"
+                                    style="background: rgba(197, 160, 89, 0.1); color: var(--accent-gold); border: 1px solid rgba(197, 160, 89, 0.3); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">
+                                + {% trans "BTN_ADD" %}
+                            </button>
+                        </div>
+                        
+                        <div class="events" style="margin-top: 15px;">
+                            {% for event in day.events.all %}
+                            <div class="event-row" 
+                                 hx-get="{% url 'travel:event_edit' event.id %}"
+                                 hx-target="#modal-container"
+                                 style="display: flex; gap: 10px; margin-bottom: 8px; font-size: 0.9rem; cursor: pointer; padding: 5px; border-radius: 5px; transition: background 0.2s;">
+                                <span style="color: var(--accent-gold); min-width: 45px;">
+                                    {{ event.time|time:"H:i" }}
+                                </span>
+                                <span>
+                                    {{ event.title }}
+                                </span>
+                                {% if event.is_paid %}
+                                <span style="color: var(--accent-teal);">✓</span>
+                                {% endif %}
+                            </div>
+                            {% empty %}
+                            <p style="color: var(--text-secondary); font-size: 0.8rem; font-style: italic;">
+                                {% trans "NO_ENTRIES_YET" %}
+                            </p>
+                            {% endfor %}
+                        </div>
                     </div>
-                    {% empty %}
-                    <p style="color: var(--text-secondary); font-size: 0.8rem; font-style: italic;">
-                        {% trans "NO_ENTRIES_YET" %}
-                    </p>
-                    {% endfor %}
                 </div>
-            </div>
-        </div>
-        {% empty %}
-        <div class="premium-card" style="text-align: center; padding: 40px;">
-            <p style="color: var(--text-secondary);">
-                {% trans "NO_DAYS_PLANNED" %}
-            </p>
-        </div>
-        {% endfor %}
+                {% endfor %}
+            {% endfor %}
         </div>
     {% endif %}
     {% else %}

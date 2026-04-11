@@ -12,40 +12,49 @@
                 </tr>
             </thead>
             <tbody>
-                {% for day in active_trip.days.all %}
-                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='none'">
-                    <td style="padding: 15px; white-space: nowrap;">
-                        <span style="display: block; font-weight: 600;">{{ day.date|date:"d. M" }}</span>
-                        <span style="font-size: 0.75rem; color: var(--text-secondary);">{{ day.date|date:"l" }}</span>
-                    </td>
-                    <td style="padding: 15px;">
-                        {{ day.location }}
-                    </td>
-                    <td style="padding: 15px;">
-                        {% if day.hotel %}
-                            <span style="color: var(--text-primary);">{{ day.hotel.title }}</span>
-                        {% else %}
-                            <span style="color: rgba(255, 69, 58, 0.5); font-style: italic; font-size: 0.8rem;">
-                                {% trans "MISSING_HOTEL" %}
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 15px;">
-                        {% if day.flight %}
-                            <div style="color: var(--accent-teal); font-size: 0.8rem;">✈ {{ day.flight.title }}</div>
-                        {% endif %}
-                        {% if day.transport %}
-                            <div style="color: var(--text-primary); font-size: 0.8rem;">🚗 {{ day.transport.title }}</div>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 15px; text-align: center;">
-                        {% if day.hotel.is_paid or day.flight.is_paid %}
-                            <span style="color: var(--accent-teal);">✓</span>
-                        {% else %}
-                            <span style="color: var(--text-secondary);">--</span>
-                        {% endif %}
-                    </td>
-                </tr>
+                {% for station in active_trip.grouped_stations %}
+                    <!-- Station Row -->
+                    <tr style="background: rgba(197, 160, 89, 0.05);">
+                        <td colspan="5" style="padding: 10px 15px; font-weight: 600; color: var(--accent-gold); border-bottom: 1px solid var(--glass-border);">
+                           📍 {{ station.location }} ({{ station.nights }} {% if station.nights > 1 %}{% trans "LABEL_NIGHTS" %}{% else %}{% trans "LABEL_NIGHT" %}{% endif %})
+                        </td>
+                    </tr>
+                    
+                    {% for day in station.days %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='none'">
+                        <td style="padding: 15px; white-space: nowrap; padding-left: 30px;">
+                            <span style="display: block; font-weight: 600;">{{ day.date|date:"d. M" }}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">{{ day.date|date:"l" }}</span>
+                        </td>
+                        <td style="padding: 15px;">
+                            {{ day.location }}
+                        </td>
+                        <td style="padding: 15px;">
+                            {% if day.hotel %}
+                                <span style="color: var(--text-primary);">{{ day.hotel.title }}</span>
+                            {% else %}
+                                <span style="color: rgba(255, 69, 58, 0.5); font-style: italic; font-size: 0.8rem;">
+                                    {% trans "MISSING_HOTEL" %}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 15px;">
+                            {% if day.flight %}
+                                <div style="color: var(--accent-teal); font-size: 0.8rem;">✈ {{ day.flight.title }}</div>
+                            {% endif %}
+                            {% if day.transport %}
+                                <div style="color: var(--text-primary); font-size: 0.8rem;">🚗 {{ day.transport.title }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 15px; text-align: center;">
+                            {% if day.hotel.is_paid or day.flight.is_paid %}
+                                <span style="color: var(--accent-teal);">✓</span>
+                            {% else %}
+                                <span style="color: var(--text-secondary);">--</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
                 {% endfor %}
             </tbody>
         </table>

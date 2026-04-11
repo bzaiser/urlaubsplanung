@@ -15,6 +15,34 @@ class Trip(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def grouped_stations(self):
+        """Groups consecutive days by location to form stations."""
+        stations = []
+        days = self.days.all().order_by('date')
+        if not days:
+            return []
+        
+        current_station = {
+            'location': days[0].location,
+            'days': [days[0]],
+            'nights': 1
+        }
+        
+        for day in days[1:]:
+            if day.location == current_station['location']:
+                current_station['days'].append(day)
+                current_station['nights'] += 1
+            else:
+                stations.append(current_station)
+                current_station = {
+                    'location': day.location,
+                    'days': [day],
+                    'nights': 1
+                }
+        stations.append(current_station)
+        return stations
+
 class Day(models.Model):
     trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="days")
     date = models.DateField(_("Datum"))
