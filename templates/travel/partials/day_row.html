@@ -9,16 +9,16 @@
         <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ day.date|date:"D" }}</span>
     </td>
     <td style="padding: 6px;">
-        <input type="text" value="{{ day.location }}" hx-post="{% url 'travel:day_inline_update' day.id %}" hx-trigger="change" hx-swap="none" name="location" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; outline: none;" onfocus="this.style.border='1px solid var(--accent-gold)'" onblur="this.style.border='1px transparent solid'">
+        <input type="text" value="{{ day.location }}" hx-post="{% url 'travel:day_inline_update' day.id %}" hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="location" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; outline: none;" onfocus="this.style.border='1px solid var(--accent-gold)'" onblur="this.style.border='1px transparent solid'">
     </td>
     <td style="padding: 6px;">
         <input type="text" value="{% if main_event %}{{ main_event.time|time:'H:i' }}{% endif %}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "time", "type": "TRANSPORT"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "time", "type": "TRANSPORT"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                placeholder="--:--" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; text-align: center;">
     </td>
     <td style="padding: 6px;">
         <input type="text" value="{% if main_event %}{{ main_event.end_time|time:'H:i' }}{% endif %}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "end_time", "type": "TRANSPORT"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "end_time", "type": "TRANSPORT"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                placeholder="--:--" style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px; text-align: center;">
     </td>
     <td id="duration-{{ day.id }}" style="padding: 8px; text-align: center; color: var(--text-secondary);">
@@ -26,51 +26,51 @@
     </td>
     <td style="padding: 6px;">
         <input type="text" value="{% if main_event %}{{ main_event.detail_info|default:'' }}{% endif %}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "detail_info", "type": "TRANSPORT"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "detail_info", "type": "TRANSPORT"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                placeholder="Flug-Nr..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
     </td>
     <td style="padding: 6px;">
         {% with hotel=day.hotel %}
         <input type="text" value="{% if hotel %}{{ hotel.title }}{% endif %}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "hotel_title", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "hotel_title", "type": "HOTEL"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                placeholder="Unterkunft..." style="background: none; border: 1px transparent solid; color: var(--text-primary); width: 100%; padding: 4px;">
         {% endwith %}
     </td>
     <td style="padding: 6px;">
         {% with hotel=day.hotel %}
         <input type="text" value="{% if main_event %}{{ main_event.meals_info }}{% elif hotel %}{{ hotel.meals_info }}{% endif %}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "meals_info", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "meals_info", "type": "HOTEL"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                placeholder="Essen..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
         {% endwith %}
     </td>
     <td style="padding: 6px;">
         <input type="number" step="0.01" value="{{ day.hotel.cost_booked|default:'0.00' }}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_booked", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_booked", "type": "HOTEL"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                style="background: none; border: 1px transparent solid; color: var(--accent-gold); width: 100%; padding: 4px; text-align: right;">
     </td>
     <td style="padding: 6px;">
         <input type="number" step="0.01" value="{{ day.hotel.cost_estimated|default:'0.00' }}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_estimated", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_estimated", "type": "HOTEL"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; text-align: right;">
     </td>
     <td style="padding: 6px;">
         <input type="number" step="0.01" value="{{ day.hotel.cost_per_person|default:'0.00' }}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_per_person", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_per_person", "type": "HOTEL"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; text-align: right;">
     </td>
     <td style="padding: 6px;">
         <input type="number" step="0.01" value="{{ day.hotel.cost_total|default:'0.00' }}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_total", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "cost_total", "type": "HOTEL"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                style="background: none; border: 1px transparent solid; color: var(--accent-gold); width: 100%; padding: 4px; text-align: right; font-weight: 600;">
     </td>
     <td style="padding: 6px;">
         <input type="text" value="{% with hotel=day.hotel %}{% if hotel %}{{ hotel.activities_info }}{% else %}{{ day.events.first.activities_info }}{% endif %}{% endwith %}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "activities_info", "type": "ACTIVITY"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "activities_info", "type": "ACTIVITY"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                placeholder="Ausflüge..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
     </td>
     <td style="padding: 6px;">
         <input type="text" value="{% with hotel=day.hotel target=hotel|default:day.events.first %}{{ target.booking_via|default:'' }}{% endwith %}" 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "booking_via", "type": "HOTEL"}' hx-trigger="change" name="value" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "booking_via", "type": "HOTEL"}' hx-trigger="change delay:200ms" hx-swap="none" hx-sync="this:replace" name="value"
                placeholder="Booking..." style="background: none; border: 1px transparent solid; color: var(--accent-teal); width: 100%; padding: 4px; font-size: 0.75rem;">
     </td>
     <td style="padding: 4px; text-align: center;">
@@ -86,7 +86,7 @@
     </td>
     <td style="padding: 8px; text-align: center;">
         <input type="checkbox" {% if day.hotel.is_paid %}checked{% endif %} 
-               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "is_paid", "type": "HOTEL"}' hx-trigger="change" name="value" value="true" hx-swap="none"
+               hx-post="{% url 'travel:event_inline_stable_update' day.id %}" hx-vals='{"field": "is_paid", "type": "HOTEL"}' hx-trigger="change" name="value" value="true" hx-swap="none" hx-sync="this:replace"
                style="cursor: pointer;">
     </td>
 </tr>

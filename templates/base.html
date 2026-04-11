@@ -79,12 +79,8 @@
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', initPickers);
-
-        // Re-initialize after HTMX content swap
-        document.body.addEventListener('htmx:afterOnLoad', (e) => {
-            initPickers();
-        });
     </script>
+
     {% endblock %}
 </body>
 </html>
