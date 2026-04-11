@@ -12,23 +12,26 @@
                         <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 60px;">{% trans "COL_DAY" %}</th>
                         <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 100px;">{% trans "COL_DATE" %}</th>
                         <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 160px;">{% trans "COL_LOCATION" %}</th>
-                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 80px;">Abfahrt</th>
-                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 80px;">Ankunft</th>
-                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 100px;">Dauer</th>
-                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 220px;">Hotel / Unterkunft</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 75px;">Abfahrt</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 75px;">Ankunft</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 85px;">Dauer</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 180px;">Flug-Nr / Info</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 200px;">Hotel / Unterkunft</th>
                         <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 160px;">Essen</th>
-                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 120px;">Preis geb.</th>
-                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 120px;">Schätzung</th>
-                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 100px;">Pro Nase</th>
-                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 120px;">Summe</th>
-                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 200px;">Ausflüge & Sonstiges</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 110px;">Preis geb.</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 110px;">Schätzung</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 90px;">Pro Nase</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 110px;">Summe</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 180px;">Ausflüge</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 150px;">Plattform</th>
+                        <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 80px; text-align: center;">Beleg</th>
                         <th style="padding: 10px; border-bottom: 1px solid var(--glass-border); width: 60px; text-align: center;">Bez.</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for station in active_trip.grouped_stations %}
                         <tr style="background: rgba(197, 160, 89, 0.05);">
-                            <td colspan="15" style="padding: 10px 15px; font-weight: 600; color: var(--accent-gold); border-bottom: 1px solid var(--glass-border);">
+                            <td colspan="17" style="padding: 10px 15px; font-weight: 600; color: var(--accent-gold); border-bottom: 1px solid var(--glass-border);">
                                📍 {{ station.location }} ({{ station.nights }} {% if station.nights > 1 %}{% trans "LABEL_NIGHTS" %}{% else %}{% trans "LABEL_NIGHT" %}{% endif %})
                             </td>
                         </tr>
@@ -61,6 +64,15 @@
                             </td>
                             <td style="padding: 8px; text-align: center; color: var(--text-secondary);">
                                 {% if main_event %}{{ main_event.duration|default:"--" }}{% else %}--{% endif %}
+                            </td>
+                            <td style="padding: 6px;">
+                                {% if main_event %}
+                                <input type="text" value="{{ main_event.detail_info|default:'' }}" 
+                                       hx-post="{% url 'travel:event_inline_update' main_event.id %}" hx-vals='{"field": "detail_info"}' hx-trigger="change" name="value"
+                                       placeholder="Flug-Nr, Terminal..." style="background: none; border: 1px transparent solid; color: var(--text-secondary); width: 100%; padding: 4px; font-size: 0.75rem;">
+                                {% else %}
+                                <span style="font-size: 0.7rem; color: var(--text-secondary); opacity: 0.3;">--</span>
+                                {% endif %}
                             </td>
                             <td style="padding: 6px;">
                                 {% with hotel=day.hotel %}
@@ -120,6 +132,33 @@
                                 {% else %}
                                 <span style="font-size: 0.7rem; color: var(--text-secondary); opacity: 0.3;">--</span>
                                 {% endif %}{% endwith %}
+                            </td>
+                            <td style="padding: 6px;">
+                                {% with hotel=day.hotel activity=day.events.first %}
+                                {% with target=hotel|default:activity %}
+                                {% if target %}
+                                <input type="text" value="{{ target.booking_via|default:'' }}" 
+                                       hx-post="{% url 'travel:event_inline_update' target.id %}" hx-vals='{"field": "booking_via"}' hx-trigger="change" name="value"
+                                       placeholder="Booking, GYG..." style="background: none; border: 1px transparent solid; color: var(--accent-teal); width: 100%; padding: 4px; font-size: 0.75rem;">
+                                {% else %}
+                                <span style="font-size: 0.7rem; color: var(--text-secondary); opacity: 0.3;">--</span>
+                                {% endif %}{% endwith %}{% endwith %}
+                            </td>
+                            <td style="padding: 4px; text-align: center;">
+                                {% with hotel=day.hotel activity=day.events.first %}
+                                {% with target=hotel|default:activity %}
+                                <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+                                    {% if target.booking_url %}
+                                        <a href="{{ target.booking_url }}" target="_blank" title="Link öffnen" style="text-decoration: none; font-size: 0.9rem;">🔗</a>
+                                    {% endif %}
+                                    {% if target.voucher %}
+                                        <a href="{{ target.voucher.url }}" target="_blank" title="Beleg öffnen" style="text-decoration: none; font-size: 0.9rem;">📄</a>
+                                    {% endif %}
+                                    {% if not target.booking_url and not target.voucher %}
+                                        <span style="opacity: 0.1;">--</span>
+                                    {% endif %}
+                                </div>
+                                {% endwith %}{% endwith %}
                             </td>
                             <td style="padding: 8px; text-align: center;">
                                 {% with hotel=day.hotel %}
