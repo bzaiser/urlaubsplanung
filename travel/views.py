@@ -531,6 +531,10 @@ def settings_modal(request):
     v2_fuel = get_setting('vehicle2_fuel_type', 'Benzin')
     v2_range = get_setting('vehicle2_range', '500')
 
+    # Fuel Prices
+    diesel_price = get_setting('diesel_price', '1.60')
+    petrol_price = get_setting('petrol_price', '1.70')
+
     
     # User Profile & Participants
     home_city = get_setting('user_home_city', 'München')
@@ -554,7 +558,7 @@ def settings_modal(request):
                 'vehicle1_name', 'vehicle1_consumption', 'vehicle1_fuel_type', 'vehicle1_weight', 'vehicle1_range',
                 'vehicle2_name', 'vehicle2_consumption', 'vehicle2_fuel_type', 'vehicle2_range',
                 'user_home_city', 'user_home_address', 'default_persons_count', 'default_persons_ages',
-                'ollama_model_name', 'ollama_url'
+                'ollama_model_name', 'ollama_url', 'diesel_price', 'petrol_price'
             ]:
                 val = request.POST.get(k, '').strip()
                 GlobalSetting.objects.update_or_create(key=k, defaults={'value': val})
@@ -597,6 +601,7 @@ def settings_modal(request):
 
         'default_persons_count': def_p_count, 'default_persons_ages': def_p_ages,
         'ollama_model_name': ollama_model, 'ollama_url': ollama_url,
+        'diesel_price': diesel_price, 'petrol_price': petrol_price,
     })
 
 

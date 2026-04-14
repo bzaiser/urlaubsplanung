@@ -77,7 +77,7 @@ class Event(models.Model):
         ('NONE', _('---')),
         ('FLIGHT', _('✈️ Flug')),
         ('HOTEL', _('🏨 Hotel')),
-        ('CAMPING', _('⛺ Camping')),
+        ('CAMPING', _('⛺ Campingplatz')),
         ('PITCH', _('🚐📍 Stellplatz')),
         ('BUNGALOW', _('🏡 Bungalow')),
         ('CAMPER', _('🚐 Wohnmobil')),

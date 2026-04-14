@@ -197,8 +197,9 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "12. LOGISTIK: Bei JEDEM Transport-Event MUSS ein Feld 'distance_km' (als Zahl) und 'end_time' (Ankunftszeit als HH:MM) vorhanden sein.\n"
         "13. LOGISTIK: Bei JEDER Aktivität MUSS ein Feld 'end_time' (Ende der Aktivität) vorhanden sein.\n"
         "14. LOGISTIK: Bei Flügen/Zügen MUSS ein separates Event für Anfahrt/Check-in (2-3h vorher) eingeplant werden.\n"
-        "15. UNTERKÜNFTE: Erstelle für JEDEN Aufenthalt NUR EIN EINZIGES EVENT (Check-in) am Ankunftstag. Gib im Feld 'nights' die Anzahl der Nächte an. Das System erstellt den Check-out automatisch am Abreisetag.\n"
-        "16. FORMAT (AM ENDE DER ANTWORT ALS JSON):\n"
+        "16. UNTERKÜNFTE: Gruppiere ALLE festen Unterkünfte (Hotel, Bungalow, Airbnb, Ferienhaus) als 'HOTEL'. Nutze 'CAMPING' (Campingplatz) oder 'PITCH' (Stellplatz/Freies Stehen) NUR bei Wohnmobil-Touren.\n"
+        "17. GLOBAL_EXPENSES: Wenn absehbare Mehrkosten wie 'Maut', 'Vignette' oder 'Fähre-Pauschale' anfallen, gib diese in einer separaten Liste 'global_expenses' im JSON an.\n"
+        "18. FORMAT (AM ENDE DER ANTWORT ALS JSON):\n"
         "{\n"
         "  \"name\": \"Reise-Titel\",\n"
         "  \"assistant_reasoning\": \"Deine Begründung...\",\n"
@@ -209,6 +210,9 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "        {\"title\": \"Check-in Hotel X\", \"type\": \"HOTEL\", \"time\": \"14:00\", \"end_time\": \"11:00\", \"nights\": 3, \"cost_estimated\": 450}\n"
         "      ]\n"
         "    }\n"
+        "  ],\n"
+        "  \"global_expenses\": [\n"
+        "    {\"title\": \"Maut Frankreich\", \"type\": \"FEE\", \"cost\": 45, \"notes\": \"Pauschale für die gesamte Strecke\"}\n"
         "  ]\n"
         "}"
     )
@@ -227,21 +231,22 @@ def gemini_generate(preferences, start_date, days, start_location, v1, v2, perso
         "1. SPRACHE: Antworten müssen komplett auf DEUTSCH sein.\n"
         "2. DAUER: Erzeuge EXAKT " + str(days) + " Tage. Flexibilität: +-4 Tage Start, +-3 Tage Dauer erlaubt.\n"
         "3. LOGISTIK: Berücksichtige Startort " + start_location + ". Bei Flügen MUSS die Anfahrt als eigenes Event davor stehen.\n"
-        "4. UNTERKÜNFTE: Erstelle für jeden Aufenthalt ZWEI Events (Check-in, Check-out). Bevorzuge BUNGALOWS.\n"
-        "5. FAHRZEUGE: Nutze ein Wohnmobil NUR bei expliziten Womotouren oder Roadtrips (z.B. NZ, Island). Sonst bevorzuge TAXI, FERY, SCOOTER oder PKW.\n"
-        "6. TYPEN: FLIGHT, HOTEL, CAMPING, PITCH, BUNGALOW, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT.\n"
-        "7. LÜCKENLOS: JEDER der " + str(days) + " Tage muss befüllt sein (KEINE leeren Tage).\n"
+        "4. UNTERKÜNFTE: Erstelle für jeden Aufenthalt ZWEI Events (Check-in, Check-out). Gruppiere Bungalow/Airbnb/Ferienhaus als 'HOTEL'.\n"
+        "5. FAHRZEUGE: Nutze ein Wohnmobil NUR bei expliziten Womotouren oder Roadtrips (z.B. NZ, Island). Sonst bevorzuge TAXI, FERRY, SCOOTER oder PKW.\n"
+        "6. TYPEN: FLIGHT, HOTEL, CAMPING, PITCH, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT.\n"
+        "7. LÜCKENLOS: JEDER der " + str(days) + " Tage muss befüllt sein.\n"
         "8. KONSTANZ: Die 'location' muss während eines Aufenthalts (Check-in bis Check-out) an jedem Tag exakt gleich geschrieben sein.\n"
-        "9. DETAILS (PFLICHT): Fülle IMMER 'end_time' (Format HH:MM) und 'distance_km' (Ganze Zahl) aus.\n"
-        "10. RESTRUKTION: KEINE Google Maps Links, KEINE Bilder, KEINE Markdown-Medien.\n"
+        "9. DETAILS (PFLICHT): Fülle IMMER 'end_time' (HH:MM) und 'distance_km' (Zahl) aus.\n"
+        "10. MAUT/GEBÜHREN: Erfasse pauschale Kosten wie Maut/Vignetten in der Liste 'global_expenses'.\n"
         "11. FORMAT (NUR JSON):\n"
         "{\n"
         "  \"name\": \"Trip\",\n"
-        "  \"assistant_reasoning\": \"Begründung deiner Wahl...\",\n"
+        "  \"assistant_reasoning\": \"...\",\n"
         "  \"days\": [\n"
-        "    {\"offset\": 0, \"events\": [{\"title\": \"Check-in\", \"type\": \"BUNGALOW\", \"time\": \"14:00\", \"end_time\": \"18:00\", \"distance_km\": 150, \"cost_estimated\": 100}]},\n"
-        "    {\"offset\": 2, \"events\": [{\"title\": \"Check-out\", \"type\": \"BUNGALOW\", \"end_time\": \"11:00\"}]}\n"
-        "  ]\n"
+        "    {\"offset\": 0, \"events\": [{\"title\": \"Check-in Hotel\", \"type\": \"HOTEL\", \"time\": \"14:00\", \"end_time\": \"18:00\", \"distance_km\": 150, \"cost_estimated\": 100}]},\n"
+        "    {\"offset\": 2, \"events\": [{\"title\": \"Check-out\", \"type\": \"HOTEL\", \"end_time\": \"11:00\"}]}\n"
+        "  ],\n"
+        "  \"global_expenses\": [{\"title\": \"Maut\", \"type\": \"FEE\", \"cost\": 30}]\n"
         "}"
     )
     
@@ -284,8 +289,8 @@ def groq_generate(preferences, start_date, days, start_location, v1, v2, persons
         return {"error": "Groq API Key missing"}
     
     system_prompt = (
-        "REGELN: 1. Sprache: DEUTSCH. 2. Dauer: EXAKT " + str(days) + " Tage (keine leeren Tage!). 3. Logistik: Bei Flügen: KEINE Krisengebiete! 4. Fahrzeuge: Wohnmobil NUR bei Roadtrip, sonst Taxi/PKW. 5. Details: Fülle IMMER 'end_time' und 'distance_km' aus. 6. Konsistenz: Location-Namen müssen während eines Stopps identisch sein. 7. Verbot: KEINE Bilder/Maps-Links.\n"
-        "Beispiel: {\"name\": \"...\", \"days\": [{\"offset\": 0, \"events\": [{\"title\": \"Check-in\", \"type\": \"BUNGALOW\", \"time\": \"14:00\", \"end_time\": \"16:00\", \"distance_km\": 120}]}]}"
+        "REGELN: 1. Sprache: DEUTSCH. 2. Dauer: EXAKT " + str(days) + " Tage (keine leeren Tage!). 3. Logistik: Bei Flügen: KEINE Krisengebiete! 4. Fahrzeuge: Wohnmobil NUR bei Roadtrip, sonst Taxi/PKW. 5. Details: Fülle IMMER 'end_time' und 'distance_km' aus. 6. Unterkünfte: Alles Feste als 'HOTEL', Womo als 'CAMPING'/'PITCH'. 7. Gebühren: Maut in 'global_expenses' erfassen.\n"
+        "Beispiel: {\"name\": \"...\", \"days\": [{\"offset\": 0, \"events\": [{\"title\": \"Check-in\", \"type\": \"HOTEL\", \"time\": \"14:00\", \"end_time\": \"16:00\", \"distance_km\": 120}]}], \"global_expenses\": [{\"title\": \"Maut\", \"cost\": 25}]}"
     )
     user_prompt = f"Plan: {preferences}. Dauer: {days} Tage. Personen: {persons_count}. Fahrzeuge: {v1}, {v2}."
     
@@ -330,11 +335,12 @@ def ollama_generate(preferences, start_date, days, start_location, v1, v2, perso
         "2. KONKRET: Nenne echte Sehenswürdigkeiten und Restaurantnamen.\n"
         "3. DAUER: Erzeuge EXAKT " + str(days) + " Tage (Flexibilität: +-4 Tage Start, +-3 Tage Dauer für bessere Flüge erlaubt).\n"
         "5. FAHRZEUGE: Nutze ein Wohnmobil NUR bei expliziten Womotouren oder Roadtrips (z.B. NZ, Island). Sonst bevorzuge TAXI, FERRY, SCOOTER oder PKW.\n"
-        "6. UNTERKÜNFTE: Erstelle für jeden Aufenthalt ZWEI Events (Check-in, Check-out). Bevorzuge BUNGALOWS.\n"
-        "7. STIL: Bevorzuge lokale Streetfood-Märkte, Natur und Erkundung mit dem SCOOTER.\n"
-        "8. TYPEN: FLIGHT, HOTEL, CAMPING, PITCH, BUNGALOW, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT.\n"
+        "6. UNTERKÜNFTE: Erstelle für jeden Aufenthalt ZWEI Events (Check-in, Check-out). Alles Feste (Airbnb/Bungalow) als 'HOTEL'. Camping als 'CAMPING'/'PITCH'.\n"
+        "7. STIL: Lokale Streetfood-Märkte, Natur und Erkundung.\n"
+        "8. TYPEN: FLIGHT, HOTEL, CAMPING, PITCH, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT.\n"
         "9. DETAILS: Fülle IMMER 'end_time', 'detail_info' (Flugnummer!), 'distance_km' und 'booking_reference' aus.\n"
-        "10. FORMAT: {\"name\": \"...\", \"assistant_reasoning\": \"...\", \"days\": [{\"offset\": 0, \"location\": \"...\", \"events\": [...]}]}"
+        "10. MAUT: Gebühren/Maut in Liste 'global_expenses' erfassen.\n"
+        "11. FORMAT: {\"name\": \"...\", \"days\": [...], \"global_expenses\": [...]}"
     )
     user_prompt = f"Plan-Wünsche: {preferences}. Dauer: {days} Tage. Start: {start_date}. Personen: {persons_count}. Fahrzeuge: {v1}, {v2}."
     
@@ -553,8 +559,12 @@ def normalize_itinerary(data):
                         'DRIVE': 'TRANSPORT',
                         'DRIVING': 'TRANSPORT',
                         'TRAVEL': 'TRANSPORT',
-                        'AUTO': 'CAR',
-                        'PKW': 'CAR'
+                        'PKW': 'CAR',
+                        'CAMPINGPLATZ': 'CAMPING',
+                        'STELLPLATZ': 'PITCH',
+                        'AIRBNB': 'HOTEL',
+                        'FERIENHAUS': 'HOTEL',
+                        'BUNGALOW': 'HOTEL'
                     }
                     if etype in type_map:
                         event['type'] = type_map[etype]
@@ -600,6 +610,12 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
             date=day_date,
             location=d_data.get('location', 'Unbekannt')
         )
+        
+        # Load settings for automated cost calculation
+        v1_cons = float(get_setting('vehicle1_consumption', '12'))
+        v2_cons = float(get_setting('vehicle2_consumption', '8'))
+        diesel_p = float(get_setting('diesel_price', '1.60'))
+        petrol_p = float(get_setting('petrol_price', '1.70'))
         
         for e_data in d_data.get('events', []):
             time_v = e_data.get('time')
@@ -650,11 +666,36 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
                 except: pass
                 
             e_obj.save()
+
+            # Automated Cost Calculation (Precision overwrite for transport)
+            if e_obj.type in ['CAR', 'CAMPER'] and e_obj.distance_km > 0:
+                # Decide which profile to use
+                cons = v1_cons if e_obj.type == 'CAMPER' else v2_cons
+                price = diesel_p if (e_obj.type == 'CAMPER') else petrol_p # Simple heuristic: Camper=Diesel, Car=Petrol
+                
+                calc_cost = (e_obj.distance_km * (cons / 100) * price)
+                # Only overwrite if AI didn't provide any cost or if user wants precision
+                if float(e_obj.cost_estimated) <= 0:
+                    e_obj.cost_estimated = round(calc_cost, 2)
+                    e_obj.save(update_fields=['cost_estimated'])
             
     # Update Trip end date
     if days_data:
         max_offset = max(d.get('offset', 0) for d in days_data)
         trip.end_date = start_date + timedelta(days=max_offset)
         trip.save()
+
+    # Handle Global Expenses (e.g. Tolls/Maut)
+    from ..models import GlobalExpense
+    global_ex = trip_data.get('global_expenses', [])
+    for gx in global_ex:
+        GlobalExpense.objects.create(
+            trip=trip,
+            title=gx.get('title', 'Ausgabe'),
+            expense_type=gx.get('type', 'FEE'),
+            unit_price=gx.get('cost', 0),
+            units=1,
+            notes=gx.get('notes', 'Importiert von KI')
+        )
         
     return trip
