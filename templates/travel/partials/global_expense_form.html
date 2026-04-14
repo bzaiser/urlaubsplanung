@@ -16,28 +16,28 @@
             
             <div>
                 <label style="display: block; color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase;">Titel</label>
-                <input type="text" name="title" placeholder="z.B. Roller-Miete, Nationalpark-Pass" required>
+                <input type="text" name="title" value="{{ expense.title|default:'' }}" placeholder="z.B. Roller-Miete, Nationalpark-Pass" required>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div>
                     <label style="display: block; color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase;">Typ</label>
                     <select name="expense_type">
-                        <option value="FOOD">🍟 Verpflegung</option>
-                        <option value="RENTAL">🛴 Miete</option>
-                        <option value="FEE">🎟️ Eintritt/Gebühr</option>
-                        <option value="OTHER" selected>📦 Sonstiges</option>
+                        <option value="FOOD" {% if expense.expense_type == 'FOOD' %}selected{% endif %}>🍟 Verpflegung</option>
+                        <option value="RENTAL" {% if expense.expense_type == 'RENTAL' %}selected{% endif %}>🛴 Miete</option>
+                        <option value="FEE" {% if expense.expense_type == 'FEE' %}selected{% endif %}>🎟️ Eintritt/Gebühr</option>
+                        <option value="OTHER" {% if not expense.expense_type or expense.expense_type == 'OTHER' %}selected{% endif %}>📦 Sonstiges</option>
                     </select>
                 </div>
                 <div>
                     <label style="display: block; color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase;">Anzahl (z.B. Tage)</label>
-                    <input type="number" name="units" value="1" min="1">
+                    <input type="number" name="units" value="{{ expense.units|default:1 }}" min="1">
                 </div>
             </div>
 
             <div>
                 <label style="display: block; color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase;">Preis pro Einheit (in €)</label>
-                <input type="number" step="0.01" name="unit_price" value="0.00">
+                <input type="number" step="0.01" name="unit_price" value="{{ expense.unit_price|stringformat:'.2f'|default:'0.00' }}">
             </div>
 
             <div style="margin-top: 10px;">
