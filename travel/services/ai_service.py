@@ -590,11 +590,11 @@ def normalize_itinerary(data):
                     # 4.5 Smart Correction for Accommodations (Pitch/Camping)
                     if event.get('type') == 'HOTEL' or event.get('type') == 'OTHER':
                         title_lower = event.get('title', '').lower()
-                        # Pitch / Area Sosta signals
-                        if any(k in title_lower for k in ['sosta', 'stellplatz', 'pitch', 'camper stop', 'wohnmobilstellplatz']):
+                        # Pitch / Area Sosta signals (International)
+                        if any(k in title_lower for k in ['sosta', 'stellplatz', 'pitch', 'camper stop', 'wohnmobilstellplatz', 'parcheggio', 'area camper', 'aire', 'stopover']):
                             event['type'] = 'PITCH'
                         # Camping signals
-                        elif any(k in title_lower for k in ['camping', 'campingplatz', 'holiday park', 'caravan park']):
+                        elif any(k in title_lower for k in ['camping', 'campingplatz', 'holiday park', 'caravan park', 'camp area']):
                             event['type'] = 'CAMPING'
 
         # 5. Smart Promotion (Trip-wide context)
