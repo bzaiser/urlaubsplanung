@@ -635,6 +635,14 @@ def normalize_itinerary(data):
                         elif event.get('type') in ['CAR', 'TRANSPORT']:
                             event['type'] = 'CAMPER'
         
+        # Normalize Global Expenses
+        if 'global_expenses' in data and isinstance(data['global_expenses'], list):
+            for k, gx in enumerate(data['global_expenses']):
+                if isinstance(gx, str):
+                    data['global_expenses'][k] = {"title": gx, "type": "FEE", "cost": 0}
+                elif not isinstance(gx, dict):
+                    data['global_expenses'][k] = {"title": str(gx), "type": "FEE", "cost": 0}
+                    
     return data
 
 def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""):
@@ -664,6 +672,8 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
     
     days_data = trip_data.get('days', [])
     for d_data in days_data:
+        # Extra safety for malformed days
+        if not isinstance(d_data, dict): continue
         offset = d_data.get('offset', 0)
         day_date = start_date + timedelta(days=offset)
         
@@ -743,20 +753,23 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
             
     # Update Trip end date
     if days_data:
-        max_offset = max(d.get('offset', 0) for d in days_data)
-        trip.end_date = start_date + timedelta(days=max_offset)
-        trip.save()
+        valid_offsets = [d.get('offset', 0) for d in days_data if isinstance(d, dict)]
+        if valid_offsets:
+            max_offset = max(valid_offsets)
+            trip.end_date = start_date + timedelta(days=max_offset)
+            trip.save()
 
     # Handle Global Expenses (e.g. Tolls/Maut)
     from ..models import GlobalExpense
     global_ex = trip_data.get('global_expenses', [])
     for gx in global_ex:
+        if not isinstance(gx, dict): continue
         GlobalExpense.objects.create(
             trip=trip,
             title=gx.get('title', 'Ausgabe'),
             expense_type=gx.get('type', 'FEE'),
-            unit_price=gx.get('cost', 0),
-            units=gx.get('units', 1),
+            unit_price=float(gx.get('cost', 0) or 0),
+            units=int(gx.get('units', 1) or 1),
             notes=gx.get('notes', 'Importiert von KI')
         )
 

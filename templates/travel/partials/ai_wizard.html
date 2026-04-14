@@ -68,11 +68,15 @@
                     {% for day in itinerary.days %}
                         <div style="margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px;">
                             <div style="font-weight: bold; font-size: 0.9rem; color: #fff;">Tag {{ day.offset|add:1 }}: {{ day.location }}</div>
-                            <div style="margin-top: 5px;">
+                            <div style="margin-top: 5px; display: flex; flex-direction: column; gap: 4px;">
                                 {% for event in day.events %}
-                                    <div style="font-size: 0.8rem; color: #ccc; display: flex; justify-content: space-between;">
-                                        <span>• {{ event.title }}</span>
-                                        <span style="color: var(--accent-gold);">{{ event.cost_estimated }}€</span>
+                                    <div style="font-size: 0.75rem; color: #ccc; display: grid; grid-template-columns: 50px 1fr 60px; align-items: center; background: rgba(255,255,255,0.03); padding: 4px 8px; border-radius: 4px;">
+                                        <span style="opacity: 0.6; font-family: monospace;">{{ event.time|default:'--:--' }}</span>
+                                        <span style="font-weight: 500;">{{ event.title }}</span>
+                                        <span style="color: var(--accent-gold); text-align: right;">{{ event.cost_estimated|default:0 }}€</span>
+                                        {% if event.distance_km %}
+                                            <div style="grid-column: 2 / 4; font-size: 0.65rem; opacity: 0.5; margin-top: -2px;">🚗 {{ event.distance_km }} km {% if event.end_time %} (Ankunft: {{ event.end_time }}){% endif %}</div>
+                                        {% endif %}
                                     </div>
                                 {% endfor %}
                             </div>
@@ -82,24 +86,26 @@
 
                 <!-- Preview Global Expenses & Food -->
                 {% if itinerary.global_expenses or itinerary.food_preferences %}
-                    <div style="margin-top: 15px; border-top: 2px solid var(--accent-gold); padding-top: 10px;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 0.8rem; color: var(--accent-gold); text-transform: uppercase;">📊 Pauschalen & Budget (Vorschau)</h4>
+                    <div style="margin-top: 20px; border-top: 2px solid var(--accent-gold); padding-top: 15px; background: rgba(197, 160, 89, 0.05); border-radius: 8px; padding: 10px;">
+                        <h4 style="margin: 0 0 10px 0; font-size: 0.8rem; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 0.5px;">📊 Budget & Pauschalen</h4>
                         
                         {% if itinerary.food_preferences %}
-                            <div style="margin-bottom: 10px; background: rgba(52, 152, 219, 0.1); border: 1px solid #3498db; padding: 8px; border-radius: 4px; font-size: 0.75rem;">
-                                🍟 <b>Verpflegungs-Strategie:</b> 
-                                {{ itinerary.food_preferences.cooking_ratio|default:0|floatformat:0 }}% Kochen / 
-                                {{ itinerary.food_preferences.dining_out_ratio|default:0|floatformat:0 }}% Auswärts 
-                                (Niveau: {{ itinerary.food_preferences.price_level|default:'med' }})
+                            <div style="margin-bottom: 12px; border: 1px solid rgba(52, 152, 219, 0.3); background: rgba(52, 152, 219, 0.08); padding: 10px; border-radius: 6px; font-size: 0.75rem;">
+                                <div style="font-weight: 700; margin-bottom: 3px; color: #3498db;">🍕 Verpflegungs-Strategie</div>
+                                {{ itinerary.food_preferences.cooking_ratio|default:0|floatformat:2|add:"0" }}% Kochen / 
+                                {{ itinerary.food_preferences.dining_out_ratio|default:0|floatformat:2|add:"0" }}% Restaurant 
+                                <span style="opacity: 0.6;">(Niveau: {{ itinerary.food_preferences.price_level|default:'med' }})</span>
                             </div>
                         {% endif %}
 
-                        {% for gx in itinerary.global_expenses %}
-                            <div style="font-size: 0.75rem; color: #aaa; background: rgba(255,255,255,0.05); padding: 5px 8px; border-radius: 4px; border-left: 2px solid #555; margin-bottom: 5px; display: flex; justify-content: space-between;">
-                                <span>{{ gx.title }}</span>
-                                <span style="font-family: monospace;">{{ gx.cost }}€</span>
-                            </div>
-                        {% endfor %}
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            {% for gx in itinerary.global_expenses %}
+                                <div style="font-size: 0.75rem; color: #eee; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px; border-left: 3px solid var(--accent-gold); display: flex; justify-content: space-between; align-items: center;">
+                                    <span>{{ gx.title }}</span>
+                                    <span style="font-weight: 700; color: var(--accent-gold);">{{ gx.cost }} €</span>
+                                </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 {% endif %}
             </div>
@@ -109,17 +115,19 @@
                 <input type="hidden" name="action" value="import">
                 <input type="hidden" name="itinerary_json" value="{{ itinerary_json|escape }}">
                 <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="persons_count" value="{{ persons_count }}">
+                <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
                 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 0.75rem; color: var(--accent-gold); margin-bottom: 5px;">Name für diese Reise:</label>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.75rem; color: var(--accent-gold); margin-bottom: 8px; text-transform: uppercase; font-weight: 700;">Reise-Titel:</label>
                     <input type="text" name="trip_name" value="{{ itinerary.name|default:'Meine KI-Reise' }}" required
-                           style="width: 100%; background: #000; border: 1px solid var(--accent-gold); color: #fff; padding: 10px; border-radius: 6px;">
+                           style="width: 100%; background: #111; border: 1px solid var(--accent-gold); color: #fff; padding: 12px; border-radius: 8px; font-weight: 600;">
                 </div>
 
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 12px;">
                     <button type="button" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" 
-                            style="flex: 1; padding: 10px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Zurück</button>
-                    <button type="submit" class="btn-primary" style="flex: 2; padding: 10px; font-weight: bold;">✅ In Kalender übernehmen</button>
+                            style="flex: 1; padding: 12px; background: #333; color: #fff; border: 1px solid #444; border-radius: 8px; cursor: pointer; font-weight: 600;">Zurück</button>
+                    <button type="submit" class="btn-primary" style="flex: 2; padding: 12px; font-weight: 800; text-transform: uppercase; border-radius: 8px;">✅ Plan jetzt erstellen</button>
                 </div>
             </form>
 
