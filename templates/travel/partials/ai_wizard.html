@@ -36,11 +36,11 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
                         <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Starttermin <span style="color: #e74c3c;">*</span>:</label>
-                        <input type="date" name="start_date" required style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                        <input type="date" name="start_date" required value="{{ start_date|default:'' }}" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
                     </div>
                     <div>
                         <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Dauer (Tage):</label>
-                        <input type="number" name="days" value="21" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                        <input type="number" name="days" value="{{ days|default:21 }}" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
                     </div>
                 </div>
 
@@ -195,9 +195,10 @@
                     {{ error|default:"Unbekannter Fehler" }}
                 </div>
 
-                <div style="display: flex; gap: 12px; justify-content: center;">
+                <div style="display: flex; gap: 12px; justify-content: center; margin-top: 15px;">
                     <form hx-post="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container">
                         {% csrf_token %}
+                        <input type="hidden" name="action" value="select_step">
                         <input type="hidden" name="template_id" value="{{ template_id }}">
                         <input type="hidden" name="start_location" value="{{ start_location }}">
                         <input type="hidden" name="start_date" value="{{ start_date }}">
@@ -206,7 +207,7 @@
                         <input type="hidden" name="persons_count" value="{{ persons_count }}">
                         <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
                         <button type="submit" class="btn-secondary" 
-                                style="padding: 12px 24px; font-weight: 700; text-transform: uppercase; border-radius: 8px; cursor: pointer; border: 1px solid #444;">
+                                style="padding: 12px 24px; font-weight: 800; text-transform: uppercase; border-radius: 8px; cursor: pointer; border: 1px solid #444; min-width: 200px;">
                             Zurück zum Formular
                         </button>
                     </form>

@@ -503,9 +503,17 @@ def normalize_itinerary(data):
                     
     # 4. Final Fallback: If 'days' is still nothing but data has 'events'
     if 'days' not in data and 'events' in data and isinstance(data['events'], list):
-        data['days'] = [{"location": "Reiseziel", "events": data['events']}]
+        data['days'] = [{"location": "Reiseplan", "events": data['events']}]
+        
+    # 5. Handle top-level list correctly if it survived this far
+    if 'days' not in data:
+         # Check if there is ANY list in the values
+         for v in data.values():
+             if isinstance(v, list) and len(v) > 0:
+                 data['days'] = v
+                 break
 
-    # 5. Normalize Days and Events
+    # 6. Normalize Days and Events
     if 'days' in data and isinstance(data['days'], list):
         last_location = "Unbekannt"
         for i, day in enumerate(data['days']):
