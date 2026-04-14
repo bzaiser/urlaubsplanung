@@ -745,6 +745,14 @@ def ai_wizard(request):
             start_date = request.POST.get('start_date')
             days = request.POST.get('days', 28)
             
+            if not start_date:
+                templates = TripTemplate.objects.all().order_by('-created_at')
+                return render(request, 'travel/partials/ai_wizard.html', {
+                    'step': 'select', 
+                    'templates': templates,
+                    'error': 'Bitte wähle ein Startdatum aus!'
+                })
+            
             template = get_object_or_404(TripTemplate, id=template_id)
             final_preferences = template.preferences
             if user_prefs:
@@ -775,6 +783,12 @@ def ai_wizard(request):
                 
                 result = ai_service.normalize_itinerary(latest_data)
                 start_date = request.POST.get('start_date')
+                
+                if not start_date:
+                    # In case of session timeout or loss of state during bridge wait
+                    return render(request, 'travel/partials/ai_wizard.html', {
+                        'step': 'error', 'error': 'Startdatum fehlt. Bitte starte den Wizard neu.'
+                    })
                 
                 return render(request, 'travel/partials/ai_wizard.html', {
                     'step': 'preview', 
