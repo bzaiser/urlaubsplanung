@@ -124,28 +124,29 @@ def get_dashboard_context(request, active_trip=None):
                     })
             
         # Add Global Expenses at the very end
+        grid_data.append({
+            'id': 'global-header',
+            'is_station_header': True,
+            'station_location': 'PAUSCHALE POSTEN / BUDGET',
+            'station_key': 'global',
+            'days_count': '',
+            'nights_count': ''
+        })
+        
         global_expenses = active_trip.global_expenses.all()
-        if global_expenses.exists():
+        for exp in global_expenses:
             grid_data.append({
-                'id': 'global-header',
-                'is_station_header': True,
-                'station_location': 'PAUSCHALE POSTEN / BUDGET',
-                'station_key': 'global',
-                'days_count': '',
-                'nights_count': ''
+                'id': f"global-{exp.id}",
+                'is_global_expense': True,
+                'type': exp.expense_type,
+                'title': exp.title,
+                'unit_price': float(exp.unit_price),
+                'units': exp.units,
+                'cost_booked': float(exp.total_amount),
+                'cost_estimated': 0,
+                'voucher_url': exp.voucher.url if exp.voucher else None,
+                'is_auto_calculated': exp.is_auto_calculated,
             })
-            for exp in global_expenses:
-                grid_data.append({
-                    'id': f"global-{exp.id}",
-                    'is_global_expense': True,
-                    'type': exp.expense_type,
-                    'title': exp.title,
-                    'unit_price': float(exp.unit_price),
-                    'units': exp.units,
-                    'cost_booked': float(exp.total_amount),
-                    'cost_estimated': 0,
-                    'is_auto_calculated': exp.is_auto_calculated,
-                })
 
         context['grid_data_json'] = json.dumps(grid_data, cls=DjangoJSONEncoder)
         
@@ -220,6 +221,11 @@ def trip_delete(request, pk):
 # Event Management Views
 from .models import Event
 
+def event_type_picker(request, day_id):
+    """Shows a grid of event types to choose from before opening the form."""
+    day = get_object_or_404(Day, pk=day_id)
+    return render(request, 'travel/partials/event_type_picker.html', {'day': day})
+
 def event_create(request, day_id):
     day = get_object_or_404(Day, pk=day_id)
     if request.method == 'POST':
@@ -239,7 +245,8 @@ def event_create(request, day_id):
                 response['HX-Retarget'] = '#modal-container'
                 return response
     else:
-        form = EventForm()
+        initial_type = request.GET.get('type', 'NONE')
+        form = EventForm(initial={'type': initial_type})
     
     return render(request, 'travel/partials/event_form.html', {
         'form': form,
@@ -567,7 +574,7 @@ def settings_modal(request):
         'user_home_city': home_city, 'user_home_address': home_addr,
 
         'default_persons_count': def_p_count, 'default_persons_ages': def_p_ages,
-        'ollama_model_name': ollama_model, 'ollama_url': ollama_url
+        'ollama_model_name': ollama_model, 'ollama_url': ollama_url,
     })
 
 
@@ -608,6 +615,21 @@ def template_delete(request, pk):
         template.delete()
         return settings_modal(request)
     return HttpResponse(status=405)
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def ai_bridge_import(request):
+    """Endpoint for the bookmarklet to POST JSON data directly."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            # We store the latest result in the session or a cache for the user to 'pick up'
+            request.session['latest_ai_import'] = data
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'error'}, status=405)
 
 def ai_wizard(request):
     """
@@ -690,6 +712,35 @@ def ai_wizard(request):
                 'persons_ages': persons_ages
             })
             
+        elif action == 'check_bridge':
+            # Pick up data sent via bridge-import endpoint
+            latest_data = request.session.get('latest_ai_import')
+            if not latest_data:
+                return render(request, 'travel/partials/ai_wizard.html', {
+                    'step': 'error', 'error': "Noch keine Daten von der Brücke empfangen. Bitte klicke erst in Gemini auf 'AN APP SENDEN'."
+                })
+            
+            # Use normalize logic
+            try:
+                # Clear after use so we don't import twice accidentally
+                del request.session['latest_ai_import']
+                
+                result = ai_service.normalize_itinerary(latest_data)
+                start_date = request.POST.get('start_date')
+                
+                return render(request, 'travel/partials/ai_wizard.html', {
+                    'step': 'preview', 
+                    'itinerary': result,
+                    'itinerary_json': json.dumps(result),
+                    'start_date': start_date,
+                    'persons_count': request.POST.get('persons_count'),
+                    'persons_ages': request.POST.get('persons_ages'),
+                })
+            except Exception as e:
+                return render(request, 'travel/partials/ai_wizard.html', {
+                    'step': 'error', 'error': f"Datenformat-Fehler: {str(e)}"
+                })
+
         elif action == 'manual_import':
             pasted_text = request.POST.get('pasted_text', '').strip()
             start_date = request.POST.get('start_date')
@@ -808,9 +859,13 @@ def global_expense_create(request, trip_id):
     if request.method == 'POST':
         title = request.POST.get('title')
         expense_type = request.POST.get('expense_type', 'OTHER')
-        unit_price = request.POST.get('unit_price', 0)
-        units = request.POST.get('units', 1)
-        
+        try:
+            unit_price = float(request.POST.get('unit_price', 0).replace(',', '.'))
+            units = int(request.POST.get('units', 1))
+        except (ValueError, TypeError):
+            unit_price = 0
+            units = 1
+            
         GlobalExpense.objects.create(
             trip=trip, title=title, expense_type=expense_type,
             unit_price=unit_price, units=units
@@ -818,10 +873,99 @@ def global_expense_create(request, trip_id):
         return HttpResponse(headers={'HX-Refresh': 'true'})
     return render(request, 'travel/partials/global_expense_form.html', {'trip': trip})
 
+def global_expense_edit(request, pk):
+    expense = get_object_or_404(GlobalExpense, pk=pk)
+    if request.method == 'POST':
+        expense.title = request.POST.get('title')
+        expense.expense_type = request.POST.get('expense_type', 'OTHER')
+        try:
+            expense.unit_price = float(request.POST.get('unit_price', 0).replace(',', '.'))
+            expense.units = int(request.POST.get('units', 1))
+        except (ValueError, TypeError):
+            pass
+        expense.save()
+        return HttpResponse(headers={'HX-Refresh': 'true'})
+    return render(request, 'travel/partials/global_expense_form.html', {'expense': expense, 'trip': expense.trip})
+
 def global_expense_delete(request, pk):
     expense = get_object_or_404(GlobalExpense, pk=pk)
     expense.delete()
     return HttpResponse(headers={'HX-Refresh': 'true'})
+
+@csrf_exempt
+def ai_bridge_import(request):
+    """Endpoint for the bookmarklet to POST JSON data directly from Gemini/Web."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            request.session['latest_ai_import'] = data
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'error'}, status=405)
+
+def export_trip_ics(request, pk):
+    """Generates an .ics file for the complete trip."""
+    trip = get_object_or_404(Trip, pk=pk)
+    
+    lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Urlaubsplaner//DE',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        f'X-WR-CALNAME:{trip.name}',
+    ]
+    
+    from datetime import datetime, time
+    
+    for day in trip.days.all():
+        for event in day.events.all():
+            lines.append('BEGIN:VEVENT')
+            lines.append(f'UID:event-{event.id}@urlaubsplaner.local')
+            
+            # Format: YYYYMMDDTHHMMSSZ
+            start_dt = datetime.combine(day.date, event.time or time(9, 0))
+            if event.end_time:
+                end_dt = datetime.combine(day.date, event.end_time)
+            else:
+                end_dt = datetime.combine(day.date, event.time or time(10, 0))
+                # Add 1 hour if no end time
+                from datetime import timedelta
+                if not event.end_time: end_dt += timedelta(hours=1)
+            
+            lines.append(f"DTSTAMP:{datetime.now().strftime('%Y%MT%H%M%S')}")
+            lines.append(f"DTSTART:{start_dt.strftime('%Y%m%dT%H%M%S')}")
+            lines.append(f"DTEND:{end_dt.strftime('%Y%m%dT%H%M%S')}")
+            
+            summary = f"{event.get_type_display()}: {event.title}"
+            lines.append(f"SUMMARY:{summary}")
+            
+            desc = event.notes or ""
+            if event.cost_booked > 0:
+                desc += f" | Kosten: {event.cost_booked}€ (Bezahlt: {'Ja' if event.is_paid else 'Nein'})"
+            
+            lines.append(f"DESCRIPTION:{desc}")
+            if event.location:
+                lines.append(f"LOCATION:{event.location}")
+            
+            lines.append('END:VEVENT')
+            
+    lines.append('END:VCALENDAR')
+    
+    ics_content = "\r\n".join(lines)
+    response = HttpResponse(ics_content, content_type='text/calendar')
+    response['Content-Disposition'] = f'attachment; filename="trip_{trip.id}.ics"'
+    return response
+
+def expense_upload_voucher(request, pk):
+    """Directly uploads a file to an existing global expense via AJAX/HTMX."""
+    if request.method == 'POST' and request.FILES.get('voucher'):
+        expense = get_object_or_404(GlobalExpense, pk=pk)
+        expense.voucher = request.FILES['voucher']
+        expense.save()
+        return JsonResponse({'status': 'success', 'voucher_url': expense.voucher.url})
+    return JsonResponse({'status': 'error'}, status=400)
 
 def add_adjustment_food(request, trip_id):
     """Smart fix to add missing food budget."""

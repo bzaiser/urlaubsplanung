@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Starting Urlaubsplaner in Development Mode on Port 8000..."
+echo "Starting Urlaubsplaner in Development Mode on Port 8001..."
 
 # Ensure migrations and translations are up to date
 docker-compose -f docker-compose.dev.yml run --rm web python manage.py makemigrations travel

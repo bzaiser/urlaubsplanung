@@ -103,20 +103,41 @@
                 </label>
             </div>
 
-            <!-- Row 3.5: Breakfast [NEW] -->
-            {% if form.type.value in 'HOTEL CAMPING PITCH BUNGALOW' or not form.instance.id %}
-            <div style="grid-column: span 6; background: rgba(0, 128, 128, 0.05); padding: 5px; border-radius: 4px; border: 1px solid rgba(0, 128, 128, 0.2);">
+            <!-- Row 3.2: Accommodation Specifics (Hotel, etc.) -->
+            {% if form.type.value in 'HOTEL CAMPING PITCH BUNGALOW' %}
+            <div style="grid-column: span 3;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">{% trans "Nächte" %}</label>
+                <input type="number" name="nights" value="{{ form.nights.value|default:'' }}" style="font-size: 0.85rem;">
+            </div>
+            <div style="grid-column: span 4; background: rgba(0, 128, 128, 0.05); padding: 5px; border-radius: 4px; border: 1px solid rgba(0, 128, 128, 0.2);">
                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--accent-teal); font-size: 0.75rem; font-weight: bold;">
                     <input type="checkbox" name="breakfast_included" {% if form.breakfast_included.value %}checked{% endif %} style="width: 16px; height: 16px; margin: 0;">
                     {% trans "Frühstück inkl." %}
                 </label>
             </div>
-            <div style="grid-column: span 6; background: rgba(0, 128, 128, 0.05); padding: 5px; border-radius: 4px; border: 1px solid rgba(0, 128, 128, 0.2);">
-                <label style="display: block; color: var(--accent-teal); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">{% trans "Preis Frühstück (falls sep.)" %}</label>
+            <div style="grid-column: span 5; background: rgba(0, 128, 128, 0.05); padding: 5px; border-radius: 4px; border: 1px solid rgba(0, 128, 128, 0.2);">
+                <label style="display: block; color: var(--accent-teal); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">{% trans "Preis Frühstück" %}</label>
                 <div style="display: flex; align-items: center; gap: 3px;">
                     <input type="number" step="0.01" name="breakfast_cost" value="{{ form.breakfast_cost.value|stringformat:'.2f'|default:'0.00' }}" style="flex: 1; font-size: 0.85rem; background: none; border: none; border-bottom: 1px solid var(--glass-border); border-radius: 0;">
                     <span style="color: var(--accent-teal); font-size: 0.75rem;">€</span>
                 </div>
+            </div>
+            {% endif %}
+
+            <!-- Row 3.3: Rental Car Specifics -->
+            {% if form.type.value == 'RENTAL_CAR' %}
+            <div style="grid-column: span 6;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase;">{% trans "Dauer (Tage)" %}</label>
+                <input type="number" name="nights" value="{{ form.nights.value|default:'' }}" placeholder="Anzahl Tage" style="font-size: 0.85rem;">
+                <small style="font-size: 0.6rem; color: var(--text-secondary); opacity: 0.7;">Erzeugt automatisch die Rückgabe am Zielort.</small>
+            </div>
+            {% endif %}
+            
+            <!-- Row 3.4: Flight Specifics -->
+            {% if form.type.value == 'FLIGHT' %}
+            <div style="grid-column: span 12;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase;">{% trans "Flug-Details (Nr, Terminal, etc.)" %}</label>
+                <input type="text" name="detail_info" value="{{ form.detail_info.value|default:'' }}" style="font-size: 0.85rem;" placeholder="z.B. LH402, Terminal 2">
             </div>
             {% endif %}
 
@@ -185,6 +206,11 @@
 
             <!-- Action Toolbar -->
             <div style="grid-column: span 12; display: flex; gap: 8px; margin-top: 4px; border-top: 1px solid var(--glass-border); padding-top: 10px;">
+                {% if not form.instance.id %}
+                <button type="button" hx-get="{% url 'travel:event_type_picker' day.id %}" hx-target="#modal-container" style="flex: 1; height: 36px; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; border-radius: 8px; cursor: pointer;">
+                    ⬅️ ZURÜCK
+                </button>
+                {% endif %}
                 <button type="submit" class="btn-primary" style="flex: 2; height: 36px; margin: 0; font-size: 0.9rem;">
                     💾 {% trans "SAVE" %}
                 </button>

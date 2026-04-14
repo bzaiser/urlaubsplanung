@@ -73,35 +73,6 @@
         color: #000 !important;
     }
 
-    /* Classic Summary Panel Styling */
-    .classic-summary-panel {
-        margin-top: 25px;
-        padding: 15px 20px;
-        background: rgba(10, 25, 47, 0.3);
-        border-top: 1px solid var(--glass-border);
-        border-bottom: 3px double var(--glass-border);
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 20px;
-        border-radius: 4px;
-    }
-    .summary-item {
-        display: flex;
-        flex-direction: column;
-        border-right: 1px solid rgba(255,255,255,0.05);
-    }
-    .summary-item:last-child { border-right: none; }
-    .summary-label {
-        color: var(--text-secondary);
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 2px;
-    }
-    .summary-value {
-        color: var(--text-primary);
-        font-family: 'JetBrains Mono', 'Courier New', monospace;
-    }
 
     /* Unified Checkbox Styling */
     input[type="checkbox"] {
@@ -331,14 +302,14 @@
                     const map = {
                         'NONE': '➖', 'FLIGHT': '✈️', 'HOTEL': '🏨', 'CAMPING': '⛺',
                         'PITCH': '🚐📍', 'BUNGALOW': '🏡', 'CAMPER': '🚐',
-                        'CAR': '🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
+                        'CAR': '🚗', 'RENTAL_CAR': '🔑🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
                         'TAXI': '🚕', 'BUS': '🚌',
                         'TRAIN': '🚆', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓'
                     };
                     const labels = {
                         'NONE': '---', 'FLIGHT': 'Flug', 'HOTEL': 'Hotel', 'CAMPING': 'Camping',
                         'PITCH': 'Stellplatz', 'BUNGALOW': 'Bungalow', 'CAMPER': 'Wohnmobil',
-                        'CAR': 'Auto', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
+                        'CAR': 'Auto', 'RENTAL_CAR': 'Mietwagen', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
                         'TAXI': 'Taxi', 'BUS': 'Bus',
                         'TRAIN': 'Zug', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges'
                     };
@@ -388,7 +359,14 @@
                         width: 0, 
                         hide: true // User requested to hide this as it's in the day header
                     },
-                    { headerName: 'Ort', field: 'location', width: 140, editable: true, headerTooltip: 'Zielort der Reiseetappe', cellClass: 'event-row-indent' },
+                    { 
+                        headerName: 'Ort', 
+                        field: 'location', 
+                        width: 140, 
+                        editable: params => params.node.rowPinned !== 'bottom',
+                        headerTooltip: 'Zielort der Reiseetappe', 
+                        cellClass: 'event-row-indent'
+                    },
                     { 
                         headerName: 'Typ', 
                         field: 'type', 
@@ -400,14 +378,14 @@
                             const map = {
                                 'NONE': '➖', 'FLIGHT': '✈️', 'HOTEL': '🏨', 'CAMPING': '⛺',
                                 'PITCH': '🚐📍', 'BUNGALOW': '🏡', 'CAMPER': '🚐',
-                                'CAR': '🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
+                                'CAR': '🚗', 'RENTAL_CAR': '🔑🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
                                 'TAXI': '🚕', 'BUS': '🚌',
                                 'TRAIN': '🚆', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓'
                             };
                             const labels = {
                                 'NONE': '---', 'FLIGHT': 'Flug', 'HOTEL': 'Hotel', 'CAMPING': 'Camping',
                                 'PITCH': 'Stellplatz', 'BUNGALOW': 'Bungalow', 'CAMPER': 'Wohnmobil',
-                                'CAR': 'Auto', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
+                                'CAR': 'Auto', 'RENTAL_CAR': 'Mietwagen', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
                                 'TAXI': 'Taxi', 'BUS': 'Bus',
                                 'TRAIN': 'Zug', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges'
                             };
@@ -424,6 +402,7 @@
                         headerTooltip: 'Titel & Status (Storno/Zahlung)',
                         cellStyle: { 'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'padding-top': '4px', 'padding-bottom': '4px' },
                         cellRenderer: p => {
+                            if (p.node.rowPinned === 'bottom') return '';
                             if (!p.data) return p.value;
                             if (p.data.is_day_header || p.data.is_station_header) return p.value;
                             
@@ -502,12 +481,6 @@
                             if (!p.data || p.data.is_station_header || p.data.is_day_header) return '';
                             let h = '<div style="display: flex; gap: 8px; justify-content: center; align-items: center; height: 100%;">';
                             
-                            if (p.data.is_global_expense) {
-                                h += `<button onclick="deleteGlobalExpense('${p.data.id.replace('global-', '')}')" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 1rem; opacity: 0.5;" title="Löschen">🗑️</button>`;
-                                h += '</div>';
-                                return h;
-                            }
-
                             // Consistent width for voucher icon
                             if (p.data.voucher_url) {
                                 h += `<a href="${p.data.voucher_url}" target="_blank" style="text-decoration: none; font-size: 1rem;">📄</a>`;
@@ -516,7 +489,12 @@
                             }
                             
                             h += `<button onclick="triggerUpload('${p.data.id}')" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 1rem;" title="Upload">📤</button>`;
-                            h += `<button onclick="deleteSingleEvent('${p.data.id}')" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 1rem; opacity: 0.5;" title="Löschen">🗑️</button>`;
+                            
+                            if (p.data.is_global_expense) {
+                                h += `<button onclick="deleteGlobalExpense('${p.data.id.replace('global-', '')}')" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 1rem; opacity: 0.5;" title="Löschen">🗑️</button>`;
+                            } else {
+                                h += `<button onclick="deleteSingleEvent('${p.data.id}')" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 1rem; opacity: 0.5;" title="Löschen">🗑️</button>`;
+                            }
                             h += '</div>';
                             return h;
                         }
@@ -538,10 +516,17 @@
                     suppressRowClickSelection: true,
                     tooltipShowDelay: 100,
                     domLayout: 'autoHeight',
-                    isFullWidthRow: (params) => params.rowNode.data.is_station_header || params.rowNode.data.is_day_header,
+                    pinnedBottomRowData: [],
+                    isFullWidthRow: (params) => (params.rowNode.data.is_station_header || params.rowNode.data.is_day_header) && params.rowNode.rowPinned !== 'bottom',
                     fullWidthCellRenderer: (params) => {
                         const d = params.data;
-                        if (d.is_station_header) {
+                        if (d.station_key === 'global') {
+                            return `<div class="station-header-grid" 
+                                         style="padding: 0 15px; background: rgba(197, 160, 89, 0.1); border-left: 4px solid var(--accent-gold); color: var(--accent-gold); font-weight: 700; height: 100%; display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem;">
+                                <span>📦 PAUSCHALE POSTEN / BUDGET</span>
+                                <button onclick="htmx.ajax('GET', '/trip/{{ active_trip.id }}/expense/new/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add" style="border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(197, 160, 89, 0.1);">➕ BUDGET</button>
+                            </div>`;
+                        } else if (d.is_station_header) {
                             const isCollapsed = window.collapsedStations.has(d.station_key);
                             const icon = isCollapsed ? '▼' : '▼'; // We rotate the same icon with CSS
                             return `<div class="station-header-grid ${isCollapsed ? 'collapsed' : ''}" 
@@ -563,13 +548,7 @@
                                         <span style="font-size: 0.8rem; opacity: 0.6; margin-left: 10px; width: 40px;">${d.day_name}</span>
                                     </div>
                                 </div>
-                                <button onclick="htmx.ajax('GET', '/day/${d.day_id}/event/new/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add">➕ EVENT</button>
-                            </div>`;
-                        } else if (d.station_key === 'global') {
-                            return `<div class="station-header-grid" 
-                                         style="padding: 0 15px; background: rgba(197, 160, 89, 0.1); border-left: 4px solid var(--accent-gold); color: var(--accent-gold); font-weight: 700; height: 100%; display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem;">
-                                <span>📦 PAUSCHALE POSTEN / BUDGET</span>
-                                <button onclick="htmx.ajax('GET', '/trip/${active_trip.id}/expense/new/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add" style="border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(197, 160, 89, 0.1);">➕ BUDGET</button>
+                                <button onclick="htmx.ajax('GET', '/day/${d.day_id}/event/type-picker/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add">➕ EVENT</button>
                             </div>`;
                         }
                     },
@@ -712,7 +691,6 @@
                         showToast("⚠️ Fehler beim Löschen");
                     }
                 });
-                });
             };
 
             window.deleteGlobalExpense = function(expenseId) {
@@ -751,7 +729,7 @@
             };
 
 
-            window.triggerUpload = function(eventId) {
+            window.triggerUpload = function(rowId) {
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.onchange = e => {
@@ -761,8 +739,12 @@
                     const formData = new FormData();
                     formData.append('voucher', file);
                     
+                    const isGlobal = String(rowId).startsWith('global-');
+                    const cleanId = isGlobal ? rowId.replace('global-', '') : rowId;
+                    const url = isGlobal ? `/expense/${cleanId}/upload-voucher/` : `/event/${cleanId}/upload-voucher/`;
+
                     const csrftoken = window.getCookie('csrftoken') || '{{ csrf_token }}';
-                    fetch(`/event/${eventId}/upload-voucher/`, {
+                    fetch(url, {
                         method: 'POST',
                         headers: { 'X-CSRFToken': csrftoken },
                         body: formData
@@ -771,10 +753,10 @@
                     .then(data => {
                         if (data.status === 'success') {
                             // Update the grid data locally
-                            const rowNode = window.agGridApi.getRowNode(eventId);
+                            const rowNode = window.agGridApi.getRowNode(rowId);
                             if (rowNode) {
                                 rowNode.setDataValue('voucher_url', data.voucher_url);
-                                alert('Beleg erfolgreich hochgeladen!');
+                                showToast('✓ Beleg hochgeladen');
                             }
                         }
                     });
@@ -786,25 +768,31 @@
                 if (!window.agGridApi) return;
                 let totalBooked = 0;
                 let totalEstimated = 0;
+                let totalKm = 0;
                 const personCount = parseInt(document.getElementById('ag-trip-grid').dataset.persons) || 1;
 
                 window.agGridApi.forEachNode(node => {
-                    if (node.data && !node.data.is_station_header && !node.data.is_day_header) {
+                    if (node.data && !node.data.is_station_header && !node.data.is_day_header && !node.rowPinned) {
                         totalBooked += parseFloat(node.data.cost_booked) || 0;
                         totalEstimated += parseFloat(node.data.cost_estimated) || 0;
+                        totalKm += parseFloat(node.data.distance_km) || 0;
                     }
                 });
 
-                const sumBooked = document.getElementById('sum-booked');
-                const sumEstimated = document.getElementById('sum-estimated');
-                const sumTotal = document.getElementById('sum-total-calc');
-                const sumPerPerson = document.getElementById('sum-per-person');
                 const total = totalBooked + totalEstimated;
 
-                if (sumBooked) sumBooked.innerText = formatCurrency(totalBooked);
-                if (sumEstimated) sumEstimated.innerText = formatCurrency(totalEstimated);
-                if (sumTotal) sumTotal.innerText = formatCurrency(total);
-                if (sumPerPerson) sumPerPerson.innerText = formatCurrency(total / personCount);
+                if (window.agGridApi) {
+                    const pinnedData = [
+                        {
+                            location: 'SUMME REISE',
+                            title: `Gesamt (PP: ${formatCurrency(total / personCount)})`,
+                            cost_booked: totalBooked,
+                            cost_estimated: totalEstimated,
+                            distance_km: totalKm.toFixed(0)
+                        }
+                    ];
+                    window.agGridApi.setPinnedBottomRowData(pinnedData);
+                }
             }
 
             // Simple initialization on load
@@ -881,24 +869,4 @@
         }
     </style>
 
-    <!-- Finanz-Zusammenfassung (Am Seitenende) -->
-    <!-- Klassische Finanz-Zusammenfassung -->
-    <div class="classic-summary-panel">
-        <div class="summary-item">
-            <span class="summary-label">Gesamt Gebucht</span>
-            <span id="sum-booked" class="summary-value">0,00 €</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-label">Geschätzt</span>
-            <span id="sum-estimated" class="summary-value" style="opacity: 0.7;">0,00 €</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-label">Summe Gesamt</span>
-            <span id="sum-total-calc" class="summary-value" style="color: var(--accent-teal);">0,00 €</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-label">Pro Nase ({{ active_trip.persons_count|default:1 }} Pers.)</span>
-            <span id="sum-per-person" class="summary-value">0,00 €</span>
-        </div>
-    </div>
 </div>

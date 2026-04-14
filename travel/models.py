@@ -88,6 +88,7 @@ class Event(models.Model):
         ('TAXI', _('🚕 Taxi')),
         ('BUS', _('🚌 Bus')),
         ('TRAIN', _('🚆 Zug')),
+        ('RENTAL_CAR', _('🔑🚗 Mietwagen')),
         ('ACTIVITY', _('🎒 Aktivität')),
         ('RESTAURANT', _('🍽️ Essen')),
         ('OTHER', _('❓ Sonstiges')),
@@ -157,16 +158,19 @@ class Event(models.Model):
 
     @property
     def is_checkin(self):
-        """Identifies if this event is a check-in for an accommodation."""
+        """Identifies if this event is a check-in or pick-up (Abholung)."""
         stay_types = ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']
         if self.type in stay_types and 'check-in' in self.title.lower():
+            return True
+        if self.type == 'RENTAL_CAR' and ('abholung' in self.title.lower() or 'start' in self.title.lower()):
             return True
         return False
 
     @property
     def is_checkout(self):
-        """Identifies if this event is a check-out."""
-        return 'check-out' in self.title.lower()
+        """Identifies if this event is a check-out or drop-off (Rückgabe)."""
+        keywords = ['check-out', 'rückgabe', 'ende', 'abgabe']
+        return any(k in self.title.lower() for k in keywords)
 
     def save(self, *args, **kwargs):
         """Overridden save to handle automatic Check-out creation/update."""
@@ -187,7 +191,12 @@ class Event(models.Model):
                 defaults={'location': self.day.location}
             )
 
-            checkout_title = self.title.lower().replace('check-in', 'Check-out').title()
+            if self.type == 'RENTAL_CAR':
+                checkout_title = self.title.lower().replace('abholung', 'Rückgabe').replace('start', 'Ende').title()
+                default_time = "10:00"
+            else:
+                checkout_title = self.title.lower().replace('check-in', 'Check-out').title()
+                default_time = self.end_time or "11:00"
             
             if not self.linked_checkout:
                 # Create new checkout
@@ -195,11 +204,11 @@ class Event(models.Model):
                     day=checkout_day,
                     title=checkout_title,
                     type=self.type,
-                    time=self.end_time or "11:00",
+                    time=default_time,
                     location=self.location,
                     cost_booked=0,
                     cost_estimated=0,
-                    notes=f"Automatisch generiert von Check-in: {self.title}"
+                    notes=f"Automatisch generiert von: {self.title}"
                 )
                 self.linked_checkout = checkout
                 # Save self again to store the link (prevent recursion with a flag)
@@ -280,6 +289,7 @@ class GlobalExpense(models.Model):
     TYPE_CHOICES = [
         ('FOOD', _('🍟 Verpflegung')),
         ('RENTAL', _('🛴 Miete (Roller/Surf/etc)')),
+        ('RENTAL_CAR', _('🔑🚗 Mietwagen')),
         ('FEE', _('🎟️ Eintritt/Gebühr')),
         ('OTHER', _('📦 Sonstiges')),
     ]
@@ -294,6 +304,7 @@ class GlobalExpense(models.Model):
     total_amount = models.DecimalField(_("Gesamtbetrag"), max_digits=12, decimal_places=2, default=0)
     
     notes = models.TextField(_("Notizen"), blank=True)
+    voucher = models.FileField(_("Voucher/Anhang"), upload_to="vouchers/", null=True, blank=True)
     is_auto_calculated = models.BooleanField(_("Automatisch berechnet"), default=False)
 
     class Meta:
@@ -302,8 +313,13 @@ class GlobalExpense(models.Model):
         verbose_name_plural = _("Globale Ausgaben")
 
     def save(self, *args, **kwargs):
-        if self.unit_price > 0 and self.units > 0:
-            self.total_amount = self.unit_price * self.units
+        try:
+            up = float(self.unit_price) if self.unit_price is not None else 0
+            un = float(self.units) if self.units is not None else 0
+            if up > 0 and un > 0:
+                self.total_amount = up * un
+        except (ValueError, TypeError):
+            pass
         super().save(*args, **kwargs)
 
     def __str__(self):

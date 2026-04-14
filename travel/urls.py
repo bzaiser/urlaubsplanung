@@ -8,8 +8,8 @@ from .views import (
     event_bulk_delete, event_bulk_move,
     settings_modal, ai_wizard, template_create,
     template_edit, template_delete, ai_test_connection,
-    trip_logic_check, global_expense_create, global_expense_delete,
-    add_adjustment_food
+    trip_logic_check, global_expense_create, global_expense_edit, global_expense_delete,
+    add_adjustment_food, expense_upload_voucher, ai_bridge_import
 )
 
 app_name = 'travel'
@@ -24,6 +24,7 @@ urlpatterns = [
     path('event/<int:pk>/delete/', event_delete, name='event_delete'),
     path('event/<int:pk>/inline-update/', event_inline_update, name='event_inline_update'),
     path('event/<int:pk>/upload-voucher/', event_upload_voucher, name='event_upload_voucher'),
+    path('expense/<int:pk>/upload-voucher/', expense_upload_voucher, name='expense_upload_voucher'),
     path('day/<int:day_id>/quick-add/', event_quick_add, name='event_quick_add'),
     path('day/<int:day_id>/inline-create/', event_inline_create, name='event_inline_create'),
     path('day/<int:pk>/inline-update/', day_inline_update, name='day_inline_update'),
@@ -42,6 +43,8 @@ urlpatterns = [
     # Logic & Global Expenses
     path('trip/<int:pk>/logic-check/', trip_logic_check, name='trip_logic_check'),
     path('trip/<int:trip_id>/expense/new/', global_expense_create, name='global_expense_create'),
+    path('expense/<int:pk>/edit/', global_expense_edit, name='global_expense_edit'),
     path('expense/<int:pk>/delete/', global_expense_delete, name='global_expense_delete'),
     path('trip/<int:trip_id>/add-food-adjustment/', add_adjustment_food, name='add_adjustment_food'),
+    path('ai/bridge-import/', ai_bridge_import, name='ai_bridge_import'),
 ]
