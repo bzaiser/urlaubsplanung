@@ -666,6 +666,19 @@ def ai_wizard(request):
     step = request.GET.get('step', 'select')
     templates = TripTemplate.objects.all()
     
+    # Default context values
+    context = {
+        'step': step,
+        'templates': templates,
+        'days': request.POST.get('days', 28),
+        'start_date': request.POST.get('start_date', ''),
+        'start_location': request.POST.get('start_location', 'Zuhause'),
+        'persons_count': request.POST.get('persons_count', 2),
+        'persons_ages': request.POST.get('persons_ages', ''),
+        'user_preferences': request.POST.get('user_preferences', ''),
+        'template_id': request.POST.get('template_id', ''),
+    }
+    
     if request.method == 'POST':
         action = request.POST.get('action')
         
@@ -675,12 +688,8 @@ def ai_wizard(request):
             start_date = request.POST.get('start_date')
             
             if not start_date:
-                templates = TripTemplate.objects.all().order_by('-created_at')
-                return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'select', 
-                    'templates': templates,
-                    'error': 'Bitte wähle ein Startdatum aus!'
-                })
+                context.update({'step': 'select', 'error': 'Bitte wähle ein Startdatum aus!'})
+                return render(request, 'travel/partials/ai_wizard.html', context)
 
             start_location = request.POST.get('start_location', 'Zuhause')
             persons_count = request.POST.get('persons_count', 2)
@@ -700,52 +709,16 @@ def ai_wizard(request):
                 msg = result['error']
                 if "429" in msg or "Too Many Requests" in msg:
                     msg = "Die KI-Anbieter brauchen gerade eine kurze Pause (Anfrage-Limit). Bitte warte ca. 60 Sekunden und versuche es erneut."
-                return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'error', 'error': msg
-                })
+                context.update({'step': 'error', 'error': msg})
+                return render(request, 'travel/partials/ai_wizard.html', context)
             
             # Normalize for consistent template rendering
-            return render(request, 'travel/partials/ai_wizard.html', {
+            context.update({
                 'step': 'preview', 
                 'itinerary': result,
                 'itinerary_json': json.dumps(result),
-                'start_date': start_date,
-                'user_preferences': user_prefs,
-                'persons_count': persons_count,
-                'persons_ages': persons_ages
             })
-            
-        elif action == 'manual_step':
-            template_id = request.POST.get('template_id')
-            user_prefs = request.POST.get('user_preferences', '')
-            start_location = request.POST.get('start_location', 'Zuhause')
-            persons_count = request.POST.get('persons_count', 2)
-            persons_ages = request.POST.get('persons_ages', '')
-            start_date = request.POST.get('start_date')
-            days = request.POST.get('days', 28)
-            
-            if not start_date:
-                templates = TripTemplate.objects.all().order_by('-created_at')
-                return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'select', 
-                    'templates': templates,
-                    'error': 'Bitte wähle ein Startdatum aus!'
-                })
-            
-            template = get_object_or_404(TripTemplate, id=template_id)
-            final_preferences = template.preferences
-            if user_prefs:
-                final_preferences = f"Style: {template.preferences}. Specific Wishes: {user_prefs}."
-                
-            prompt = ai_service.get_itinerary_prompt(final_preferences, start_date, days, start_location, persons_count, persons_ages)
-            
-            return render(request, 'travel/partials/ai_wizard.html', {
-                'step': 'manual',
-                'prompt': prompt,
-                'start_date': start_date,
-                'persons_count': persons_count,
-                'persons_ages': persons_ages
-            })
+            return render(request, 'travel/partials/ai_wizard.html', context)
 
         elif action == 'manual_import':
             pasted_text = request.POST.get('pasted_text', '').strip()
@@ -770,9 +743,8 @@ def ai_wizard(request):
                     return response
                 return redirect('travel:dashboard')
             except Exception as e:
-                return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'error', 'error': f"Fehler beim Einlesen: {str(e)}"
-                })
+                context.update({'step': 'error', 'error': f"Fehler beim Einlesen: {str(e)}"})
+                return render(request, 'travel/partials/ai_wizard.html', context)
             
         elif action == 'import':
             itinerary_json = request.POST.get('itinerary_json')
@@ -797,14 +769,12 @@ def ai_wizard(request):
                     return response
                 return redirect('travel:dashboard')
             except Exception as e:
-                return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'error', 'error': f"Fehler beim Speichern: {str(e)}"
-                })
+                context.update({'step': 'error', 'error': f"Fehler beim Speichern: {str(e)}"})
+                return render(request, 'travel/partials/ai_wizard.html', context)
             
         elif action == 'refine':
             instructions = request.POST.get('instructions')
             itinerary_json = request.POST.get('itinerary_json')
-            start_date = request.POST.get('start_date')
             
             current_itinerary = json.loads(itinerary_json)
             result = ai_service.refine_itinerary(current_itinerary, instructions)
@@ -813,21 +783,16 @@ def ai_wizard(request):
                 msg = result['error']
                 if "429" in msg or "Too Many Requests" in msg:
                     msg = "Die KI-Anbieter brauchen gerade eine kurze Pause (Anfrage-Limit). Bitte warte ca. 60 Sekunden und versuche es erneut."
-                return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'error', 'error': msg
-                })
+                context.update({'step': 'error', 'error': msg})
+                return render(request, 'travel/partials/ai_wizard.html', context)
             
             # Normalize for consistent template rendering
             result = ai_service.normalize_itinerary(result)
                 
-            return render(request, 'travel/partials/ai_wizard.html', {
+            context.update({
                 'step': 'preview', 
                 'itinerary': result,
                 'itinerary_json': json.dumps(result),
-                'start_date': start_date,
-                'user_preferences': request.POST.get('user_preferences', ''),
-                'persons_count': request.POST.get('persons_count'),
-                'persons_ages': request.POST.get('persons_ages'),
                 'refined': True
             })
 
