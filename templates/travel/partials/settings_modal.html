@@ -3,7 +3,7 @@
     <div class="modal-content" style="border: 1px solid var(--accent-gold); padding: 20px; background: var(--card-bg); backdrop-filter: blur(15px); border-radius: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px;">
             <h2 style="margin: 0; font-family: 'Outfit', sans-serif; color: var(--accent-gold); font-size: 1.2rem; text-transform: uppercase;">
-                ⚙️ {% trans "Einstellungen" %} & AI
+                ⚙️ {% trans "Einstellungen" %}
             </h2>
             <button type="button" onclick="closeModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.6rem; cursor: pointer;">&times;</button>
         </div>
@@ -14,57 +14,12 @@
         </div>
         {% endif %}
 
-        <!-- AI Provider & Keys Section -->
+        <!-- Vehicles & Profile Section -->
         <section style="margin-bottom: 25px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--glass-border);">
             <form hx-post="{% url 'travel:settings_modal' %}" hx-target="#modal-container">
                 {% csrf_token %}
                 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 0.8rem; margin-bottom: 5px; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 1px;">Aktiver KI-Anbieter</label>
-                    <select name="active_ai_provider" style="width: 100%; padding: 10px; background: #000; border: 1px solid var(--glass-border); border-radius: 6px; color: #fff; font-size: 0.9rem;">
-                        <option value="gemini" {% if active_provider == 'gemini' %}selected{% endif %}>Google Gemini (Flash 1.5/2.0) - Allrounder</option>
-                        <option value="groq" {% if active_provider == 'groq' %}selected{% endif %}>Groq (Llama 3.3 / 70B) - Schnell & hohe Limits</option>
-                        <option value="ollama" {% if active_provider == 'ollama' %}selected{% endif %}>Ollama (Lokal) - Unbegrenzt & Privat</option>
-                    </select>
-                </div>
-
-                <div style="margin-bottom: 15px; background: rgba(197, 160, 89, 0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(197, 160, 89, 0.2);">
-                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px;">
-                        <div>
-                            <label style="display: block; font-size: 0.7rem; margin-bottom: 5px; color: var(--accent-gold);">Ollama Basis-URL (z.B. NAS)</label>
-                            <input type="text" name="ollama_url" value="{{ ollama_url }}" placeholder="http://192.168.123.107:11434" 
-                                   style="width: 100%; padding: 8px; background: #000; border: 1px solid var(--glass-border); border-radius: 6px; color: #fff; font-size: 0.85rem;">
-                        </div>
-                        <div>
-                            <label style="display: block; font-size: 0.7rem; margin-bottom: 5px; color: var(--accent-gold);">Ollama Modell</label>
-                            <input type="text" name="ollama_model_name" value="{{ ollama_model_name }}" placeholder="llama3" 
-                                   style="width: 100%; padding: 8px; background: #000; border: 1px solid var(--glass-border); border-radius: 6px; color: #fff; font-size: 0.85rem;">
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <div>
-                        <label style="display: block; font-size: 0.7rem; margin-bottom: 3px; color: var(--text-secondary);">Gemini API Key</label>
-                        <input type="password" name="gemini_api_key" value="{{ gemini_key }}" placeholder="Gemini Key..." 
-                               style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 6px; color: #fff; font-size: 0.8rem; font-family: monospace;">
-                    </div>
-                    <div>
-                        <label style="display: block; font-size: 0.7rem; margin-bottom: 3px; color: var(--text-secondary);">Groq API Key</label>
-                        <input type="password" name="groq_api_key" value="{{ groq_key }}" placeholder="Groq Key..." 
-                               style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 6px; color: #fff; font-size: 0.8rem; font-family: monospace;">
-                    </div>
-                </div>
-                
-                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
-                    <button type="submit" class="btn-primary" style="flex: 1; padding: 10px; font-weight: bold; font-size: 0.9rem;">💾 Alle Einstellungen speichern</button>
-                    <button type="button" hx-get="{% url 'travel:ai_test_connection' %}" hx-target="#ai-test-result" hx-indicator="#loading-test" 
-                            style="background: rgba(46, 204, 113, 0.1); border: 1px solid #2ecc71; color: #2ecc71; padding: 9px 15px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
-                        ⚡ Test
-                    </button>
-                </div>
-                <div id="ai-test-result" style="margin-top: 10px; font-size: 0.75rem; text-align: center; color: var(--accent-gold);"></div>
-                <div id="loading-test" class="htmx-indicator" style="text-align: center; font-size: 0.75rem; color: var(--accent-gold);">Test läuft...</div>
+                <div style="padding-top: 10px;">
                 
                 <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--glass-border);">
                     
@@ -177,8 +132,7 @@
             </form>
 
             <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 10px; display: flex; gap: 15px;">
-                <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-gold);">Gemini Key holen</a>
-                <a href="https://console.groq.com/" target="_blank" style="color: var(--accent-gold);">Groq Key holen</a>
+                <!-- AI Links removed -->
             </div>
         </section>
 

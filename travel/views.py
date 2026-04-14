@@ -553,80 +553,37 @@ def settings_modal(request):
 
     
     if request.method == 'POST':
-        # Handle Provider/Keys/Vehicles update
-        if 'active_ai_provider' in request.POST:
-            provider = request.POST.get('active_ai_provider', 'gemini')
-            gemini_val = request.POST.get('gemini_api_key', '').strip()
-            groq_val = request.POST.get('groq_api_key', '').strip()
-            
-            GlobalSetting.objects.update_or_create(key='active_ai_provider', defaults={'value': provider or 'gemini'})
-            GlobalSetting.objects.update_or_create(key='gemini_api_key', defaults={'value': gemini_val or ''})
-            GlobalSetting.objects.update_or_create(key='groq_api_key', defaults={'value': groq_val or ''})
-            # Vehicles & Profile
-            for k in [
-                'vehicle1_name', 'vehicle1_consumption', 'vehicle1_fuel_type', 'vehicle1_weight', 'vehicle1_range',
-                'vehicle2_name', 'vehicle2_consumption', 'vehicle2_fuel_type', 'vehicle2_range',
-                'user_home_city', 'user_home_address', 'default_persons_count', 'default_persons_ages',
-                'ollama_model_name', 'ollama_url', 'diesel_price', 'petrol_price',
-                'food_self_low', 'food_self_med', 'food_self_high',
-                'food_out_low', 'food_out_med', 'food_out_high'
-            ]:
-                val = request.POST.get(k, '').strip()
-                GlobalSetting.objects.update_or_create(key=k, defaults={'value': val})
+        # Vehicles & Profile update
+        for k in [
+            'vehicle1_name', 'vehicle1_consumption', 'vehicle1_fuel_type', 'vehicle1_weight', 'vehicle1_range',
+            'vehicle2_name', 'vehicle2_consumption', 'vehicle2_fuel_type', 'vehicle2_range',
+            'user_home_city', 'user_home_address', 'default_persons_count', 'default_persons_ages',
+            'diesel_price', 'petrol_price',
+            'food_self_low', 'food_self_med', 'food_self_high',
+            'food_out_low', 'food_out_med', 'food_out_high'
+        ]:
+            val = request.POST.get(k, '').strip()
+            GlobalSetting.objects.update_or_create(key=k, defaults={'value': val})
 
-
-            
-            return render(request, 'travel/partials/settings_modal.html', {
-                'templates': templates,
-                'gemini_key': gemini_val,
-                'groq_key': groq_val,
-                'active_provider': provider,
-                'v1_name': request.POST.get('v1_name'),
-                'v1_consumption': request.POST.get('v1_consumption'),
-                'v1_fuel': request.POST.get('v1_fuel'),
-                'v1_weight': request.POST.get('v1_weight'),
-                'v1_range': request.POST.get('v1_range'),
-                'v2_name': request.POST.get('v2_name'),
-                'v2_consumption': request.POST.get('v2_consumption'),
-                'v2_fuel': request.POST.get('v2_fuel'),
-                'v2_range': request.POST.get('v2_range'),
-
-                'user_home_city': request.POST.get('user_home_city'),
-                'user_home_address': request.POST.get('user_home_address'),
-                'default_persons_count': request.POST.get('default_persons_count'),
-                'default_persons_ages': request.POST.get('default_persons_ages'),
-                'ollama_model_name': request.POST.get('ollama_model_name'),
-                'ollama_url': request.POST.get('ollama_url'),
-                'success': True
-            })
-
+        return render(request, 'travel/partials/settings_modal.html', {
+            'templates': templates,
+            'user_home_city': request.POST.get('user_home_city'),
+            'user_home_address': request.POST.get('user_home_address'),
+            'default_persons_count': request.POST.get('default_persons_count'),
+            'default_persons_ages': request.POST.get('default_persons_ages'),
+            'success': True
+        })
 
     return render(request, 'travel/partials/settings_modal.html', {
         'templates': templates,
-        'gemini_key': gemini_key.value if gemini_key else '',
-        'groq_key': groq_key.value if groq_key else '',
-        'active_provider': active_provider.value if active_provider else 'gemini',
         'v1_name': v1_name, 'v1_consumption': v1_consump, 'v1_fuel': v1_fuel, 'v1_weight': v1_weight, 'v1_range': v1_range,
         'v2_name': v2_name, 'v2_consumption': v2_consump, 'v2_fuel': v2_fuel, 'v2_range': v2_range,
         'user_home_city': home_city, 'user_home_address': home_addr,
-
         'default_persons_count': def_p_count, 'default_persons_ages': def_p_ages,
-        'ollama_model_name': ollama_model, 'ollama_url': ollama_url,
         'diesel_price': diesel_price, 'petrol_price': petrol_price,
         'food_self_low': food_self_l, 'food_self_med': food_self_m, 'food_self_high': food_self_h,
         'food_out_low': food_out_l, 'food_out_med': food_out_m, 'food_out_high': food_out_h,
     })
-
-
-def ai_test_connection(request):
-    """Diagnostic view using the new lightweight test function."""
-    result = ai_service.test_ai_connection()
-    
-    if "error" in result:
-        return HttpResponse(f"<span style='color: #e74c3c;'>❌ Fehler: {result['error']}</span>")
-    
-    msg = result.get('message', 'Unbekannte Antwort')
-    return HttpResponse(f"<span style='color: #2ecc71;'>✅ KI sagt: {msg}</span>")
 
 def template_create(request):
     """Simple view to create a new trip template."""
@@ -682,48 +639,38 @@ def ai_wizard(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         
-        if action == 'generate':
+        if action == 'manual_step':
             template_id = request.POST.get('template_id')
             days = request.POST.get('days', 28)
             start_date = request.POST.get('start_date')
-            
-            if not start_date:
-                context.update({'step': 'select', 'error': 'Bitte wähle ein Startdatum aus!'})
-                return render(request, 'travel/partials/ai_wizard.html', context)
-
             start_location = request.POST.get('start_location', 'Zuhause')
             persons_count = request.POST.get('persons_count', 2)
             persons_ages = request.POST.get('persons_ages', '')
-            
+            user_prefs = request.POST.get('user_preferences', '').strip()
+
             try:
                 template = get_object_or_404(TripTemplate, pk=template_id)
-                user_prefs = request.POST.get('user_preferences', '').strip()
-                
                 # Combine template + user wishes
                 final_preferences = template.preferences
                 if user_prefs:
-                    final_preferences = f"Style: {template.preferences}. Specific Wishes/Destination: {user_prefs}. (Note: Prioritize specific wishes over style if they conflict)."
+                    final_preferences = f"Style: {template.preferences}. Specific Wishes/Destination: {user_prefs}."
                 
-                result = ai_service.generate_itinerary(final_preferences, start_date, days, start_location, persons_count, persons_ages)
+                # Generate the prompt for the user to copy
+                prompt = ai_service.get_itinerary_prompt(
+                    final_preferences, start_date, days, start_location, persons_count, persons_ages
+                )
                 
-                if "error" in result:
-                    msg = result['error']
-                    if "429" in msg or "Too Many Requests" in msg:
-                        msg = "Die KI-Anbieter brauchen gerade eine kurze Pause (Anfrage-Limit). Bitte warte ca. 60 Sekunden und versuche es erneut."
-                    context.update({'step': 'error', 'error': msg})
-                    return render(request, 'travel/partials/ai_wizard.html', context)
-                
-                # Normalize for consistent template rendering
                 context.update({
-                    'step': 'preview', 
-                    'itinerary': result,
-                    'itinerary_json': json.dumps(result),
+                    'step': 'manual',
+                    'prompt': prompt,
+                    'start_date': start_date,
+                    'days': days,
+                    'persons_count': persons_count,
+                    'persons_ages': persons_ages,
                 })
                 return render(request, 'travel/partials/ai_wizard.html', context)
             except Exception as e:
-                import traceback
-                error_detail = f"CRITICAL CRASH: {str(e)}\n{traceback.format_exc()}"
-                context.update({'step': 'error', 'error': error_detail})
+                context.update({'step': 'error', 'error': f"Fehler bei der Prompt-Erstellung: {str(e)}"})
                 return render(request, 'travel/partials/ai_wizard.html', context)
 
         elif action == 'manual_import':
@@ -733,16 +680,12 @@ def ai_wizard(request):
             persons_ages = request.POST.get('persons_ages', '')
             
             try:
-                # Use the new repair_json utility to handle malformed/truncated output
                 pasted_text = ai_service.repair_json(pasted_text)
-                
                 trip_data = json.loads(pasted_text)
                 trip = ai_service.save_itinerary_to_db(trip_data, start_date, persons_count, persons_ages)
                 
-                # Set as active trip
                 request.session['active_trip_id'] = trip.id
                 
-                # Redirect to dashboard without old GET parameters to ensure new trip is loaded
                 if request.htmx:
                     response = HttpResponse("")
                     response['HX-Redirect'] = f"/?trip_id={trip.id}"
@@ -765,8 +708,6 @@ def ai_wizard(request):
                 
             try:
                 trip = ai_service.save_itinerary_to_db(trip_data, start_date, persons_count, persons_ages)
-                
-                # Set as active trip
                 request.session['active_trip_id'] = trip.id
 
                 if request.htmx:
@@ -777,30 +718,6 @@ def ai_wizard(request):
             except Exception as e:
                 context.update({'step': 'error', 'error': f"Fehler beim Speichern: {str(e)}"})
                 return render(request, 'travel/partials/ai_wizard.html', context)
-            
-        elif action == 'refine':
-            instructions = request.POST.get('instructions')
-            itinerary_json = request.POST.get('itinerary_json')
-            
-            current_itinerary = json.loads(itinerary_json)
-            result = ai_service.refine_itinerary(current_itinerary, instructions)
-            
-            if "error" in result:
-                msg = result['error']
-                if "429" in msg or "Too Many Requests" in msg:
-                    msg = "Die KI-Anbieter brauchen gerade eine kurze Pause (Anfrage-Limit). Bitte warte ca. 60 Sekunden und versuche es erneut."
-                context.update({'step': 'error', 'error': msg})
-                return render(request, 'travel/partials/ai_wizard.html', context)
-            
-            # Normalize for consistent template rendering
-            result = ai_service.normalize_itinerary(result)
-                
-            context.update({
-                'step': 'preview', 
-                'itinerary': result,
-                'itinerary_json': json.dumps(result),
-                'refined': True
-            })
 
     if step == 'select':
         templates = TripTemplate.objects.all().order_by('-created_at')

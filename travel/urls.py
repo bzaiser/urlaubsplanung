@@ -7,7 +7,7 @@ from .views import (
     day_inline_update, event_upload_voucher,
     event_bulk_delete, event_bulk_move,
     settings_modal, ai_wizard, template_create,
-    template_edit, template_delete, ai_test_connection,
+    template_edit, template_delete,
     trip_logic_check, global_expense_create, global_expense_edit, global_expense_delete,
     add_adjustment_food, expense_upload_voucher, export_trip_ics,
     event_type_picker
@@ -40,7 +40,6 @@ urlpatterns = [
     path('template/new/', template_create, name='template_create'),
     path('template/<int:pk>/edit/', template_edit, name='template_edit'),
     path('template/<int:pk>/delete/', template_delete, name='template_delete'),
-    path('ai/test/', ai_test_connection, name='ai_test_connection'),
     
     # Logic & Global Expenses
     path('trip/<int:pk>/logic-check/', trip_logic_check, name='trip_logic_check'),

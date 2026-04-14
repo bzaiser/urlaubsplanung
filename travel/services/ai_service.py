@@ -17,112 +17,6 @@ def get_setting(key, default=''):
     except:
         return default
 
-def get_best_gemini_model(api_key):
-    """Dynamically finds the best available Gemini model for the key."""
-    try:
-        genai.configure(api_key=api_key)
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        
-        # Preference Order (Moved 1.5 to top because user project has 0-quota for 2.0)
-        preferences = [
-            'models/gemini-1.5-flash-latest',
-            'models/gemini-1.5-flash',
-            'models/gemini-2.0-flash',
-            'models/gemini-1.5-flash-8b',
-        ]
-        
-        for p in preferences:
-            if p in available_models:
-                logger.info(f"Using dynamic model selection: {p}")
-                return p
-        
-        # Fallback to the first available if none of our preferences are matched
-        if available_models:
-            return available_models[0]
-            
-    except Exception as e:
-        logger.error(f"Error listing models: {e}")
-        
-    return 'models/gemini-1.5-flash' # Hardcoded fallback
-
-def test_ai_connection():
-    """Lightweight test using the official SDK."""
-    provider = get_setting('active_ai_provider', 'gemini')
-    api_key = get_setting('gemini_api_key' if provider == 'gemini' else 'groq_api_key')
-    
-    if provider != 'ollama' and not api_key:
-        return {"error": f"API Key for {provider} missing"}
-        
-    if provider == 'gemini':
-        try:
-            model_name = get_best_gemini_model(api_key)
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content("Confirm with 'OK'.")
-            return {"status": "success", "message": f"{response.text} (Aktiv: {model_name})"}
-        except Exception as e:
-            err_msg = str(e).replace(api_key, "HIDDEN_KEY")
-            return {"error": err_msg}
-    elif provider == 'groq':
-        # Groq remains via requests (OpenAI-compatible)
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-        payload = {
-            "model": "llama-3.3-70b-versatile",
-            "messages": [{"role": "user", "content": "Say 'OK' and confirm your model name."}]
-        }
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=10)
-            if response.status_code == 429:
-                return {"error": "Rate Limit: Groq ist gerade ausgelastet. Bitte kurz warten."}
-            response.raise_for_status()
-            text = response.json()['choices'][0]['message']['content']
-            return {"status": "success", "message": text}
-        except Exception as e:
-            err_msg = str(e).replace(api_key, "HIDDEN_KEY")
-            return {"error": err_msg}
-    elif provider == 'ollama':
-        model_name = get_setting('ollama_model_name', 'llama3')
-        ollama_url = get_setting('ollama_url', 'http://192.168.123.107:11434').rstrip('/')
-        url = f"{ollama_url}/api/chat"
-        payload = {
-            "model": model_name,
-            "messages": [{"role": "user", "content": "Say 'OK' if you are ready."}],
-            "stream": False
-        }
-        try:
-            response = requests.post(url, json=payload, timeout=10)
-            response.raise_for_status()
-            text = response.json()['message']['content']
-            return {"status": "success", "message": f"{text} (Ollama Modell: {model_name})"}
-        except Exception as e:
-            return {"error": f"Ollama nicht erreichbar unter {url}. Fehler: {str(e)}"}
-
-def generate_itinerary(preferences, start_date=None, days=28, start_location="Zuhause", persons_count=2, persons_ages=""):
-    provider = get_setting('active_ai_provider', 'gemini')
-    
-    v1 = {
-        'name': get_setting('vehicle1_name', 'Camper'),
-        'consump': get_setting('vehicle1_consumption', '12'),
-        'range': get_setting('vehicle1_range', '600'),
-        'fuel': get_setting('vehicle1_fuel_type', 'Diesel'),
-        'weight': get_setting('vehicle1_weight', '3.5t')
-    }
-    v2 = {
-        'name': get_setting('vehicle2_name', 'PKW'),
-        'consump': get_setting('vehicle2_consumption', '7'),
-        'range': get_setting('vehicle2_range', '800'),
-        'fuel': get_setting('vehicle2_fuel_type', 'Benzin')
-    }
-
-    if provider == 'gemini':
-        itinerary = gemini_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages)
-    elif provider == 'groq':
-        itinerary = groq_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages)
-    else:
-        itinerary = ollama_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages)
-        
-    return normalize_itinerary(itinerary)
-
 def repair_json(json_str):
     """
     Highly robust JSON repair using the "json-repair" library.
@@ -130,8 +24,6 @@ def repair_json(json_str):
     """
     if not json_str:
         return "{}"
-    
-    logger.error(f"DEBUG: repair_json called. Input len: {len(json_str)}")
     
     # 1. Isolate the JSON object (strip preamble and postamble)
     start_idx = json_str.find("{")
@@ -151,26 +43,10 @@ def repair_json(json_str):
         # Verify it is actually valid
         import json
         json.loads(repaired)
-        logger.error(f"DEBUG: repair_json finished. Output len: {len(repaired)}")
         return repaired
     except Exception as e:
         logger.error(f"Professional repair failed context: {json_str[:200]}...")
-        logger.error(f"Professional repair error: {str(e)}")
-        # Fallback
         return json_str
-
-    
-    # NEW: Try to parse here just for debugging context if it fails
-    try:
-        json.loads(json_str)
-    except json.JSONDecodeError as e:
-        # Show exactly what's wrong in the logs
-        context = json_str[max(0, e.pos-60):min(len(json_str), e.pos+60)]
-        logger.error(f"DEBUG: JSON still failing at char {e.pos} (Line {e.lineno}, Col {e.colno})")
-        logger.error(f"DEBUG: Error context: >>>{context}<<<")
-        logger.error(f"DEBUG: Error marker: {' ' * (min(e.pos, 60))}^")
-        
-    return json_str
 
 def get_itinerary_prompt(preferences, start_date, days, start_location, persons_count, persons_ages):
     """Returns the raw prompt text for manual copy-pasting into external LLMs."""
@@ -214,239 +90,6 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
     user_text = f"Sonderwünsche/Ziel: {preferences}. Starttermin: {start_date}. Dauer: {days} Tage."
     
     return f"{system_text}\n\n{user_text}"
-
-def gemini_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages):
-    api_key = get_setting('gemini_api_key')
-    if not api_key:
-        return {"error": "Gemini API Key missing"}
-    
-    system_prompt = (
-        "Du bist ein Weltklasse-Reiseplaner. Erstelle einen detaillierten Reiseplan als JSON auf DEUTSCH.\n"
-        "REGELN:\n"
-        "1. SPRACHE: Antworten müssen komplett auf DEUTSCH sein.\n"
-        "2. DAUER: Erzeuge EXAKT " + str(days) + " Tage. Flexibilität: +-4 Tage Start, +-3 Tage Dauer erlaubt.\n"
-        "3. LOGISTIK: Berücksichtige Startort " + start_location + ". Bei Flügen MUSS die Anfahrt als eigenes Event davor stehen.\n"
-        "4. UNTERKÜNFTE: Erstelle für jeden Aufenthalt ZWEI Events (Check-in, Check-out). Gruppiere Bungalow/Airbnb/Ferienhaus als 'HOTEL'.\n"
-        "5. FAHRZEUGE: Nutze ein Wohnmobil NUR bei expliziten Womotouren oder Roadtrips (z.B. NZ, Island). Sonst bevorzuge TAXI, FERRY, SCOOTER oder PKW.\n"
-        "6. TYPEN: Nutze EXAKT FLIGHT, HOTEL, CAMPING, PITCH, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT. (KEIN 'TRANSPORT' nutzen!).\n"
-        "7. WICHTIG: Wenn die Reise eine Wohnmobil-Tour ist, MUSS jedes Fahr-Event (Driving) den Typ 'CAMPER' haben (NICHT 'CAR' oder 'TRANSPORT').\n"
-        "7. LÜCKENLOS: JEDER der " + str(days) + " Tage muss befüllt sein.\n"
-        "8. KONSTANZ: Die 'location' muss während eines Aufenthalts (Check-in bis Check-out) an jedem Tag exakt gleich geschrieben sein.\n"
-        "9. DETAILS (PFLICHT): Fülle IMMER 'end_time' (HH:MM) und 'distance_km' (Zahl) aus.\n"
-        "10. VERPFLEGUNG: Berechne KEINE Euro-Beträge für Essen. Nutze nur das Objekt 'food_preferences' (ratios: 0.0-1.0, price_level: low/med/high).\n"
-        "11. MAUT: Erfasse NUR Gebühren (Maut etc.) in 'global_expenses'.\n"
-        "12. FORMAT (NUR JSON):\n"
-        "{\n"
-        "  \"name\": \"Trip\",\n"
-        "  \"days\": [...],\n"
-        "  \"food_preferences\": {\"cooking_ratio\": 0.5, \"dining_out_ratio\": 0.5, \"price_level\": \"med\"},\n"
-        "  \"global_expenses\": [{\"title\": \"Maut\", \"type\": \"FEE\", \"cost\": 30}]\n"
-        "}"
-    )
-    
-    genai.configure(api_key=api_key)
-    
-    # Context: Food Budgets
-    food_ctx = (
-        f"Tagessätze (pro Person): Selbstversorgung: Niedrig={get_setting('food_self_low')}€/Med={get_setting('food_self_med')}€/High={get_setting('food_self_high')}€, "
-        f"Restaurant: Niedrig={get_setting('food_out_low')}€/Med={get_setting('food_out_med')}€/High={get_setting('food_out_high')}€."
-    )
-    
-    user_prompt = f"Plan: {preferences}. Dauer: {days} Tage. Start: {start_date}. Fahrzeuge: {v1}, {v2}. Personen: {persons_count} ({persons_ages}). {food_ctx}"
-    model_name = get_best_gemini_model(api_key)
-    model = genai.GenerativeModel(
-        model_name,
-        generation_config={"response_mime_type": "application/json", "temperature": 0.2, "max_output_tokens": 8192},
-        safety_settings=[
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-        ]
-    )
-    
-    max_retries = 5
-    for attempt in range(max_retries):
-        try:
-            # Use repair_json to handle minor formatting errors
-            cleaned_text = repair_json(response.text)
-            return json.loads(cleaned_text)
-        except Exception as e:
-            if "429" in str(e) and attempt < max_retries - 1:
-                wait_time = 10 * (attempt + 1)
-                logger.warning(f"AI Rate limit hit (429). Waiting {wait_time}s...")
-                time.sleep(wait_time)
-                continue
-            if attempt < max_retries - 1:
-                time.sleep(2)
-                continue
-            err_msg = str(e).replace(api_key, "HIDDEN_KEY")
-            return {"error": err_msg}
-
-def groq_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages):
-    api_key = get_setting('groq_api_key')
-    if not api_key:
-        return {"error": "Groq API Key missing"}
-    
-    system_prompt = (
-        "Du bist ein Weltklasse-Reiseplaner. Antworte AUSSCHLIESSLICH im JSON-Format.\n"
-        "REGELN: 1. Sprache: DEUTSCH. 2. Dauer: EXAKT " + str(days) + " Tage. 3. Unterkünfte: Alles Feste als 'HOTEL', Womo als 'CAMPING'/'PITCH'. 4. Gebühren: Maut in 'global_expenses'. 5. Verpflegung: Nutze 'food_preferences' (ratios: 0.0-1.0, level: low/med/high).\n"
-        "Beispiel: {\"name\": \"...\", \"days\": [...], \"food_preferences\": {\"cooking_ratio\": 0.5, \"dining_out_ratio\": 0.5, \"price_level\": \"med\"}}"
-    )
-    # Context: Food Budgets
-    food_ctx = f"Tagessätze: Selbst: {get_setting('food_self_med')}€, Restaurant: {get_setting('food_out_med')}€."
-    user_prompt = f"Plan: {preferences}. Dauer: {days} Tage. Personen: {persons_count}. {food_ctx}"
-    
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-        "response_format": {"type": "json_object"},
-        "temperature": 0.2
-    }
-    
-    max_retries = 5
-    for attempt in range(max_retries):
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=60)
-            if response.status_code == 429 and attempt < max_retries - 1:
-                wait_time = 10 * (attempt + 1)
-                time.sleep(wait_time)
-                continue
-            response.raise_for_status()
-            text = response.json()['choices'][0]['message']['content']
-            # Use repair_json for resilience
-            cleaned_text = repair_json(text)
-            return json.loads(cleaned_text)
-        except Exception as e:
-            if attempt < max_retries - 1:
-                time.sleep(2)
-                continue
-            err_msg = str(e).replace(api_key, "HIDDEN_KEY")
-            return {"error": f"Groq Error: {err_msg}"}
-
-def ollama_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages):
-    """Generates an itinerary using a local Ollama instance (e.g. on NAS)."""
-    model_name = get_setting('ollama_model_name', 'llama3')
-    ollama_url = get_setting('ollama_url', 'http://192.168.123.107:11434').rstrip('/')
-    
-    system_prompt = (
-        "Du bist ein Weltklasse-Reiseplaner. Erstelle einen detaillierten Reiseplan als JSON auf DEUTSCH.\n"
-        "REGELN:\n"
-        "1. SPRACHE: Antworten müssen komplett auf DEUTSCH sein.\n"
-        "2. KONKRET: Nenne echte Sehenswürdigkeiten und Restaurantnamen.\n"
-        "3. DAUER: Erzeuge EXAKT " + str(days) + " Tage (Flexibilität: +-4 Tage Start, +-3 Tage Dauer für bessere Flüge erlaubt).\n"
-        "5. FAHRZEUGE: Nutze ein Wohnmobil NUR bei expliziten Womotouren oder Roadtrips (z.B. NZ, Island). Sonst bevorzuge TAXI, FERRY, SCOOTER oder PKW.\n"
-        "6. UNTERKÜNFTE: Erstelle für jeden Aufenthalt ZWEI Events (Check-in, Check-out). Alles Feste (Airbnb/Bungalow) als 'HOTEL'. Camping als 'CAMPING'/'PITCH'.\n"
-        "7. STIL: Lokale Streetfood-Märkte, Natur und Erkundung.\n"
-        "8. TYPEN: FLIGHT, HOTEL, CAMPING, PITCH, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT.\n"
-        "9. DETAILS: Fülle IMMER 'end_time', 'detail_info' (Flugnummer!), 'distance_km' und 'booking_reference' aus.\n"
-        "10. MAUT: Gebühren/Maut in Liste 'global_expenses' erfassen.\n"
-        "11. VERPFLEGUNG: Nutze nur 'food_preferences' (cooking_ratio, dining_out_ratio, price_level) für Essen-Wünsche.\n"
-        "12. FORMAT: {\"name\": \"...\", \"days\": [...], \"food_preferences\": {...}, \"global_expenses\": [...]}"
-    )
-    food_ctx = f"Tagessätze: Selbst: {get_setting('food_self_med')}€, Restaurant: {get_setting('food_out_med')}€."
-    user_prompt = f"Plan-Wünsche: {preferences}. Dauer: {days} Tage. Start: {start_date}. {food_ctx}"
-    
-    url = f"{ollama_url}/api/chat"
-    payload = {
-        "model": model_name,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "format": "json",
-        "stream": False,
-        "options": {
-            "num_predict": 8192,
-            "temperature": 0.2
-        }
-    }
-    try:
-        response = requests.post(url, json=payload, timeout=240)
-        response.raise_for_status()
-        content = response.json()['message']['content'].strip()
-        
-        # Use the robust repair utility
-        content = repair_json(content)
-        return normalize_itinerary(json.loads(content))
-    except Exception as e:
-        return {"error": f"Ollama Fehler ({url}): {str(e)}"}
-
-def refine_itinerary(current_itinerary, instructions):
-    provider = get_setting('active_ai_provider', 'gemini')
-    if provider == 'ollama':
-        model_name = get_setting('ollama_model_name', 'llama3')
-        ollama_url = get_setting('ollama_url', 'http://192.168.123.107:11434').rstrip('/')
-        url = f"{ollama_url}/api/chat"
-        system_prompt = (
-            "Du bist ein Reiseplaner-Experte. Aktualisiere diesen Reiseplan als JSON auf DEUTSCH basierend auf dem Feedback. "
-            "Regel: Antworte NUR mit validem JSON auf DEUTSCH."
-        )
-        user_prompt = f"Aktueller PLAN: {json.dumps(current_itinerary)}\n\nFeedback/Änderung: {instructions}"
-        payload = {
-            "model": model_name,
-            "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-            "format": "json",
-            "stream": False
-        }
-        try:
-            response = requests.post(url, json=payload, timeout=180)
-            response.raise_for_status()
-            content = response.json()['message']['content']
-            return normalize_itinerary(json.loads(content))
-        except Exception as e:
-            return {"error": f"Ollama Fehler ({url}): {str(e)}"}
-
-    api_key_name = 'gemini_api_key' if provider == 'gemini' else 'groq_api_key'
-    api_key = get_setting(api_key_name)
-    
-    if not api_key and provider != 'ollama':
-        return {"error": f"{provider.capitalize()} API Key missing"}
-    
-    system_prompt = "You are an expert travel planner. Update this itinerary as JSON. Output ONLY valid JSON."
-    user_prompt = f"Current ITINERARY: {json.dumps(current_itinerary)}\n\nInstructions: {instructions}"
-    
-    if provider == 'gemini':
-        genai.configure(api_key=api_key)
-        model_name = get_best_gemini_model(api_key)
-        model = genai.GenerativeModel(
-            model_name,
-            generation_config={"response_mime_type": "application/json"},
-            safety_settings=[{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
-        )
-        
-        max_retries = 5
-        for attempt in range(max_retries):
-            try:
-                response = model.generate_content(f"{system_prompt}\n\n{user_prompt}")
-                return json.loads(response.text)
-            except Exception as e:
-                if "429" in str(e) and attempt < max_retries - 1:
-                    time.sleep(10 * (attempt + 1))
-                    continue
-                if attempt < max_retries - 1:
-                    time.sleep(2)
-                    continue
-                err_msg = str(e).replace(api_key, "HIDDEN_KEY")
-                return {"error": err_msg}
-    else:
-        # Groq (Existing logic simplified)
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-        payload = {
-            "model": "llama-3.3-70b-versatile",
-            "messages": [{"role": "system", "content": system_prompt + " HINWEIS: Antworte im JSON-Format."}, {"role": "user", "content": user_prompt}],
-            "response_format": {"type": "json_object"}
-        }
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            return json.loads(response.json()['choices'][0]['message']['content'])
-        except Exception as e:
-            err_msg = str(e).replace(api_key, "HIDDEN_KEY")
-            return {"error": err_msg}
 
 def normalize_itinerary(data):
     """
@@ -522,9 +165,9 @@ def normalize_itinerary(data):
     if 'days' in data and isinstance(data['days'], list):
         last_location = "Unbekannt"
         for i, day in enumerate(data['days']):
-            # Ensure day is a dict, not a string
-            if isinstance(day, str):
-                day = {"location": day, "events": []}
+            # Ensure day is a dictionary (AI sometimes sends strings or ints)
+            if not isinstance(day, dict):
+                day = {"location": str(day), "events": []}
                 data['days'][i] = day
                 
             # Ensure 'offset' (Order matters!)

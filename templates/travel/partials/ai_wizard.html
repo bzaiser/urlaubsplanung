@@ -47,21 +47,14 @@
                     </div>
                 </div>
 
-                <div class="modal-action-grid" style="margin-top: 20px;">
-                    <button type="submit" class="btn-primary btn-xl" style="flex-direction: column; width: 100%;">
-                        <span style="font-size: 1.5rem;">🪄</span>
-                        <span style="letter-spacing: 0.5px;">Auto-Generieren</span>
-                        <small style="font-size: 0.6rem; opacity: 0.7; font-weight: 400; text-transform: none;">(Empfohlen)</small>
-                    </button>
-                    
-                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary btn-xl" style="flex-direction: column; width: 100%;">
+                <div class="modal-action-flex" style="margin-top: 20px; justify-content: center;">
+                    <button type="submit" name="action" value="manual_step" class="btn-primary btn-xl" style="flex-direction: column; width: 100%; max-width: 400px;">
                         <span style="font-size: 1.5rem;">📋</span>
-                        <span style="letter-spacing: 0.5px;">Manueller Modus</span>
-                        <small style="font-size: 0.6rem; opacity: 0.7; font-weight: 400; text-transform: none;">(Prompt kopieren)</small>
+                        <span style="letter-spacing: 0.5px;">Reise-Prompt erstellen</span>
+                        <small style="font-size: 0.6rem; opacity: 0.7; font-weight: 400; text-transform: none;">(Anschließend Ergebnis von KI hier einfügen)</small>
                     </button>
                 </div>
             </form>
-            <div id="loading-ai" class="htmx-indicator" style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--accent-gold);">🤖 KI arbeitet... häng dich rein!</div>
 
         {% elif step == 'preview' %}
             <div style="margin-bottom: 15px; background: #000; border: 1px solid #444; border-radius: 6px; padding: 12px; max-height: 400px; overflow-y: auto;">
