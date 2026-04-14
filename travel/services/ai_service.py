@@ -657,7 +657,7 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
     trip = Trip.objects.create(
         name=trip_data.get('name', 'Neue KI Reise'),
         start_date=start_date,
-        persons_count=persons_count or 2,
+        persons_count=int(persons_count or 2),
         persons_ages=persons_ages or ""
     )
     
@@ -734,9 +734,9 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
                 cons = v1_cons if e_obj.type == 'CAMPER' else v2_cons
                 price = diesel_p if (e_obj.type == 'CAMPER') else petrol_p # Simple heuristic: Camper=Diesel, Car=Petrol
                 
-                calc_cost = (e_obj.distance_km * (cons / 100) * price)
+                calc_cost = (float(e_obj.distance_km or 0) * (float(cons) / 100) * float(price))
                 # Only overwrite if AI didn't provide any cost or if user wants precision
-                if float(e_obj.cost_estimated) <= 0:
+                if float(e_obj.cost_estimated or 0) <= 0:
                     e_obj.cost_estimated = round(calc_cost, 2)
                     e_obj.save(update_fields=['cost_estimated'])
             
@@ -777,7 +777,7 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
         rate_self = float(get_setting(f'food_self_{suffix}', '15'))
         rate_out = float(get_setting(f'food_out_{suffix}', '35'))
         
-        persons = trip.persons_count or 2
+        persons = int(trip.persons_count or 2)
         
         if cooking_ratio > 0:
             units = round(total_days * cooking_ratio, 1)
