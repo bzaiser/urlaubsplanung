@@ -198,21 +198,16 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "13. LOGISTIK: Bei JEDER Aktivität MUSS ein Feld 'end_time' (Ende der Aktivität) vorhanden sein.\n"
         "14. LOGISTIK: Bei Flügen/Zügen MUSS ein separates Event für Anfahrt/Check-in (2-3h vorher) eingeplant werden.\n"
         "16. UNTERKÜNFTE: Gruppiere ALLE festen Unterkünfte (Hotel, Bungalow, Airbnb, Ferienhaus) als 'HOTEL'. Nutze 'CAMPING' (Campingplatz) oder 'PITCH' (Stellplatz/Freies Stehen) NUR bei Wohnmobil-Touren.\n"
-        "17. GLOBAL_EXPENSES: Wenn absehbare Mehrkosten wie 'Maut', 'Vignette' oder 'Fähre-Pauschale' anfallen, gib diese in einer separaten Liste 'global_expenses' im JSON an.\n"
-        "18. FORMAT (AM ENDE DER ANTWORT ALS JSON):\n"
+        "17. VERPFLEGUNG: Wenn Verpflegungswünsche (z.B. 50% Kochen, 50% Restaurant) vorhanden sind, erstelle ZWEI Einträge in 'global_expenses'. Berechne die Kosten basierend auf den bereitgestellten Tagessätzen pro Person und der Anzahl der Tage (Anzahl Personen * Tage * Anteil * Satz).\n"
+        "18. GLOBAL_EXPENSES: Wenn absehbare Mehrkosten wie 'Maut', 'Vignette' oder 'Fähre-Pauschale' (z.B. Brenner, Karawanken) anfallen, gib diese als separate Einträge in der Liste 'global_expenses' an.\n"
+        "19. FORMAT (AM ENDE DER ANTWORT ALS JSON):\n"
         "{\n"
         "  \"name\": \"Reise-Titel\",\n"
         "  \"assistant_reasoning\": \"Deine Begründung...\",\n"
-        "  \"days\": [\n"
-        "    {\n"
-        "      \"offset\": 0, \"location\": \"Stuttgart\",\n"
-        "      \"events\": [\n"
-        "        {\"title\": \"Check-in Hotel X\", \"type\": \"HOTEL\", \"time\": \"14:00\", \"end_time\": \"11:00\", \"nights\": 3, \"cost_estimated\": 450}\n"
-        "      ]\n"
-        "    }\n"
-        "  ],\n"
+        "  \"days\": [...],\n"
         "  \"global_expenses\": [\n"
-        "    {\"title\": \"Maut Frankreich\", \"type\": \"FEE\", \"cost\": 45, \"notes\": \"Pauschale für die gesamte Strecke\"}\n"
+        "    {\"title\": \"Vignette Österreich\", \"type\": \"FEE\", \"cost\": 11.50, \"units\": 1},\n"
+        "    {\"title\": \"Lebensmittel (Selbstversorgung)\", \"type\": \"FOOD\", \"cost\": 15.00, \"units\": 14, \"notes\": \"7 Tage für 2 Personen\"}\n"
         "  ]\n"
         "}"
     )
@@ -238,22 +233,25 @@ def gemini_generate(preferences, start_date, days, start_location, v1, v2, perso
         "7. LÜCKENLOS: JEDER der " + str(days) + " Tage muss befüllt sein.\n"
         "8. KONSTANZ: Die 'location' muss während eines Aufenthalts (Check-in bis Check-out) an jedem Tag exakt gleich geschrieben sein.\n"
         "9. DETAILS (PFLICHT): Fülle IMMER 'end_time' (HH:MM) und 'distance_km' (Zahl) aus.\n"
-        "10. MAUT/GEBÜHREN: Erfasse pauschale Kosten wie Maut/Vignetten in der Liste 'global_expenses'.\n"
-        "11. FORMAT (NUR JSON):\n"
+        "10. VERPFLEGUNG: Wenn gewünscht, erstelle pauschale Einträge in 'global_expenses' (FOOD). Nutze 'units' für die Anzahl der Tage/Personen-Einheiten.\n"
+        "11. MAUT: Erfasse Gebühren (Brenner, Vignette etc.) in 'global_expenses'.\n"
+        "12. FORMAT (NUR JSON):\n"
         "{\n"
         "  \"name\": \"Trip\",\n"
-        "  \"assistant_reasoning\": \"...\",\n"
-        "  \"days\": [\n"
-        "    {\"offset\": 0, \"events\": [{\"title\": \"Check-in Hotel\", \"type\": \"HOTEL\", \"time\": \"14:00\", \"end_time\": \"18:00\", \"distance_km\": 150, \"cost_estimated\": 100}]},\n"
-        "    {\"offset\": 2, \"events\": [{\"title\": \"Check-out\", \"type\": \"HOTEL\", \"end_time\": \"11:00\"}]}\n"
-        "  ],\n"
-        "  \"global_expenses\": [{\"title\": \"Maut\", \"type\": \"FEE\", \"cost\": 30}]\n"
+        "  \"days\": [...],\n"
+        "  \"global_expenses\": [{\"title\": \"Lebensmittel\", \"type\": \"FOOD\", \"cost\": 25, \"units\": 10}]\n"
         "}"
     )
     
-    user_prompt = f"Plan: {preferences}. Dauer: {days} Tage. Start: {start_date}. Fahrzeuge: {v1}, {v2}. Personen: {persons_count} ({persons_ages})."
-    
     genai.configure(api_key=api_key)
+    
+    # Context: Food Budgets
+    food_ctx = (
+        f"Tagessätze (pro Person): Selbstversorgung: Niedrig={get_setting('food_self_low')}€/Med={get_setting('food_self_med')}€/High={get_setting('food_self_high')}€, "
+        f"Restaurant: Niedrig={get_setting('food_out_low')}€/Med={get_setting('food_out_med')}€/High={get_setting('food_out_high')}€."
+    )
+    
+    user_prompt = f"Plan: {preferences}. Dauer: {days} Tage. Start: {start_date}. Fahrzeuge: {v1}, {v2}. Personen: {persons_count} ({persons_ages}). {food_ctx}"
     model_name = get_best_gemini_model(api_key)
     model = genai.GenerativeModel(
         model_name,
@@ -290,10 +288,12 @@ def groq_generate(preferences, start_date, days, start_location, v1, v2, persons
         return {"error": "Groq API Key missing"}
     
     system_prompt = (
-        "REGELN: 1. Sprache: DEUTSCH. 2. Dauer: EXAKT " + str(days) + " Tage (keine leeren Tage!). 3. Logistik: Bei Flügen: KEINE Krisengebiete! 4. Fahrzeuge: Wohnmobil NUR bei Roadtrip, sonst Taxi/PKW. 5. Details: Fülle IMMER 'end_time' und 'distance_km' aus. 6. Unterkünfte: Alles Feste als 'HOTEL', Womo als 'CAMPING'/'PITCH'. 7. Gebühren: Maut in 'global_expenses' erfassen.\n"
-        "Beispiel: {\"name\": \"...\", \"days\": [{\"offset\": 0, \"events\": [{\"title\": \"Check-in\", \"type\": \"HOTEL\", \"time\": \"14:00\", \"end_time\": \"16:00\", \"distance_km\": 120}]}], \"global_expenses\": [{\"title\": \"Maut\", \"cost\": 25}]}"
+        "REGELN: 1. Sprache: DEUTSCH. 2. Dauer: EXAKT " + str(days) + " Tage. 3. Unterkünfte: Alles Feste als 'HOTEL', Womo als 'CAMPING'/'PITCH'. 4. Gebühren: Maut (Brenner etc.) in 'global_expenses'. 5. Verpflegung: Berechne Pauschalen für Selbstkochen/Restaurant in 'global_expenses' (FOOD) mit 'units'=Tage. 6. Details: Fülle 'end_time' und 'distance_km' aus.\n"
+        "Beispiel: {\"name\": \"...\", \"days\": [...], \"global_expenses\": [{\"title\": \"Lebensmittel\", \"type\": \"FOOD\", \"cost\": 25, \"units\": 10}]}"
     )
-    user_prompt = f"Plan: {preferences}. Dauer: {days} Tage. Personen: {persons_count}. Fahrzeuge: {v1}, {v2}."
+    # Context: Food Budgets
+    food_ctx = f"Tagessätze: Selbst: {get_setting('food_self_med')}€, Restaurant: {get_setting('food_out_med')}€."
+    user_prompt = f"Plan: {preferences}. Dauer: {days} Tage. Personen: {persons_count}. {food_ctx}"
     
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -341,9 +341,11 @@ def ollama_generate(preferences, start_date, days, start_location, v1, v2, perso
         "8. TYPEN: FLIGHT, HOTEL, CAMPING, PITCH, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT.\n"
         "9. DETAILS: Fülle IMMER 'end_time', 'detail_info' (Flugnummer!), 'distance_km' und 'booking_reference' aus.\n"
         "10. MAUT: Gebühren/Maut in Liste 'global_expenses' erfassen.\n"
-        "11. FORMAT: {\"name\": \"...\", \"days\": [...], \"global_expenses\": [...]}"
+        "11. VERPFLEGUNG: Pauschale für Selbstkochen/Restaurant in 'global_expenses' (FOOD) eintragen. Units = Tage.\n"
+        "12. FORMAT: {\"name\": \"...\", \"days\": [...], \"global_expenses\": [...]}"
     )
-    user_prompt = f"Plan-Wünsche: {preferences}. Dauer: {days} Tage. Start: {start_date}. Personen: {persons_count}. Fahrzeuge: {v1}, {v2}."
+    food_ctx = f"Tagessätze: Selbst: {get_setting('food_self_med')}€, Restaurant: {get_setting('food_out_med')}€."
+    user_prompt = f"Plan-Wünsche: {preferences}. Dauer: {days} Tage. Start: {start_date}. {food_ctx}"
     
     url = f"{ollama_url}/api/chat"
     payload = {
@@ -725,7 +727,7 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
             title=gx.get('title', 'Ausgabe'),
             expense_type=gx.get('type', 'FEE'),
             unit_price=gx.get('cost', 0),
-            units=1,
+            units=gx.get('units', 1),
             notes=gx.get('notes', 'Importiert von KI')
         )
         

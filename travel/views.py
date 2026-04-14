@@ -542,6 +542,14 @@ def settings_modal(request):
     def_p_count = get_setting('default_persons_count', '2')
     def_p_ages = get_setting('default_persons_ages', '40, 38')
 
+    # Food Budgets
+    food_self_l = get_setting('food_self_low', '10')
+    food_self_m = get_setting('food_self_med', '15')
+    food_self_h = get_setting('food_self_high', '25')
+    food_out_l = get_setting('food_out_low', '20')
+    food_out_m = get_setting('food_out_med', '40')
+    food_out_h = get_setting('food_out_high', '70')
+
     
     if request.method == 'POST':
         # Handle Provider/Keys/Vehicles update
@@ -558,7 +566,9 @@ def settings_modal(request):
                 'vehicle1_name', 'vehicle1_consumption', 'vehicle1_fuel_type', 'vehicle1_weight', 'vehicle1_range',
                 'vehicle2_name', 'vehicle2_consumption', 'vehicle2_fuel_type', 'vehicle2_range',
                 'user_home_city', 'user_home_address', 'default_persons_count', 'default_persons_ages',
-                'ollama_model_name', 'ollama_url', 'diesel_price', 'petrol_price'
+                'ollama_model_name', 'ollama_url', 'diesel_price', 'petrol_price',
+                'food_self_low', 'food_self_med', 'food_self_high',
+                'food_out_low', 'food_out_med', 'food_out_high'
             ]:
                 val = request.POST.get(k, '').strip()
                 GlobalSetting.objects.update_or_create(key=k, defaults={'value': val})
@@ -602,6 +612,8 @@ def settings_modal(request):
         'default_persons_count': def_p_count, 'default_persons_ages': def_p_ages,
         'ollama_model_name': ollama_model, 'ollama_url': ollama_url,
         'diesel_price': diesel_price, 'petrol_price': petrol_price,
+        'food_self_low': food_self_l, 'food_self_med': food_self_m, 'food_self_high': food_self_h,
+        'food_out_low': food_out_l, 'food_out_med': food_out_m, 'food_out_high': food_out_h,
     })
 
 
