@@ -651,16 +651,30 @@ from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 def ai_bridge_import(request):
-    """Endpoint for the bookmarklet to POST JSON data directly."""
+    """Endpoint for the bookmarklet to POST JSON data directly with CORS support."""
+    if request.method == 'OPTIONS':
+        # Handle browser preflight requests
+        response = HttpResponse()
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            # We store the latest result in the session or a cache for the user to 'pick up'
             request.session['latest_ai_import'] = data
-            return JsonResponse({'status': 'success'})
+            response = JsonResponse({'status': 'success'})
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-    return JsonResponse({'status': 'error'}, status=405)
+            response = JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+    
+    response = JsonResponse({'status': 'error'}, status=405)
+    response['Access-Control-Allow-Origin'] = '*'
+    return response
 
 def ai_wizard(request):
     """
@@ -923,17 +937,6 @@ def global_expense_delete(request, pk):
     expense.delete()
     return HttpResponse(headers={'HX-Refresh': 'true'})
 
-@csrf_exempt
-def ai_bridge_import(request):
-    """Endpoint for the bookmarklet to POST JSON data directly from Gemini/Web."""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            request.session['latest_ai_import'] = data
-            return JsonResponse({'status': 'success'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-    return JsonResponse({'status': 'error'}, status=405)
 
 def export_trip_ics(request, pk):
     """Generates an .ics file for the complete trip."""
