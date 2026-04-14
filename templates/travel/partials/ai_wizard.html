@@ -135,8 +135,6 @@
                             </div>
                         </div>
                     {% endfor %}
-                {% else %}
-                    <p style="color: #e74c3c; font-size: 0.85rem;">Kein Plan-Inhalt gefunden (Formatfehler). Bitte noch mal versuchen.</p>
                 {% endif %}
             </div>
 
@@ -210,6 +208,7 @@
                     <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
 
                     <div style="margin-bottom: 10px;">
+                    <div style="margin-bottom: 10px;">
                         <button type="button" onclick="navigator.clipboard.readText().then(t => { document.querySelector('textarea[name=\'pasted_text\']').value = t; }).catch(e => alert('Bitte erlaube den Zugriff auf die Zwischenablage!'))" 
                                 style="width: 100%; padding: 8px; background: rgba(26, 188, 156, 0.2); color: #1abc9c; border: 1px solid #1abc9c; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
                             📋 AUS ZWISCHENABLAGE EINFÜGEN
@@ -217,7 +216,7 @@
                     </div>
 
                     <textarea name="pasted_text" placeholder="Füge hier die Antwort der KI ein (JSON oder kompletter Text)..." 
-                              required style="width: 100%; height: 150px; background: #000; border: 1px solid var(--accent-gold); border-radius: 6px; color: #fff; font-size: 0.8rem; padding: 10px; margin-bottom: 15px;"></textarea>
+                              required style="width: 100%; height: 200px; background: #000; border: 1px solid var(--accent-gold); border-radius: 6px; color: #fff; font-size: 0.85rem; padding: 12px; margin-bottom: 15px; outline: none;"></textarea>
                     
                     <div style="display: flex; gap: 10px;">
                         <button type="button" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" 
