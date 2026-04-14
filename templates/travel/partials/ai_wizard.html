@@ -175,9 +175,27 @@
             </div>
 
         {% elif step == 'error' %}
-            <div style="text-align: center; color: #e74c3c; padding: 20px;">
-                <p>⚠️ {{ error }}</p>
-                <button hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" style="padding: 8px 16px; background: #555; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Zurück</button>
+            <div style="padding: 20px; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">🚧</div>
+                <h3 style="color: #e74c3c; margin-bottom: 15px;">Ups! Da ist was schiefgelaufen.</h3>
+                
+                <div style="background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3); color: #ff7675; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; text-align: left; font-family: monospace; white-space: pre-wrap; word-break: break-all;">
+                    {{ error|default:"Unbekannter Fehler" }}
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <form hx-post="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container">
+                        {% csrf_token %}
+                        <input type="hidden" name="template_id" value="{{ template_id }}">
+                        <input type="hidden" name="start_location" value="{{ start_location }}">
+                        <input type="hidden" name="start_date" value="{{ start_date }}">
+                        <input type="hidden" name="days" value="{{ days }}">
+                        <input type="hidden" name="user_preferences" value="{{ user_preferences }}">
+                        <input type="hidden" name="persons_count" value="{{ persons_count }}">
+                        <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
+                        <button type="submit" style="padding: 12px 24px; background: #333; color: #fff; border: 1px solid #444; border-radius: 8px; cursor: pointer; font-weight: 600;">Zurück zum Formular</button>
+                    </form>
+                </div>
             </div>
         {% endif %}
     </div>
