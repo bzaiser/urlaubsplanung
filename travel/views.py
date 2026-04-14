@@ -725,20 +725,21 @@ def ai_wizard(request):
         try:
             raw_json = ai_service.repair_json(bridge_data)
             itinerary = ai_service.normalize_itinerary(json.loads(raw_json))
+            request.session['latest_ai_import'] = itinerary
             
-            return render(request, 'travel/partials/ai_wizard.html', {
-                'step': 'preview', 
-                'itinerary': itinerary,
-                'itinerary_json': json.dumps(itinerary),
-                'start_date': request.GET.get('start_date') or date.today().isoformat(),
-                'persons_count': 2,
-                'persons_ages': "",
-                'bridge_import': True
-            })
+            # Return Success page and close tab (Messenger mode)
+            html = """
+            <html><body style="font-family: sans-serif; text-align: center; padding-top: 50px; background: #1a1a1a; color: #fff;">
+                <div style="background: rgba(197, 160, 89, 0.2); border: 1px solid #c5a059; padding: 20px; border-radius: 12px; display: inline-block;">
+                    <h2 style="color: #c5a059;">✅ Plan erfolgreich übertragen!</h2>
+                    <p>Dieses Fenster schließt sich... Wechsel zurück zur App.</p>
+                </div>
+                <script>setTimeout(() => window.close(), 1500);</script>
+            </body></html>
+            """
+            return HttpResponse(html)
         except Exception as e:
-            return render(request, 'travel/partials/ai_wizard.html', {
-                'step': 'error', 'error': f"Fehler beim URL-Import: {str(e)}"
-            })
+            return HttpResponse(f"⚠️ Fehler beim URL-Import: {str(e)}", status=400)
 
     templates = TripTemplate.objects.all()
     
