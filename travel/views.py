@@ -829,32 +829,20 @@ def ai_wizard(request):
             latest_data = request.session.get('latest_ai_import')
             if not latest_data:
                 return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'error', 'error': "Noch keine Daten von der Brücke empfangen. Bitte klicke erst in Gemini auf 'AN APP SENDEN'."
+                    'step': 'error', 'error': "Noch keine Daten von der Brücke empfangen. Bitte erst bei Gemini auf 'AN APP SENDEN' klicken."
                 })
             
-            # Use normalize logic
-            try:
-                # Clear after use so we don't import twice accidentally
-                del request.session['latest_ai_import']
-                
-                result = ai_service.normalize_itinerary(latest_data)
-                start_date = request.POST.get('start_date')
-                
-                if not start_date:
-                    # In case of session timeout or loss of state during bridge wait
-                    return render(request, 'travel/partials/ai_wizard.html', {
-                        'step': 'error', 'error': 'Startdatum fehlt. Bitte starte den Wizard neu.'
-                    })
-                
-                return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'preview', 
-                    'itinerary': result,
-                    'itinerary_json': json.dumps(result),
-                    'start_date': start_date,
-                    'persons_count': request.POST.get('persons_count'),
-                    'persons_ages': request.POST.get('persons_ages'),
-                })
-            except Exception as e:
+            # Fill the manual text area with this data so user can see/edit it
+            # We don't delete from session yet, so they can try again if they mess up the text
+            itinerary_str = json.dumps(latest_data, indent=2, ensure_ascii=False)
+            
+            return render(request, 'travel/partials/ai_wizard.html', {
+                'step': 'manual',
+                'pasted_text': itinerary_str,
+                'start_date': request.POST.get('start_date'),
+                'persons_count': request.POST.get('persons_count'),
+                'persons_ages': request.POST.get('persons_ages'),
+            })
                 return render(request, 'travel/partials/ai_wizard.html', {
                     'step': 'error', 'error': f"Datenformat-Fehler: {str(e)}"
                 })
