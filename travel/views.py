@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from datetime import date, timedelta
 from .models import Trip, Day, Event, TripTemplate, GlobalSetting, GlobalExpense
 from .forms import TripForm, EventForm
@@ -662,7 +662,10 @@ def ai_bridge_import(request):
 
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
+            # Decode and repair JSON before loading
+            raw_text = request.body.decode('utf-8')
+            repaired = ai_service.repair_json(raw_text)
+            data = json.loads(repaired)
             request.session['latest_ai_import'] = data
             response = JsonResponse({'status': 'success'})
             response['Access-Control-Allow-Origin'] = '*'

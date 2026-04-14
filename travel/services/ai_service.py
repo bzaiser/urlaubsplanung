@@ -442,8 +442,11 @@ def normalize_itinerary(data):
     Ensures the itinerary has a standard structure and maps common 
     synonyms for keys used by different AI providers.
     """
+    # 0. Handle direct lists (if AI skipped the wrapping object)
+    if isinstance(data, list):
+        data = {"days": data}
+        
     if not isinstance(data, dict):
-        # If it's not a dict, we can't normalize it - return an error-like dict
         return {"error": f"KI lieferte Text statt Daten: {str(data)[:100]}..."}
         
     # 1. Handle wrapping
@@ -456,17 +459,25 @@ def normalize_itinerary(data):
     mapping = {
         'itinerary': 'days',
         'travel_plan': 'days',
+        'plan': 'days',
+        'itinerary_days': 'days',
+        'route': 'days',
         'reasoning': 'assistant_reasoning',
         'thoughts': 'assistant_reasoning',
-        'explanation': 'assistant_reasoning'
+        'explanation': 'assistant_reasoning',
+        'details': 'assistant_reasoning'
     }
     for old_key, new_key in mapping.items():
         if old_key in data and new_key not in data:
             data[new_key] = data[old_key]
             
-    # 3. Ensure 'days' is present
-    if 'days' not in data and 'itinerary' in data:
-        data['days'] = data['itinerary']
+    # 3. Ensure 'days' is present (and check nested keys again)
+    if 'days' not in data:
+        # Look for anything that might be the list of days
+        for k, v in data.items():
+            if isinstance(v, list) and len(v) > 0 and (isinstance(v[0], dict) or isinstance(v[0], str)):
+                data['days'] = v
+                break
         
     # 3. Normalize Days and Events
     if 'days' in data and isinstance(data['days'], list):
@@ -476,6 +487,10 @@ def normalize_itinerary(data):
             if isinstance(day, str):
                 day = {"location": day, "events": []}
                 data['days'][i] = day
+                
+            # Ensure 'offset' (Order matters!)
+            if 'offset' not in day or day.get('offset') is None:
+                day['offset'] = i
                 
             # Ensure 'location'
             if 'location' not in day or not day.get('location'):
