@@ -150,8 +150,8 @@ class Event(models.Model):
     
     class Meta:
         ordering = ['time', 'id']
-        verbose_name = _("Event")
-        verbose_name_plural = _("Events")
+        verbose_name = _("Eintrag")
+        verbose_name_plural = _("Einträge")
 
     def __str__(self):
         return f"{self.get_type_display()}: {self.title}"

@@ -548,7 +548,7 @@
                                         <span style="font-size: 0.8rem; opacity: 0.6; margin-left: 10px; width: 40px;">${d.day_name}</span>
                                     </div>
                                 </div>
-                                <button onclick="htmx.ajax('GET', '/day/${d.day_id}/event/type-picker/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add">➕ EVENT</button>
+                                <button onclick="htmx.ajax('GET', '/day/${d.day_id}/event/type-picker/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add">➕ EINTRAG</button>
                             </div>`;
                         }
                     },
@@ -642,7 +642,7 @@
                     const dayIds = [...new Set(selectedRows.map(r => r.day_id))].filter(id => id !== undefined);
                     updateHiddenIds(dayIds, 'day_ids');
                 } else {
-                    labelEl.innerText = 'EVENTS AUSGEWÄHLT';
+                    labelEl.innerText = 'EINTRÄGE AUSGEWÄHLT';
                     if (dayTools) dayTools.style.display = 'none';
                     if (eventTools) eventTools.style.display = 'flex';
                     updateHiddenIds(selectedRows.map(r => r.id), 'event_ids');
@@ -670,7 +670,7 @@
             }
 
             window.deleteSingleEvent = function(eventId) {
-                if (!confirm('Event wirklich löschen?')) return;
+                if (!confirm('Eintrag wirklich löschen?')) return;
                 const csrftoken = window.getCookie('csrftoken') || '{{ csrf_token }}';
                 fetch(`/event/${eventId}/delete/`, {
                     method: 'POST',
@@ -843,7 +843,7 @@
                         hx-post="{% url 'travel:event_bulk_delete' %}" 
                         hx-target="body" 
                         hx-include="[name='event_ids']"
-                        hx-confirm="Markierte Events wirklich löschen?"
+                        hx-confirm="Markierte Einträge wirklich löschen?"
                         hx-on::after-request="clearSelection();"
                         style="background: #e74c3c; color: #fff; border: none; padding: 8px 20px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; transition: background 0.2s;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">LÖSCHEN</button>
             </div>

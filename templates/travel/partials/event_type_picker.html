@@ -9,25 +9,7 @@
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-            {% set types = [
-                ('FLIGHT', '✈️', 'Flug'),
-                ('HOTEL', '🏨', 'Hotel'),
-                ('RENTAL_CAR', '🔑🚗', 'Mietwagen'),
-                ('CAR', '🚗', 'Privat-Auto'),
-                ('CAMPING', '⛺', 'Camping'),
-                ('PITCH', '🚐📍', 'Stellplatz'),
-                ('CAMPER', '🚐', 'Wohnmobil'),
-                ('SCOOTER', '🛵', 'Roller'),
-                ('TRAIN', '🚆', 'Zug'),
-                ('FERRY', '⛴️', 'Fähre'),
-                ('BOAT', '🛥️', 'Boot'),
-                ('BUS', '🚌', 'Bus'),
-                ('ACTIVITY', '🎒', 'Aktivität'),
-                ('RESTAURANT', '🍽️', 'Essen'),
-                ('OTHER', '❓', 'Sonstiges')
-            ] %}
-            
-            {% comment %} Manually iterate since Django templates don't support the 'set' tag like Jinja2 without custom tags {% endcomment %}
+            {% comment %} Manually iterate since Django templates don't support the 'set' tag like Jinja2 {% endcomment %}
             <button class="type-btn" hx-get="{% url 'travel:event_create' day.id %}?type=FLIGHT" hx-target="#modal-container"><span>✈️</span><br>Flug</button>
             <button class="type-btn" hx-get="{% url 'travel:event_create' day.id %}?type=HOTEL" hx-target="#modal-container"><span>🏨</span><br>Hotel</button>
             <button class="type-btn" hx-get="{% url 'travel:event_create' day.id %}?type=RENTAL_CAR" hx-target="#modal-container"><span>🔑🚗</span><br>Mietwagen</button>
