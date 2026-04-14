@@ -115,11 +115,13 @@ def generate_itinerary(preferences, start_date=None, days=28, start_location="Zu
     }
 
     if provider == 'gemini':
-        return gemini_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages)
+        itinerary = gemini_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages)
     elif provider == 'groq':
-        return groq_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages)
+        itinerary = groq_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages)
     else:
-        return ollama_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages)
+        itinerary = ollama_generate(preferences, start_date, days, start_location, v1, v2, persons_count, persons_ages)
+        
+    return normalize_itinerary(itinerary)
 
 def repair_json(json_str):
     """
