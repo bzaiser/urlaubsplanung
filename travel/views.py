@@ -667,6 +667,10 @@ def ai_bridge_import(request):
             itinerary_data = request.POST.get('itinerary_data')
             is_form_post = itinerary_data is not None
             
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"AI Bridge: Received POST. Form={is_form_post}, PayloadLen={len(itinerary_data or request.body)}")
+
             if not is_form_post:
                 # Fallback to direct JSON body (Fetch)
                 raw_text = request.body.decode('utf-8')
@@ -714,6 +718,29 @@ def ai_wizard(request):
     Supports initial prompt and refinement instructions.
     """
     step = request.GET.get('step', 'select')
+    bridge_data = request.GET.get('bridge_data')
+    
+    # Final CSP-Bypass: Detect bridge data in GET parameters (URL Navigation)
+    if bridge_data:
+        try:
+            from django.utils.http import urlunquote
+            raw_json = ai_service.repair_json(bridge_data)
+            itinerary = ai_service.normalize_itinerary(json.loads(raw_json))
+            
+            return render(request, 'travel/partials/ai_wizard.html', {
+                'step': 'preview', 
+                'itinerary': itinerary,
+                'itinerary_json': json.dumps(itinerary),
+                'start_date': request.GET.get('start_date') or date.today().isoformat(),
+                'persons_count': 2,
+                'persons_ages': "",
+                'bridge_import': True
+            })
+        except Exception as e:
+            return render(request, 'travel/partials/ai_wizard.html', {
+                'step': 'error', 'error': f"Fehler beim URL-Import: {str(e)}"
+            })
+
     templates = TripTemplate.objects.all()
     
     if request.method == 'POST':

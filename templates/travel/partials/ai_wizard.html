@@ -83,7 +83,7 @@
                 <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 5px; text-transform: uppercase;">🚀 NEU: Die "Brücke" verwenden</h3>
                 <p style="font-size: 0.75rem; color: #ccc; margin-bottom: 10px;">Ziehe diesen Button einmalig in deine <b>Lesezeichenleiste</b> (Strg+Shift+B zum Einblenden):</p>
                 
-                <a href="javascript:(function(){const t=document.body.innerText;const m=t.match(/\{[\s\S]*\}/);if(!m){alert('Kein Plan gefunden!');return;}const f=document.createElement('form');f.method='POST';f.action='http://localhost:8001/ai/bridge-import/';f.target='_blank';const i=document.createElement('input');i.type='hidden';i.name='itinerary_data';i.value=m[0];f.appendChild(i);document.body.appendChild(f);f.submit();document.body.removeChild(f);})()" 
+                <a href="javascript:(function(){const t=document.body.innerText;const m=t.match(/\{[\s\S]*\}/);if(!m){alert('Kein Plan gefunden!');return;}window.open('{% if request.is_secure %}https{% else %}http{% endif %}://{{ request.get_host }}{% url 'travel:ai_wizard' %}?bridge_data='+encodeURIComponent(m[0])+'&start_date={{ start_date }}','_blank');})()" 
                    style="display: inline-block; padding: 8px 15px; background: #333; color: var(--accent-gold); border: 2px solid var(--accent-gold); border-radius: 50px; font-size: 0.8rem; font-weight: bold; text-decoration: none; cursor: grab;"
                    onclick="return false;">
                     ➡️ AN APP SENDEN
@@ -208,6 +208,13 @@
                     <input type="hidden" name="start_date" value="{{ start_date }}">
                     <input type="hidden" name="persons_count" value="{{ persons_count }}">
                     <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
+
+                    <div style="margin-bottom: 10px;">
+                        <button type="button" onclick="navigator.clipboard.readText().then(t => { document.querySelector('textarea[name=\'pasted_text\']').value = t; }).catch(e => alert('Bitte erlaube den Zugriff auf die Zwischenablage!'))" 
+                                style="width: 100%; padding: 8px; background: rgba(26, 188, 156, 0.2); color: #1abc9c; border: 1px solid #1abc9c; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            📋 AUS ZWISCHENABLAGE EINFÜGEN
+                        </button>
+                    </div>
 
                     <textarea name="pasted_text" placeholder="Füge hier die Antwort der KI ein (JSON oder kompletter Text)..." 
                               required style="width: 100%; height: 150px; background: #000; border: 1px solid var(--accent-gold); border-radius: 6px; color: #fff; font-size: 0.8rem; padding: 10px; margin-bottom: 15px;"></textarea>
