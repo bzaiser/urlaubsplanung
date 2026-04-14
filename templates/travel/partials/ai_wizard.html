@@ -44,9 +44,20 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <button type="submit" class="btn-primary" style="padding: 10px; font-weight: bold;">🪄 Entwurf erstellen</button>
-                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary" style="padding: 10px; font-weight: bold; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer;">📋 Direkt zur KI (Manueller Import)</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                    <button type="submit" class="btn-primary" 
+                            style="padding: 14px 10px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border-radius: 8px;">
+                        <span style="font-size: 1.2rem;">🪄</span>
+                        <span>Auto-Generieren</span>
+                        <small style="font-size: 0.65rem; opacity: 0.8; font-weight: 400;">(Empfohlen)</small>
+                    </button>
+                    
+                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary" 
+                            style="padding: 14px 10px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; background: rgba(255,255,255,0.05); border: 1px solid #444; color: #ccc; border-radius: 8px; cursor: pointer;">
+                        <span style="font-size: 1.2rem;">📋</span>
+                        <span>Manueller Modus</span>
+                        <small style="font-size: 0.65rem; opacity: 0.8; font-weight: 400;">(Prompt kopieren)</small>
+                    </button>
                 </div>
             </form>
             <div id="loading-ai" class="htmx-indicator" style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--accent-gold);">🤖 KI arbeitet... häng dich rein!</div>
