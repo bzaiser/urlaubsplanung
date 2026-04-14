@@ -47,17 +47,15 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; align-items: stretch;">
-                    <button type="submit" class="btn-primary" 
-                            style="padding: 16px 10px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 10px; height: 100%; min-height: 100px; border: none; cursor: pointer; margin: 0 !important; align-self: stretch;">
-                        <span style="font-size: 1.4rem;">🪄</span>
+                <div class="modal-action-grid" style="margin-top: 15px;">
+                    <button type="submit" class="btn-primary btn-xl" style="flex-direction: column;">
+                        <span style="font-size: 1.5rem;">🪄</span>
                         <span style="letter-spacing: 0.5px;">Auto-Generieren</span>
                         <small style="font-size: 0.6rem; opacity: 0.8; font-weight: 400; text-transform: none;">(Empfohlen)</small>
                     </button>
                     
-                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary" 
-                            style="padding: 16px 10px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: rgba(255,255,255,0.05); border: 1px solid #444; color: #ccc; border-radius: 10px; height: 100%; min-height: 100px; cursor: pointer; margin: 0 !important; align-self: stretch;">
-                        <span style="font-size: 1.4rem;">📋</span>
+                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary btn-xl" style="flex-direction: column;">
+                        <span style="font-size: 1.5rem;">📋</span>
                         <span style="letter-spacing: 0.5px;">Manueller Modus</span>
                         <small style="font-size: 0.6rem; opacity: 0.8; font-weight: 400; text-transform: none;">(Prompt kopieren)</small>
                     </button>
@@ -127,15 +125,13 @@
                            style="width: 100%; background: #111; border: 1px solid var(--accent-gold); color: #fff; padding: 12px; border-radius: 8px; font-weight: 600;">
                 </div>
 
-                <div style="display: flex; gap: 12px;">
+                <div class="modal-action-grid">
                     <button type="button" hx-post="{% url 'travel:ai_wizard' %}?step=select" 
                             hx-include="next input, next textarea, next select" hx-target="#modal-container" 
-                            class="btn-secondary"
-                            style="flex: 1; padding: 12px; font-weight: 700; text-transform: uppercase; border-radius: 8px; cursor: pointer;">
+                            class="btn-secondary btn-large">
                         Zurück
                     </button>
-                    <button type="submit" class="btn-primary" 
-                            style="flex: 2; padding: 14px 12px; font-weight: 800; text-transform: uppercase; border-radius: 8px; border: none; cursor: pointer;">
+                    <button type="submit" class="btn-primary btn-large">
                         ✅ Plan jetzt erstellen
                     </button>
                 </div>
@@ -175,14 +171,13 @@
                     <textarea name="pasted_text" id="manual-import-area" placeholder="Hier das Ergebnis von Gemini einfügen..." 
                               required style="width: 100%; height: 320px; background: #000; border: 1px solid var(--accent-gold); border-radius: 6px; color: #fff; font-size: 0.85rem; padding: 12px; margin-bottom: 15px; outline: none; display: block; line-height: 1.4;">{{ pasted_text }}</textarea>
                     
-                    <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <div class="modal-action-grid" style="margin-top: 20px;">
                         <button type="button" hx-post="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" 
                                 hx-include="next input, next textarea, next select"
-                                class="btn-secondary" style="flex: 1; padding: 12px; font-weight: 700; text-transform: uppercase; border-radius: 8px; cursor: pointer;">
+                                class="btn-secondary btn-large">
                             Abbrechen
                         </button>
-                        <button type="submit" class="btn-primary" 
-                                style="flex: 2; padding: 14px 12px; font-weight: 800; text-transform: uppercase; border-radius: 8px; border: none; cursor: pointer;">
+                        <button type="submit" class="btn-primary btn-large">
                             🚀 Reise einlesen
                         </button>
                     </div>
@@ -198,7 +193,7 @@
                     {{ error|default:"Unbekannter Fehler" }}
                 </div>
 
-                <div style="display: flex; gap: 12px; justify-content: center; margin-top: 15px;">
+                <div class="modal-action-flex" style="justify-content: center; margin-top: 15px;">
                     <form hx-post="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="select_step">
@@ -209,8 +204,7 @@
                         <input type="hidden" name="user_preferences" value="{{ user_preferences }}">
                         <input type="hidden" name="persons_count" value="{{ persons_count }}">
                         <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
-                        <button type="submit" class="btn-secondary" 
-                                style="padding: 12px 24px; font-weight: 800; text-transform: uppercase; border-radius: 8px; cursor: pointer; border: 1px solid #444; min-width: 200px;">
+                        <button type="submit" class="btn-secondary btn-large" style="min-width: 200px;">
                             Zurück zum Formular
                         </button>
                     </form>
