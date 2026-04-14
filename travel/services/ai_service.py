@@ -626,9 +626,9 @@ def normalize_itinerary(data):
             for day in data['days']:
                 for event in day.get('events', []):
                     if event.get('type') in ['CAR', 'TRANSPORT', 'OTHER']:
-                        title_lower = event.get('title', '').lower()
                         # If it's a driving/transport event in a camper trip, it's a CAMPER
-                        if any(k in title_lower for k in ['fahrt', 'drive', 'reise', 'überfahrt', 'route']):
+                        transport_keywords = ['fahrt', 'drive', 'reise', 'überfahrt', 'route', 'etappe', 'strecke', 'grenz', 'uebergang', 'home', 'heimat', 'nach hause', 'transfer', 'transit']
+                        if any(k in title_lower for k in transport_keywords):
                             event['type'] = 'CAMPER'
                         # Extra safety: if it was already marked as CAR or TRANSPORT by AI, but it's a camper trip
                         elif event.get('type') in ['CAR', 'TRANSPORT']:
