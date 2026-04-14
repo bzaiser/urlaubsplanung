@@ -182,7 +182,6 @@ input:focus {
     font-weight: 600;
     cursor: pointer;
     width: 100%;
-    margin-top: 10px;
 }
 
 /* Flatpickr Customization */
