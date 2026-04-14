@@ -508,7 +508,7 @@
                         sortable: true, 
                         filter: true, 
                         resizable: true,
-                        editable: true,
+                        editable: params => !params.data.is_global_expense,
                         singleClickEdit: true,
                         tooltipComponent: null 
                     },
@@ -568,7 +568,12 @@
                                 params.api.stopEditing(true);
                                 
                                 const eventId = params.data.id;
-                                if (eventId && !isNaN(eventId)) {
+                                if (!eventId) return;
+
+                                if (params.data.is_global_expense) {
+                                    const cleanId = eventId.toString().replace('global-', '');
+                                    htmx.ajax('GET', `/expense/${cleanId}/edit/`, { target: '#modal-container', swap: 'innerHTML' });
+                                } else if (!isNaN(eventId)) {
                                     htmx.ajax('GET', `/event/${eventId}/edit/`, { target: '#modal-container', swap: 'innerHTML' });
                                 }
                             } catch (err) {
