@@ -653,11 +653,12 @@ from django.views.decorators.csrf import csrf_exempt
 def ai_bridge_import(request):
     """Endpoint for the bookmarklet to POST JSON data directly with CORS support."""
     if request.method == 'OPTIONS':
-        # Handle browser preflight requests
+        # Handle browser preflight requests including Private Network Access (PNA)
         response = HttpResponse()
         response['Access-Control-Allow-Origin'] = '*'
         response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
         response['Access-Control-Allow-Headers'] = 'Content-Type'
+        response['Access-Control-Allow-Private-Network'] = 'true' # Required by Chrome for Localhost connections
         return response
 
     if request.method == 'POST':
