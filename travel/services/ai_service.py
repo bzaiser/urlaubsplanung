@@ -489,13 +489,23 @@ def normalize_itinerary(data):
             
     # 3. Ensure 'days' is present (and check nested keys again)
     if 'days' not in data:
-        # Look for anything that might be the list of days
+        # Look for anything that might be the list/dict of days
         for k, v in data.items():
-            if isinstance(v, list) and len(v) > 0 and (isinstance(v[0], dict) or isinstance(v[0], str)):
-                data['days'] = v
-                break
-        
-    # 3. Normalize Days and Events
+            if isinstance(v, (list, dict)) and len(v) > 0:
+                # If it's a dict where keys are "1", "2" or "Day 1", "Day 2"
+                if isinstance(v, dict):
+                    # Convert dict to list
+                    data['days'] = list(v.values())
+                    break
+                elif isinstance(v, list) and (isinstance(v[0], dict) or isinstance(v[0], str)):
+                    data['days'] = v
+                    break
+                    
+    # 4. Final Fallback: If 'days' is still nothing but data has 'events'
+    if 'days' not in data and 'events' in data and isinstance(data['events'], list):
+        data['days'] = [{"location": "Reiseziel", "events": data['events']}]
+
+    # 5. Normalize Days and Events
     if 'days' in data and isinstance(data['days'], list):
         last_location = "Unbekannt"
         for i, day in enumerate(data['days']):
@@ -550,45 +560,25 @@ def normalize_itinerary(data):
                         event['nights'] = event.get('naechte', event.get('nächte', event.get('duration_nights', None)))
 
                     # 4. Map Event Types for Icons
-                    etype = str(event.get('type', 'OTHER')).upper()
+                    etype_raw = str(event.get('type' or 'OTHER')).upper()
                     type_map = {
-                        'SIGHTSEEING': 'ACTIVITY',
-                        'MUSEUM': 'ACTIVITY',
-                        'WALK': 'ACTIVITY',
-                        'TOUR': 'ACTIVITY',
-                        'FOOD': 'RESTAURANT',
-                        'MEAL': 'RESTAURANT',
-                        'DINNER': 'RESTAURANT',
-                        'LUNCH': 'RESTAURANT',
-                        'BREAKFAST': 'RESTAURANT',
-                        'STAY': 'HOTEL',
-                        'SLEEP': 'HOTEL',
-                        'ACCOMMODATION': 'HOTEL',
-                        'FLIGHT': 'FLIGHT',
-                        'PLANE': 'FLIGHT',
-                        'DRIVE': 'CAR',
-                        'DRIVING': 'CAR',
-                        'TRAVEL': 'CAR',
-                        'TRANSPORT': 'CAR',
-                        'PKW': 'CAR',
-                        'CAMPINGPLATZ': 'CAMPING',
-                        'STELLPLATZ': 'PITCH',
-                        'AIRBNB': 'HOTEL',
-                        'FERIENHAUS': 'HOTEL',
-                        'BUNGALOW': 'HOTEL',
-                        'SOSTA': 'PITCH',
-                        'AREA SOSTA': 'PITCH',
-                        'CAMPER STOP': 'PITCH',
-                        'CAMPING SITE': 'CAMPING',
-                        'HOLIDAY PARK': 'CAMPING'
+                        'SIGHTSEEING': 'ACTIVITY', 'MUSEUM': 'ACTIVITY', 'WALK': 'ACTIVITY', 'TOUR': 'ACTIVITY',
+                        'FOOD': 'RESTAURANT', 'MEAL': 'RESTAURANT', 'DINNER': 'RESTAURANT', 'LUNCH': 'RESTAURANT', 'BREAKFAST': 'RESTAURANT',
+                        'STAY': 'HOTEL', 'SLEEP': 'HOTEL', 'ACCOMMODATION': 'HOTEL', 'AIRBNB': 'HOTEL', 'FERIENHAUS': 'HOTEL', 'BUNGALOW': 'HOTEL',
+                        'CAMPINGPLATZ': 'CAMPING', 'STELLPLATZ': 'PITCH', 'SOSTA': 'PITCH', 'AREA SOSTA': 'PITCH', 'CAMPER STOP': 'PITCH',
+                        'CAMPING SITE': 'CAMPING', 'HOLIDAY PARK': 'CAMPING', 'DRIVE': 'CAR', 'DRIVING': 'CAR', 'TRAVEL': 'CAR', 'TRANSPORT': 'CAR', 'PKW': 'CAR'
                     }
-                    if etype in type_map:
-                        event['type'] = type_map[etype]
                     
-                    if etype not in ['FLIGHT', 'HOTEL', 'CAMPING', 'PITCH', 'CAMPER', 'CAR', 'BOAT', 'TAXI', 'BUS', 'TRAIN', 'ACTIVITY', 'RESTAURANT', 'OTHER']:
-                        event['type'] = 'OTHER'
+                    # Apply specific mapping
+                    if etype_raw in type_map:
+                        event['type'] = type_map[etype_raw]
                     else:
-                        event['type'] = etype 
+                        # Only use the raw type if it's already one of our known base types
+                        allowed = ['FLIGHT', 'HOTEL', 'CAMPING', 'PITCH', 'CAMPER', 'CAR', 'SCOOTER', 'BOAT', 'FERRY', 'TAXI', 'BUS', 'TRAIN', 'ACTIVITY', 'RESTAURANT', 'OTHER', 'FOOD', 'FEE', 'RENTAL']
+                        if etype_raw not in allowed:
+                            event['type'] = 'OTHER'
+                        else:
+                            event['type'] = etype_raw
 
                         # Pitch / Area Sosta signals (International)
                         pitch_keywords = [
