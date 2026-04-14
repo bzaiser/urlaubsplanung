@@ -460,7 +460,12 @@ def normalize_itinerary(data):
     # 1. Handle wrapping
     for key in ['itinerary', 'trip', 'travel_plan']:
         if key in data and isinstance(data[key], dict):
-            data = data[key]
+            # Preserve existing top-level fields (like food_preferences) 
+            # while unwrapping the main container
+            nested = data.pop(key)
+            for k, v in nested.items():
+                if k not in data:
+                    data[k] = v
             break
             
     # 2. Map synonyms
@@ -567,7 +572,12 @@ def normalize_itinerary(data):
                         'STELLPLATZ': 'PITCH',
                         'AIRBNB': 'HOTEL',
                         'FERIENHAUS': 'HOTEL',
-                        'BUNGALOW': 'HOTEL'
+                        'BUNGALOW': 'HOTEL',
+                        'SOSTA': 'PITCH',
+                        'AREA SOSTA': 'PITCH',
+                        'CAMPER STOP': 'PITCH',
+                        'CAMPING SITE': 'CAMPING',
+                        'HOLIDAY PARK': 'CAMPING'
                     }
                     if etype in type_map:
                         event['type'] = type_map[etype]
@@ -576,6 +586,16 @@ def normalize_itinerary(data):
                         event['type'] = 'OTHER'
                     else:
                         event['type'] = etype 
+
+                    # 4.5 Smart Correction for Accommodations (Pitch/Camping)
+                    if event.get('type') == 'HOTEL' or event.get('type') == 'OTHER':
+                        title_lower = event.get('title', '').lower()
+                        # Pitch / Area Sosta signals
+                        if any(k in title_lower for k in ['sosta', 'stellplatz', 'pitch', 'camper stop', 'wohnmobilstellplatz']):
+                            event['type'] = 'PITCH'
+                        # Camping signals
+                        elif any(k in title_lower for k in ['camping', 'campingplatz', 'holiday park', 'caravan park']):
+                            event['type'] = 'CAMPING'
 
         # 5. Smart Promotion (Trip-wide context)
         # If the trip contains any CAMPER/CAMPING/PITCH signal, promote all generic drives to CAMPER
