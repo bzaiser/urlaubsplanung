@@ -1,41 +1,51 @@
 {% load i18n %}{% load static %}
 <section id="trip-overview">
     {% if active_trip %}
-    <div class="premium-card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-                <h1 style="margin: 0; font-size: 1.5rem;">
-                    {{ active_trip.name }}
-                </h1>
-                <p style="color: var(--text-secondary); margin-top: 5px; font-size: 0.9rem;">
-                    {{ active_trip.start_date|date:"d. M" }} - {{ active_trip.end_date|date:"d. M Y" }}
-                </p>
-                
-                <!-- View Switcher -->
-                <div style="margin-top: 15px; display: flex; gap: 8px;">
-                    <button hx-get="{% url 'travel:dashboard' %}?view=timeline" 
-                            hx-target="#dashboard-refresh"
-                            style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--glass-border); background: {% if view_type == 'timeline' %}rgba(197, 160, 89, 0.2){% else %}none{% endif %}; color: {% if view_type == 'timeline' %}var(--accent-gold){% else %}var(--text-secondary){% endif %}; cursor: pointer; font-size: 0.75rem; transition: all 0.2s;">
-                        🕒 {% trans "VIEW_TIMELINE" %}
-                    </button>
-                    <button hx-get="{% url 'travel:dashboard' %}?view=table" 
-                            hx-target="#dashboard-refresh"
-                            style="padding: 6px 14px; border-radius: 20px; border: 1px solid var(--glass-border); background: {% if view_type == 'table' %}rgba(197, 160, 89, 0.2){% else %}none{% endif %}; color: {% if view_type == 'table' %}var(--accent-gold){% else %}var(--text-secondary){% endif %}; cursor: pointer; font-size: 0.75rem; transition: all 0.2s;">
-                        📊 {% trans "VIEW_TABLE" %}
-                    </button>
-                </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 15px; background: rgba(10, 25, 47, 0.4); border: 1px solid var(--glass-border); border-radius: 12px; backdrop-filter: blur(10px);">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;">
+                📅 {{ active_trip.start_date|date:"d. M" }} - {{ active_trip.end_date|date:"d. M Y" }}
+            </span>
+            <div style="height: 20px; width: 1px; background: rgba(255,255,255,0.1);"></div>
+            <!-- View Switcher -->
+            <div style="display: flex; gap: 5px;">
+                <button hx-get="{% url 'travel:dashboard' %}?view=timeline" 
+                        hx-target="#dashboard-refresh"
+                        style="padding: 4px 12px; border-radius: 15px; border: 1px solid {% if view_type == 'timeline' %}var(--accent-gold){% else %}var(--glass-border){% endif %}; background: {% if view_type == 'timeline' %}rgba(197, 160, 89, 0.2){% else %}none{% endif %}; color: {% if view_type == 'timeline' %}var(--accent-gold){% else %}var(--text-secondary){% endif %}; cursor: pointer; font-size: 0.7rem; font-weight: 600; transition: all 0.2s;">
+                    🕒 Plan
+                </button>
+                <button hx-get="{% url 'travel:dashboard' %}?view=table" 
+                        hx-target="#dashboard-refresh"
+                        style="padding: 4px 12px; border-radius: 15px; border: 1px solid {% if view_type == 'table' %}var(--accent-gold){% else %}var(--glass-border){% endif %}; background: {% if view_type == 'table' %}rgba(197, 160, 89, 0.2){% else %}none{% endif %}; color: {% if view_type == 'table' %}var(--accent-gold){% else %}var(--text-secondary){% endif %}; cursor: pointer; font-size: 0.7rem; font-weight: 600; transition: all 0.2s;">
+                    📊 Tabelle
+                </button>
             </div>
-            <button class="btn-edit" 
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn-edit-compact" 
+                    hx-get="{% url 'travel:trip_logic_check' active_trip.id %}"
+                    hx-target="#modal-container"
+                    style="background: linear-gradient(135deg, rgba(26, 188, 156, 0.2) 0%, rgba(22, 160, 133, 0.2) 100%); border: 1px solid #1abc9c; color: #1abc9c; padding: 4px 15px; border-radius: 15px; cursor: pointer; font-size: 0.7rem; font-weight: 700; transition: all 0.2s; box-shadow: 0 0 10px rgba(26, 188, 156, 0.2);" onmouseover="this.style.background='rgba(26, 188, 156, 0.3)'" onmouseout="this.style.background='rgba(26, 188, 156, 0.2)'">
+                ✨ Reise-Check
+            </button>
+            <button class="btn-edit-compact" 
                     hx-get="{% url 'travel:trip_edit' active_trip.id %}"
                     hx-target="#modal-container"
-                    style="background: none; border: 1px solid var(--glass-border); color: var(--accent-gold); padding: 5px 10px; border-radius: 5px; cursor: pointer;">
-                {% trans "BTN_EDIT" %}
+                    style="background: none; border: 1px solid rgba(197, 160, 89, 0.3); color: var(--accent-gold); padding: 4px 12px; border-radius: 15px; cursor: pointer; font-size: 0.7rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(197, 160, 89, 0.1)'" onmouseout="this.style.background='none'">
+                ✏️ Edit
+            </button>
+            <button class="btn-delete-compact" 
+                    hx-delete="{% url 'travel:trip_delete' active_trip.id %}"
+                    hx-target="#dashboard-refresh"
+                    hx-confirm="Willst du diese Reise wirklich komplett löschen?"
+                    style="background: none; border: 1px solid rgba(231, 76, 60, 0.3); color: #ff7675; padding: 4px 12px; border-radius: 15px; cursor: pointer; font-size: 0.7rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(231, 76, 60, 0.1)'" onmouseout="this.style.background='none'">
+                🗑️ Löschen
             </button>
         </div>
     </div>
 
     {% if view_type == 'table' %}
-        {% include 'travel/partials/trip_table.html' %}
+        {% include 'travel/partials/trip_table_aggrid.html' %}
     {% else %}
         <div class="timeline">
             {% for station in active_trip.grouped_stations %}
@@ -95,18 +105,43 @@
     {% endif %}
     {% else %}
     <div class="premium-card" style="text-align: center; padding: 60px;">
-        <h2>
-            {% trans "WELCOME_MESSAGE" %}
+        <h2 style="color: var(--accent-gold); font-family: 'Outfit', sans-serif;">
+            {% trans "Willkommen im Travel Hub" %}
         </h2>
-        <p>
-            {% trans "START_BY_CREATING_TRIP" %}
+        <p style="color: var(--text-secondary); margin-top: 10px;">
+            {% if trips %}
+                Wähle eine deiner vorhandenen Reisen oben aus oder erstelle eine neue Planung.
+            {% else %}
+                Beginne damit, deine erste Reise anzulegen.
+            {% endif %}
         </p>
-        <button class="btn-primary" 
-                style="margin-top: 20px;"
-                hx-get="{% url 'travel:trip_create' %}"
-                hx-target="#modal-container">
-            {% trans "BTN_NEW_TRIP" %}
-        </button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 35px; max-width: 600px; margin-left: auto; margin-right: auto;">
+            <!-- AI Option -->
+            <div style="background: rgba(197, 160, 89, 0.05); border: 1px solid rgba(197, 160, 89, 0.2); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; transition: all 0.3s;" onmouseover="this.style.borderColor='var(--accent-gold)'; this.style.background='rgba(197, 160, 89, 0.1)'" onmouseout="this.style.borderColor='rgba(197, 160, 89, 0.2)'; this.style.background='rgba(197, 160, 89, 0.05)'">
+                <div style="font-size: 1.5rem;">✨</div>
+                <h3 style="margin: 0; color: var(--accent-gold); font-size: 1rem;">KI Reise-Assistent</h3>
+                <p style="margin: 0; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4;">Generiert autom. einen vollen Plan mit Flügen, Hotels & Aktivitäten.</p>
+                <button class="btn-primary" 
+                        hx-get="{% url 'travel:ai_wizard' %}?step=select"
+                        hx-target="#modal-container"
+                        style="background: linear-gradient(135deg, var(--accent-gold) 0%, #177070 100%); width: 100%; border: none; margin-top: auto; padding: 10px;">
+                    Assistent starten
+                </button>
+            </div>
+
+            <!-- Manual Option -->
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='rgba(255, 255, 255, 0.05)'" onmouseout="this.style.borderColor='var(--glass-border)'; this.style.background='rgba(255, 255, 255, 0.02)'">
+                <div style="font-size: 1.5rem;">➕</div>
+                <h3 style="margin: 0; color: var(--text-primary); font-size: 1rem;">Manuelle Planung</h3>
+                <p style="margin: 0; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4;">Erstellt eine leere Reise (nur Tage) zum komplett selbst befüllen.</p>
+                <button class="btn-primary" 
+                        hx-get="{% url 'travel:trip_create' %}"
+                        hx-target="#modal-container"
+                        style="width: 100%; padding: 10px; margin-top: auto;">
+                    Leere Reise anlegen
+                </button>
+            </div>
+        </div>
     </div>
     {% endif %}
 </section>

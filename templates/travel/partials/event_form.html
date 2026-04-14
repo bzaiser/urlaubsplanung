@@ -1,48 +1,204 @@
 {% load i18n %}
-<div class="premium-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin: 0;">
-            {% if form.instance.id %}{% trans "EDIT_EVENT" %}{% else %}{% trans "ADD_EVENT" %}{% endif %} 
-            ({{ day.date|date:"d. M" }})
-        </h2>
-        <button type="button" onclick="closeModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;">&times;</button>
-    </div>
-    
-    <form hx-post="{{ request.path }}" 
-          hx-target="#trip-overview" 
-          hx-on::after-request="if(event.detail.successful) closeModal()"
-          hx-encoding="multipart/form-data">
-        {% csrf_token %}
+<style>
+    input, select, textarea {
+        width: 100%;
+        padding: 7px;
+        margin: 0px 0;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        color: white;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    input:focus, select:focus, textarea:focus {
+        border-color: var(--accent-gold);
+        outline: none;
+    }
+    select option {
+        background: #1a2438;
+        color: var(--text-primary);
+    }
+    .error-msg {
+        color: #e74c3c;
+        font-size: 0.75rem;
+        margin-top: 2px;
+        display: block;
+    }
+</style>
+<div class="modal-dialog">
+    <div class="modal-content" style="border: 1px solid var(--accent-gold); padding: 12px; font-size: 0.85rem; background: var(--card-bg); backdrop-filter: blur(10px); border-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
+            <h2 style="margin: 0; font-family: 'Outfit', sans-serif; color: var(--accent-gold); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">
+                {% if form.instance.id %}✏️ {% trans "EDIT_EVENT" %}{% else %}➕ {% trans "ADD_EVENT" %}{% endif %} 
+                <span style="opacity: 0.5; font-size: 0.8rem; font-weight: 400;">({{ day.date|date:"d. M" }})</span>
+            </h2>
+            <button type="button" onclick="closeModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.4rem; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+
+        {% if form.errors %}
+        <div style="background: rgba(231, 76, 60, 0.1); border: 1px solid #e74c3c; border-radius: 8px; padding: 10px; margin-bottom: 12px; color: #e74c3c; font-size: 0.8rem;">
+            <strong>⚠️ {% trans "Bitte korrigiere die Fehler:" %}</strong>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                {% for field, errors in form.errors.items %}
+                    <li>{{ field }}: {{ errors|striptags }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
         
-        {% if form.instance.voucher %}
-            <div style="background: rgba(197, 160, 89, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 0.85rem;">
-                <span style="font-size: 1.2rem;">📄</span>
-                <div style="flex-grow: 1;">
-                    <div style="color: var(--text-secondary);">{% trans "CURRENT_VOUCHER" %}</div>
-                    <a href="{{ form.instance.voucher.url }}" target="_blank" style="color: var(--accent-gold); text-decoration: none; font-weight: 600;">
-                        {{ form.instance.voucher.name|cut:"vouchers/" }}
-                    </a>
+        <form hx-post="{{ request.path }}" 
+              hx-target="#trip-overview" 
+              hx-on::after-request="if(event.detail.successful && event.detail.xhr.status === 200) closeModal()"
+              hx-encoding="multipart/form-data"
+              style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px;">
+            {% csrf_token %}
+
+            <!-- Row 1: Title & Location -->
+            <div style="grid-column: span 6;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">{% trans "Titel" %}</label>
+                <input type="text" name="title" value="{{ form.title.value|default:'' }}" required style="font-size: 0.85rem;">
+            </div>
+            <div style="grid-column: span 6;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Ort / Ziel" %}</label>
+                <input type="text" name="location" value="{{ form.location.value|default:'' }}" style="font-size: 0.85rem;">
+            </div>
+
+            <!-- Row 2: Type, Start, End -->
+            <div style="grid-column: span 4;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Typ" %}</label>
+                <select name="type" style="font-size: 0.85rem;">
+                    {% for val, label in form.fields.type.choices %}
+                        <option value="{{ val }}" {% if form.type.value == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="grid-column: span 4;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Start" %}</label>
+                <input type="time" name="time" value="{{ form.time.value|time:'H:i'|default:'' }}" style="font-size: 0.85rem;">
+            </div>
+            <div style="grid-column: span 4;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Ende" %}</label>
+                <input type="time" name="end_time" value="{{ form.end_time.value|time:'H:i'|default:'' }}" style="font-size: 0.85rem;">
+            </div>
+
+            <!-- Row 3: Final Costs & Paid -->
+            <div style="grid-column: span 4;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Preis Gebucht" %}</label>
+                <div style="display: flex; align-items: center; gap: 3px;">
+                    <input type="number" step="0.01" name="cost_booked" value="{{ form.cost_booked.value|stringformat:'.2f'|default:'0.00' }}" style="flex: 1; font-size: 0.85rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.75rem;">€</span>
                 </div>
             </div>
-        {% endif %}
+            <div style="grid-column: span 4;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Ist (Gezahlt)" %}</label>
+                <div style="display: flex; align-items: center; gap: 3px;">
+                    <input type="number" step="0.01" name="amount_paid" value="{{ form.amount_paid.value|stringformat:'.2f'|default:'0.00' }}" style="flex: 1; font-size: 0.85rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.75rem;">€</span>
+                </div>
+            </div>
+            <div style="grid-column: span 4; display: flex; align-items: flex-end; padding-bottom: 6px; padding-left: 4px;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-secondary); font-size: 0.75rem;">
+                    <input type="checkbox" name="is_paid" {% if form.is_paid.value %}checked{% endif %} style="width: 16px; height: 16px; margin: 0;">
+                    {% trans "Bezahlt" %}
+                </label>
+            </div>
 
-        {{ form.as_p }}
-        
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button type="submit" class="btn-primary" style="flex: 2;">
-                {% trans "BTN_SAVE" %}
-            </button>
-            {% if form.instance.id %}
-            <button type="button" 
-                    hx-post="{% url 'travel:event_delete' form.instance.id %}"
-                    hx-confirm="{% trans 'CONFIRM_DELETE' %}"
-                    hx-target="#trip-overview"
-                    hx-on::after-request="if(event.detail.successful) closeModal()"
-                    class="btn-secondary" 
-                    style="flex: 1; background: rgba(255, 69, 58, 0.1); color: #ff453a; border: 1px solid rgba(255, 69, 58, 0.3); border-radius: 8px;">
-                {% trans "BTN_DELETE" %}
-            </button>
+            <!-- Row 3.5: Breakfast [NEW] -->
+            {% if form.type.value in 'HOTEL CAMPING PITCH BUNGALOW' or not form.instance.id %}
+            <div style="grid-column: span 6; background: rgba(0, 128, 128, 0.05); padding: 5px; border-radius: 4px; border: 1px solid rgba(0, 128, 128, 0.2);">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--accent-teal); font-size: 0.75rem; font-weight: bold;">
+                    <input type="checkbox" name="breakfast_included" {% if form.breakfast_included.value %}checked{% endif %} style="width: 16px; height: 16px; margin: 0;">
+                    {% trans "Frühstück inkl." %}
+                </label>
+            </div>
+            <div style="grid-column: span 6; background: rgba(0, 128, 128, 0.05); padding: 5px; border-radius: 4px; border: 1px solid rgba(0, 128, 128, 0.2);">
+                <label style="display: block; color: var(--accent-teal); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">{% trans "Preis Frühstück (falls sep.)" %}</label>
+                <div style="display: flex; align-items: center; gap: 3px;">
+                    <input type="number" step="0.01" name="breakfast_cost" value="{{ form.breakfast_cost.value|stringformat:'.2f'|default:'0.00' }}" style="flex: 1; font-size: 0.85rem; background: none; border: none; border-bottom: 1px solid var(--glass-border); border-radius: 0;">
+                    <span style="color: var(--accent-teal); font-size: 0.75rem;">€</span>
+                </div>
+            </div>
             {% endif %}
-        </div>
-    </form>
+
+            <!-- Row 4: Estimations & KM -->
+            <div style="grid-column: span 6;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Schätzung (Preis)" %}</label>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <input type="number" step="0.01" name="cost_estimated" value="{{ form.cost_estimated.value|stringformat:'.2f'|default:'0.00' }}" style="flex: 1; font-size: 0.85rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">€</span>
+                </div>
+            </div>
+            <div style="grid-column: span 6;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Entfernung (km)" %}</label>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <input type="number" name="distance_km" value="{{ form.distance_km.value|default:'' }}" style="flex: 1; font-size: 0.85rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">km</span>
+                </div>
+            </div>
+
+            <!-- Row 5: Method & Deadline -->
+            <div style="grid-column: span 6;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Zahlungsweg" %}</label>
+                <select name="payment_method" style="font-size: 0.85rem;">
+                    {% for val, label in form.fields.payment_method.choices %}
+                        <option value="{{ val }}" {% if form.payment_method.value == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="grid-column: span 6;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Storno bis" %}</label>
+                <input type="date" name="cancellation_deadline" value="{{ form.cancellation_deadline.value|date:'Y-m-d'|default:'' }}" style="font-size: 0.8rem; height: auto;">
+            </div>
+
+            <!-- Row 6: Logistics -->
+            <div style="grid-column: span 6;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Buchungs-Ref" %}</label>
+                <input type="text" name="booking_reference" value="{{ form.booking_reference.value|default:'' }}" style="font-size: 0.85rem;">
+            </div>
+            <div style="grid-column: span 6;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Gebucht über" %}</label>
+                <input type="text" name="booking_via" value="{{ form.booking_via.value|default:'' }}" style="font-size: 0.85rem;">
+            </div>
+
+            <!-- Row 7: URL -->
+            <div style="grid-column: span 12;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Buchungs-URL" %}</label>
+                <input type="url" name="booking_url" value="{{ form.booking_url.value|default:'' }}" style="font-size: 0.85rem;" placeholder="https://...">
+            </div>
+
+            <!-- Notes -->
+            <div style="grid-column: span 12;">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Notizen / Details" %}</label>
+                <textarea name="notes" rows="2" style="padding: 6px 8px; font-size: 0.85rem; min-height: 44px;">{{ form.notes.value|default:'' }}</textarea>
+            </div>
+
+            <!-- Media & Files -->
+            <div style="grid-column: span 12; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; border: 1px dashed var(--glass-border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label style="display: block; color: var(--accent-gold); font-size: 0.65rem; text-transform: uppercase; font-weight: bold;">{% trans "Beleg / Anhang" %}</label>
+                    {% if form.instance.voucher %}
+                        <a href="{{ form.instance.voucher.url }}" target="_blank" style="font-size: 0.65rem; color: var(--accent-gold); text-decoration: none; border: 1px solid var(--accent-gold); padding: 2px 6px; border-radius: 4px;">ÖFFNEN</a>
+                    {% endif %}
+                </div>
+                <input type="file" name="voucher" style="font-size: 0.75rem; color: var(--text-secondary); border: none; padding: 0; background: none;">
+            </div>
+
+            <!-- Action Toolbar -->
+            <div style="grid-column: span 12; display: flex; gap: 8px; margin-top: 4px; border-top: 1px solid var(--glass-border); padding-top: 10px;">
+                <button type="submit" class="btn-primary" style="flex: 2; height: 36px; margin: 0; font-size: 0.9rem;">
+                    💾 {% trans "SAVE" %}
+                </button>
+                {% if form.instance.id %}
+                <button type="button" 
+                        hx-post="{% url 'travel:event_delete' form.instance.id %}"
+                        hx-confirm="{% trans 'Event wirklich löschen?' %}"
+                        hx-target="#trip-overview"
+                        hx-on::after-request="if(event.detail.successful) closeModal()"
+                        style="flex: 1; background: rgba(231, 76, 60, 0.1); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">
+                    🗑️
+                </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
 </div>

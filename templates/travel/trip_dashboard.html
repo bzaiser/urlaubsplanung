@@ -3,7 +3,9 @@
 {% block title %}{% trans "DASHBOARD_TITLE" %}{% endblock %}
 
 {% block content %}
-<div id="dashboard-refresh">
+<div id="dashboard-refresh" 
+     hx-get="{% url 'travel:dashboard' %}{% if view_type %}?view={{ view_type }}{% endif %}" 
+     hx-trigger="refresh">
     {% include 'travel/partials/trip_list.html' %}
 </div>
 {% endblock %}

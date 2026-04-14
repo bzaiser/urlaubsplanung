@@ -1,0 +1,185 @@
+{% load i18n %}
+<div class="modal-dialog" style="max-width: 600px;">
+    <div class="modal-content" style="border: 1px solid #555; padding: 20px; background: #1a1a1a; border-radius: 8px; color: #fff;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 10px;">
+            <h2 style="margin: 0; font-size: 1.1rem; color: var(--accent-gold);">✨ KI Reise-Designer</h2>
+            <button type="button" onclick="closeModal()" style="background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+
+        {% if error %}
+            <div style="background: rgba(231, 76, 60, 0.15); border: 1px solid #e74c3c; color: #ff7675; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.85rem; text-align: center;">
+                ⚠️ {{ error }}
+            </div>
+        {% endif %}
+
+        {% if step == 'select' %}
+            <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#modal-container" hx-indicator="#loading-ai">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="generate">
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Vorlage / Grundstil:</label>
+                    <select name="template_id" required style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                        {% for t in templates %}
+                            <option value="{{ t.id }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Spontane Änderungen oder Ergänzungen zur Vorlage (Optional):</label>
+                    <textarea name="user_preferences" placeholder="Z.B. diesmal nach Norwegen, mit Hund, extra viel Wellness oder andere Zielwünsche..." style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff; height: 60px; font-family: 'Inter', sans-serif; font-size: 0.85rem;"></textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Wohnort / Startort:</label>
+                    <input type="text" name="start_location" placeholder="z.B. München" required value="{{ start_location|default:'Zuhause' }}" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Personen:</label>
+                        <input type="number" name="persons_count" value="{{ persons_count|default:2 }}" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Alter (z.B. 40, 38, 12):</label>
+                        <input type="text" name="persons_ages" value="{{ persons_ages }}" placeholder="Alter kommagetrennt" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Starttermin <span style="color: #e74c3c;">*</span>:</label>
+                        <input type="date" name="start_date" required style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Dauer (Tage):</label>
+                        <input type="number" name="days" value="28" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button type="submit" class="btn-primary" style="padding: 10px; font-weight: bold;">🪄 Automatisch erstellen</button>
+                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary" style="padding: 10px; font-weight: bold; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer;">📋 Manueller Weg</button>
+                </div>
+            </form>
+            <div id="loading-ai" class="htmx-indicator" style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--accent-gold);">🤖 KI arbeitet...</div>
+
+        {% elif step == 'preview' %}
+            {% if itinerary.assistant_reasoning %}
+                <div style="margin-bottom: 15px; background: rgba(197, 160, 89, 0.15); border: 1px solid var(--accent-gold); padding: 15px; border-radius: 8px;">
+                    <h4 style="margin: 0 0 8px 0; color: var(--accent-gold); font-size: 0.85rem; text-transform: uppercase;">🧭 KI-Empfehlung & Begründung</h4>
+                    <p style="margin: 0; font-size: 0.9rem; line-height: 1.5; color: #eee; font-style: italic;">"{{ itinerary.assistant_reasoning }}"</p>
+                </div>
+            {% endif %}
+
+            <div style="margin-bottom: 15px; background: #000; border: 1px solid #444; border-radius: 6px; padding: 12px; max-height: 350px; overflow-y: auto;">
+                {% if itinerary.days %}
+                    {% for day in itinerary.days %}
+                        <div style="margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px;">
+                            <div style="font-weight: bold; font-size: 0.9rem; color: #fff;">Tag {{ day.offset|add:1 }}: {{ day.location }}</div>
+                            <div style="margin-top: 5px;">
+                                {% for event in day.events %}
+                                    <div style="font-size: 0.8rem; color: #ccc; display: flex; justify-content: space-between;">
+                                        <span>• {{ event.title }}</span>
+                                        <span style="color: var(--accent-gold);">{{ event.cost_estimated }}€</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: #e74c3c; font-size: 0.85rem;">Kein Plan-Inhalt gefunden (Formatfehler). Bitte noch mal versuchen.</p>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 15px; padding: 10px; border: 1px dashed #555; border-radius: 6px;">
+                <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#modal-container" hx-indicator="#loading-refine">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="refine">
+                    <input type="hidden" name="itinerary_json" value="{{ itinerary_json|escape }}">
+                    <input type="hidden" name="start_date" value="{{ start_date }}">
+                    <input type="hidden" name="persons_count" value="{{ persons_count }}">
+                    <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
+                    <input type="hidden" name="user_preferences" value="{{ user_preferences }}">
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="text" name="instructions" placeholder="Was soll sich ändern? (z.B. Mehr Strand)" style="flex: 3; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                        <button type="submit" style="flex: 1; padding: 8px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Anwenden</button>
+                        <button type="submit" 
+                                name="instructions" 
+                                value="Schlag ein komplett anderes Land oder Ziel für diese Reise vor. Budget ist zweitrangig, schlag etwas Hochwertiges vor und erkläre den Mehrwert in deiner Begründung." 
+                                style="flex: 1; padding: 8px; background: rgba(197, 160, 89, 0.2); color: var(--accent-gold); border: 1px solid var(--accent-gold); border-radius: 4px; cursor: pointer; font-size: 0.75rem;">
+                            🔄 Alternative
+                        </button>
+                    </div>
+                    <div id="loading-refine" class="htmx-indicator" style="font-size: 0.7rem; color: var(--accent-gold); margin-top: 5px;">🤖 KI überarbeitet...</div>
+                </form>
+            </div>
+
+            <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#dashboard-refresh" hx-on::after-request="if(event.detail.successful) closeModal()">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="import">
+                <input type="hidden" name="itinerary_json" value="{{ itinerary_json|escape }}">
+                <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="persons_count" value="{{ persons_count }}">
+                <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 0.75rem; color: var(--accent-gold); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Reise-Name (Vorschlag bearbeitbar)</label>
+                    <input type="text" name="trip_name" value="{{ itinerary.name|default:'Meine KI-Reise' }}" required
+                           style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: #fff; font-size: 1rem; font-family: 'Outfit', sans-serif; padding: 10px; border-radius: 6px; outline: none; transition: all 0.2s;"
+                           onmouseover="this.style.borderColor='rgba(197, 160, 89, 0.5)'"
+                           onfocus="this.style.borderColor='var(--accent-gold)'; this.style.background='rgba(255,255,255,0.08)'"
+                           onblur="this.style.borderColor='var(--glass-border)'; this.style.background='rgba(255,255,255,0.05)'">
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" 
+                            style="flex: 1; padding: 10px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Abbrechen</button>
+                    <button type="submit" class="btn-primary" style="flex: 2; padding: 10px; font-weight: bold; width: auto;">✅ Reise in Kalender übernehmen</button>
+                </div>
+            </form>
+
+        {% elif step == 'manual' %}
+            <div style="margin-bottom: 20px;">
+                <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 10px; text-transform: uppercase;">1. Prompt kopieren</h3>
+                <p style="font-size: 0.75rem; color: #ccc; margin-bottom: 10px;">Kopiere diesen Text und füge ihn in Chrome bei Gemini, ChatGPT oder Claude ein:</p>
+                <div style="position: relative;">
+                    <textarea id="manual-prompt-text" readonly style="width: 100%; height: 120px; background: #000; border: 1px solid #444; border-radius: 6px; color: #aaa; font-size: 0.75rem; padding: 10px; font-family: monospace;">{{ prompt }}</textarea>
+                    <button type="button" onclick="const ta = document.getElementById('manual-prompt-text'); ta.select(); document.execCommand('copy'); this.innerText='✅ Kopiert!';" 
+                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: var(--accent-gold); color: #000; border: none; border-radius: 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer;">
+                        Kopieren
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px; border-top: 1px solid #333; padding-top: 15px;">
+                <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 10px; text-transform: uppercase;">2. Ergebnis einfügen</h3>
+                <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#dashboard-refresh" hx-on::after-request="if(event.detail.successful) closeModal()">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="manual_import">
+                    <input type="hidden" name="start_date" value="{{ start_date }}">
+                    <input type="hidden" name="persons_count" value="{{ persons_count }}">
+                    <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
+
+                    <textarea name="pasted_text" placeholder="Füge hier die Antwort der KI ein (JSON oder kompletter Text)..." 
+                              required style="width: 100%; height: 150px; background: #000; border: 1px solid var(--accent-gold); border-radius: 6px; color: #fff; font-size: 0.8rem; padding: 10px; margin-bottom: 15px;"></textarea>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" 
+                                style="flex: 1; padding: 10px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Abbrechen</button>
+                        <button type="submit" class="btn-primary" style="flex: 2; padding: 10px; font-weight: bold;">✅ Reise importieren</button>
+                    </div>
+                </form>
+            </div>
+
+        {% elif step == 'error' %}
+            <div style="text-align: center; color: #e74c3c; padding: 20px;">
+                <p>⚠️ {{ error }}</p>
+                <button hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" style="padding: 8px 16px; background: #555; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Zurück</button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+

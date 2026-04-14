@@ -12,19 +12,58 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://unpkg.com/htmx.org@1.9.11"></script>
+    <!-- AG Grid Community -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.1.1/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.1.1/styles/ag-theme-quartz.css">
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.1.1/dist/ag-grid-community.min.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/de.js"></script>
+    
+    <style>
+        /* Custom AG Grid Thailand Gold Theme */
+        .ag-theme-quartz-dark.ag-theme-thailand-gold {
+            --ag-foreground-color: var(--text-primary);
+            --ag-background-color: var(--bg-color);
+            --ag-header-background-color: rgba(197, 160, 89, 0.1);
+            --ag-header-foreground-color: var(--accent-gold);
+            --ag-row-hover-color: rgba(197, 160, 89, 0.1);
+            --ag-selected-row-background-color: rgba(197, 160, 89, 0.2);
+            --ag-odd-row-background-color: rgba(255, 255, 255, 0.02);
+            --ag-border-color: var(--glass-border);
+            --ag-input-focus-border-color: var(--accent-gold);
+            --ag-font-size: 0.9rem;
+            --ag-font-family: 'Inter', sans-serif;
+            border: none;
+        }
+        .ag-theme-thailand-gold .ag-header {
+            border-bottom: 2px solid var(--accent-gold) !important;
+            font-family: 'Outfit', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .ag-theme-thailand-gold .ag-row {
+            border-bottom: 1px solid var(--glass-border) !important;
+        }
+    </style>
     {% progressive_web_app_meta %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <header class="navbar">
         <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; color: var(--accent-gold);">
-                {% trans "TRAVEL_HUB_NAME" %}
-            </span>
+            <div id="trip-switcher-container-wrapper" style="display: flex; align-items: center; gap: 15px; max-width: 70%;">
+                {% include 'travel/partials/trip_switcher.html' %}
+            </div>
             <div id="nav-actions" style="display: flex; gap: 15px; align-items: center;">
+                <button hx-get="{% url 'travel:settings_modal' %}" 
+                        hx-target="#modal-container"
+                        style="background: none; border: 1px solid var(--glass-border); color: var(--text-secondary); border-radius: 20px; padding: 5px 15px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.3s;"
+                        onmouseover="this.style.borderColor='var(--accent-gold)'; this.style.color='var(--accent-gold)'"
+                        onmouseout="this.style.borderColor='var(--glass-border)'; this.style.color='var(--text-secondary)'">
+                    ⚙️ {% trans "Einstellungen" %}
+                </button>
                 <a href="/admin/" target="_blank" style="color: var(--text-secondary); text-decoration: none; font-size: 0.8rem; padding: 5px 15px; border: 1px solid var(--glass-border); border-radius: 20px; transition: all 0.3s;" onmouseover="this.style.borderColor='var(--accent-gold)'; this.style.color='var(--accent-gold)'" onmouseout="this.style.borderColor='var(--glass-border)'; this.style.color='var(--text-secondary)'">
-                    ⚙️ Admin
+                    🛠️ Admin
                 </a>
             </div>
         </div>
@@ -45,6 +84,7 @@
         document.body.addEventListener('htmx:afterSwap', (e) => {
             if (e.detail.target.id === "modal-container") {
                 document.getElementById('modal-container').classList.add('show');
+                initPickers(); // Initialize date/time pickers in the new modal content
             }
         });
 
@@ -80,26 +120,33 @@
         // Initialize on load
         document.addEventListener('DOMContentLoaded', initPickers);
 
-        // Feedback Toast Logic
+        // Feedback Toast Logic: Only for modifying requests (Saves)
         document.body.addEventListener('htmx:afterRequest', function(evt) {
+            const method = evt.detail.requestConfig.method;
             if (evt.detail.xhr.status >= 200 && evt.detail.xhr.status < 300) {
-                showToast("✓ Gespeichert");
+                // Only show "Saved" for POST/PUT/DELETE/PATCH
+                if (method !== 'GET') {
+                    showToast("✓ Gespeichert");
+                }
+            } else if (evt.detail.xhr.status >= 400) {
+                showToast("⚠️ Fehler!", true);
             }
         });
 
-        function showToast(message) {
+        function showToast(message, isError = false) {
             let toast = document.getElementById('status-toast');
             if (!toast) {
                 toast = document.createElement('div');
                 toast.id = 'status-toast';
-                toast.style = 'position: fixed; top: 20px; right: 20px; background: var(--accent-teal); color: white; padding: 10px 20px; border-radius: 8px; z-index: 9999; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transform: translateY(-100px); transition: transform 0.3s ease;';
+                toast.style = 'position: fixed; top: 20px; right: 20px; color: white; padding: 10px 20px; border-radius: 8px; z-index: 9999; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transform: translateY(-100px); transition: transform 0.3s ease;';
                 document.body.appendChild(toast);
             }
             toast.innerText = message;
+            toast.style.background = isError ? '#e74c3c' : 'var(--accent-teal)';
             toast.style.transform = 'translateY(0)';
             setTimeout(() => {
                 toast.style.transform = 'translateY(-100px)';
-            }, 2000);
+            }, 2500);
         }
     </script>
 

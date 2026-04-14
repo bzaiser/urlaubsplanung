@@ -2,7 +2,6 @@ const CACHE_NAME = 'travel-hub-v1';
 const ASSETS = [
     '/',
     '/static/css/base.css',
-    '/static/js/main.js',
     '/static/img/icon-160.png',
 ];
 

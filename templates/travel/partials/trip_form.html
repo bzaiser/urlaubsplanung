@@ -1,16 +1,49 @@
 {% load i18n %}
-<div class="premium-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="margin: 0;">{% if form.instance.id %}{% trans "EDIT_TRIP" %}{% else %}{% trans "NEW_TRIP" %}{% endif %}</h2>
-        <button type="button" onclick="closeModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;">&times;</button>
+<div class="premium-card" style="max-width: 500px; margin: 0 auto; border: 1px solid var(--accent-gold);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h2 style="margin: 0; font-family: 'Outfit', sans-serif; color: var(--accent-gold); font-size: 1.4rem;">
+            {% if form.instance.id %}✏️ {% trans "EDIT_TRIP" %}{% else %}✨ {% trans "NEW_TRIP" %}{% endif %}
+        </h2>
+        <button type="button" onclick="closeModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.8rem; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#fff'">&times;</button>
     </div>
     
-    <form hx-post="{{ request.path }}" hx-target="#trip-overview" hx-on::after-request="if(event.detail.successful) closeModal()">
+    <form hx-post="{{ request.path }}" 
+          hx-target="#trip-overview" 
+          hx-on::after-request="if(event.detail.successful) closeModal()"
+          style="display: flex; flex-direction: column; gap: 15px;">
         {% csrf_token %}
-        {{ form.as_p }}
         
-        <button type="submit" class="btn-primary">
-            {% trans "BTN_SAVE" %}
+        <div class="form-group">
+            <label style="display: block; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 5px;">{% trans "Reise-Name" %}</label>
+            <input type="text" name="name" value="{{ form.name.value|default:'' }}" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; color: #fff; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--accent-gold)'" onblur="this.style.borderColor='var(--glass-border)'">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 5px;">{% trans "Startdatum" %}</label>
+                <input type="date" name="start_date" id="id_start_date" value="{{ form.start_date.value|date:'Y-m-d'|default:'' }}" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; color: #fff;">
+            </div>
+            <div class="form-group">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 5px;">{% trans "Enddatum" %}</label>
+                <input type="date" name="end_date" id="id_end_date" value="{{ form.end_date.value|date:'Y-m-d'|default:'' }}" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; color: #fff;">
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 5px;">{% trans "Basis-Währung" %}</label>
+                <input type="text" name="base_currency" value="{{ form.base_currency.value|default:'EUR' }}" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; color: #fff;">
+            </div>
+            <div class="form-group">
+                <label style="display: block; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 5px;">{% trans "Reisende" %}</label>
+                <input type="number" name="persons_count" value="{{ form.persons_count.value|default:2 }}" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; color: #fff;">
+            </div>
+        </div>
+
+        <input type="hidden" name="local_currency" value="{{ form.local_currency.value|default:'THB' }}">
+        
+        <button type="submit" class="btn-primary" style="margin-top: 10px; padding: 12px; font-weight: bold; font-size: 1rem; border-radius: 10px;">
+            💾 {% trans "BTN_SAVE" %}
         </button>
     </form>
 </div>

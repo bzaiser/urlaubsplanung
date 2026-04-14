@@ -113,17 +113,36 @@ h1, h2 {
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(5px);
     z-index: 2000;
-    justify-content: center;
-    align-items: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+    outline: 0;
+    pointer-events: none; /* Prevent blocking clicks when hidden */
 }
 
 #modal-container.show {
-    display: flex;
+    display: block;
+    pointer-events: auto; /* Enable clicks when shown */
+}
+
+.modal-dialog {
+    position: relative;
+    width: 95%;
+    max-width: 500px;
+    margin: 1.75rem auto;
+    pointer-events: none;
 }
 
 .modal-content {
-    width: 95%;
-    max-width: 800px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    pointer-events: auto;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
     animation: slideUp 0.3s ease-out;
 }
 
@@ -190,4 +209,19 @@ input:focus {
 
 .numInputWrapper span {
     border-color: var(--glass-border) !important;
+}
+
+/* HTMX Indicators */
+.htmx-indicator {
+    display: none;
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+}
+.htmx-request .htmx-indicator {
+    display: block !important;
+    opacity: 1;
+}
+.htmx-request.htmx-indicator {
+    display: block !important;
+    opacity: 1;
 }

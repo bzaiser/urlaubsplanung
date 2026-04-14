@@ -1,0 +1,24 @@
+{% load i18n %}
+<div class="premium-card" style="margin-bottom: 20px; border: 1px solid var(--accent-teal); padding: 15px; border-radius: 12px; background: rgba(46, 204, 113, 0.05);">
+    <h4 style="margin: 0 0 10px 0; color: var(--accent-teal); font-size: 0.85rem;">
+        {% if template %}✏️ {% trans "Vorlage bearbeiten" %}{% else %}✨ {% trans "Neue Vorlage erstellen" %}{% endif %}
+    </h4>
+    <form hx-post="{% if template %}{% url 'travel:template_edit' template.id %}{% else %}{% url 'travel:template_create' %}{% endif %}" 
+          hx-target="#modal-container" hx-swap="innerHTML">
+        {% csrf_token %}
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase;">{% trans "Name der Vorlage" %}</label>
+            <input type="text" name="name" value="{{ template.name|default:'' }}" required placeholder="z.B. Thailand 4 Wochen" 
+                   style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 6px; color: white; font-size: 0.85rem;">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase;">{% trans "Deine Vorlieben" %}</label>
+            <textarea name="preferences" rows="8" required placeholder="Beschreibe hier, wie du reist..." 
+                      style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 6px; color: white; font-size: 0.8rem;">{{ template.preferences }}</textarea>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" class="btn-primary" style="flex: 1; padding: 8px;">💾 Speichern</button>
+            <button type="button" class="btn-secondary" onclick="document.getElementById('template-form-area').innerHTML=''" style="padding: 8px;">Abbrechen</button>
+        </div>
+    </form>
+</div>

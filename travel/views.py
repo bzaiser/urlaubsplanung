@@ -1,9 +1,11 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView
 from django.http import HttpResponse
-from datetime import timedelta
-from .models import Trip, Day
+from datetime import date, timedelta
+from .models import Trip, Day, Event, TripTemplate, GlobalSetting, GlobalExpense
 from .forms import TripForm, EventForm
+from .services import ai_service, logic_service
+import json
 
 def _generate_days(trip):
     """Utility to generate Day objects for the trip duration."""
@@ -20,9 +22,138 @@ def _generate_days(trip):
         )
         current_date += timedelta(days=1)
 
+import json
+from django.core.serializers.json import DjangoJSONEncoder
+
 class TripDashboardView(ListView):
     model = Trip
-    template_name = 'travel/dashboard.html'
+    template_name = 'travel/trip_dashboard.html'
+    context_object_name = 'trips'
+
+    def get_template_names(self):
+        if self.request.htmx:
+            return ['travel/partials/trip_list.html']
+        return [self.template_name]
+
+def get_dashboard_context(request, active_trip=None):
+    """Helper to prepare the full context for trip_list.html, 
+    ensuring AG Grid and view types are always synchronized."""
+    view_type = request.GET.get('view', request.session.get('view_type', 'timeline'))
+    request.session['view_type'] = view_type
+    
+    # Trip Selection logic (if not provided)
+    if not active_trip:
+        trip_id = request.GET.get('trip_id') or request.session.get('active_trip_id')
+        if trip_id:
+            active_trip = Trip.objects.filter(id=trip_id).first()
+        else:
+            active_trip = Trip.objects.first()
+            
+    if active_trip:
+        request.session['active_trip_id'] = active_trip.id
+
+    context = {
+        'view_type': view_type,
+        'active_trip': active_trip,
+        'trips': Trip.objects.all().order_by('name'),
+    }
+    
+    # Prepare AG Grid Data
+    if active_trip:
+        grid_data = []
+        for i, station in enumerate(active_trip.grouped_stations):
+            station_key = f"st-{i}"
+            grid_data.append({
+                'id': f"station-{i}",
+                'is_station_header': True,
+                'station_key': station_key,
+                'station_location': station['location'],
+                'days_count': station['days_count'],
+                'nights_count': station['nights_count'],
+            })
+            
+            for day in station['days']:
+                events = day.events.all().order_by('time', 'id')
+                acc_events = events.filter(type__in=['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW'])
+                
+                acc_status = 'MISSING'
+                acc_name = ''
+                if acc_events.exists():
+                    main_acc = acc_events.first()
+                    acc_name = main_acc.title or 'Unterkunft'
+                    acc_status = 'FIX' if main_acc.cost_booked > 0 else 'PLANNED'
+                
+                grid_data.append({
+                    'id': f"day-header-{day.id}",
+                    'day_id': day.id,
+                    'is_day_header': True,
+                    'station_key': station_key,
+                    'date_display': day.date.strftime('%d. %b'),
+                    'day_name': day.date.strftime('%a'),
+                    'location': day.location,
+                    'acc_status': acc_status,
+                    'acc_name': acc_name,
+                })
+                
+                for event in events:
+                    grid_data.append({
+                        'id': event.id,
+                        'day_id': day.id,
+                        'station_key': station_key,
+                        'type': event.type,
+                        'title': event.title,
+                        'location': event.location or day.location,
+                        'dep_time': event.time.strftime('%H:%M') if event.time else '',
+                        'arr_time': event.end_time.strftime('%H:%M') if event.end_time else '',
+                        'duration': event.duration or '',
+                        'distance_km': event.distance_km or '',
+                        'cost_booked': float(event.cost_booked),
+                        'cost_estimated': float(event.cost_estimated),
+                        'amount_paid': float(event.amount_paid),
+                        'payment_method': event.get_payment_method_display() if event.payment_method != 'NONE' else '',
+                        'cancellation_deadline': event.cancellation_deadline.strftime('%d.%m.') if event.cancellation_deadline else '',
+                        'days_until_storno': (event.cancellation_deadline - date.today()).days if event.cancellation_deadline else None,
+                        'is_paid': event.is_paid,
+                        'voucher_url': event.voucher.url if event.voucher else '',
+                        'booking_url': event.booking_url,
+                        'nights': event.nights,
+                        'is_checkin': event.is_checkin,
+                        'is_checkout': event.is_checkout,
+                        'breakfast_included': event.breakfast_included,
+                        'breakfast_cost': float(event.breakfast_cost),
+                    })
+            
+        # Add Global Expenses at the very end
+        global_expenses = active_trip.global_expenses.all()
+        if global_expenses.exists():
+            grid_data.append({
+                'id': 'global-header',
+                'is_station_header': True,
+                'station_location': 'PAUSCHALE POSTEN / BUDGET',
+                'station_key': 'global',
+                'days_count': '',
+                'nights_count': ''
+            })
+            for exp in global_expenses:
+                grid_data.append({
+                    'id': f"global-{exp.id}",
+                    'is_global_expense': True,
+                    'type': exp.expense_type,
+                    'title': exp.title,
+                    'unit_price': float(exp.unit_price),
+                    'units': exp.units,
+                    'cost_booked': float(exp.total_amount),
+                    'cost_estimated': 0,
+                    'is_auto_calculated': exp.is_auto_calculated,
+                })
+
+        context['grid_data_json'] = json.dumps(grid_data, cls=DjangoJSONEncoder)
+        
+    return context
+
+class TripDashboardView(ListView):
+    model = Trip
+    template_name = 'travel/trip_dashboard.html'
     context_object_name = 'trips'
 
     def get_template_names(self):
@@ -32,12 +163,9 @@ class TripDashboardView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Handle view type (timeline/table)
-        view_type = self.request.GET.get('view', self.request.session.get('view_type', 'timeline'))
-        self.request.session['view_type'] = view_type
-        
-        context['view_type'] = view_type
-        context['active_trip'] = Trip.objects.first() 
+        # Use centralized helper
+        dashboard_context = get_dashboard_context(self.request)
+        context.update(dashboard_context)
         return context
 
 def trip_create(request):
@@ -46,10 +174,12 @@ def trip_create(request):
         if form.is_valid():
             trip = form.save()
             _generate_days(trip)
-            if request.htmx:
-                # Return the updated list to be swapped into the dashboard
-                return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
+            # Set as active trip
+            request.session['active_trip_id'] = trip.id
+            # Full redirect to refresh navbar and switcher
             return redirect('travel:dashboard')
+        else:
+            print(f"DEBUG: Trip form errors: {form.errors.as_text()}")
     else:
         form = TripForm()
     
@@ -63,12 +193,29 @@ def trip_edit(request, pk):
             trip = form.save()
             _generate_days(trip) # Refresh days if dates changed
             if request.htmx:
-                return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
+                response = HttpResponse("")
+                response['HX-Refresh'] = 'true'
+                return response
             return redirect('travel:dashboard')
     else:
         form = TripForm(instance=trip)
     
     return render(request, 'travel/partials/trip_form.html', {'form': form})
+
+def trip_delete(request, pk):
+    trip = get_object_or_404(Trip, pk=pk)
+    if request.method == 'DELETE' or request.method == 'POST':
+        trip.delete()
+        if request.session.get('active_trip_id') == pk:
+            request.session['active_trip_id'] = None
+        if request.htmx:
+            # We return both the trip list and the switcher (OOB)
+            context = get_dashboard_context(request)
+            html = render(request, 'travel/partials/trip_list.html', context).content.decode('utf-8')
+            html += render(request, 'travel/partials/trip_switcher.html', context).content.decode('utf-8')
+            return HttpResponse(html)
+        return redirect('travel:dashboard')
+    return HttpResponse(status=405)
 
 # Event Management Views
 from .models import Event
@@ -82,8 +229,15 @@ def event_create(request, day_id):
             event.day = day
             event.save()
             if request.htmx:
-                return render(request, 'travel/partials/trip_list.html', {'active_trip': day.trip})
+                response = HttpResponse("")
+                response['HX-Refresh'] = 'true'
+                return response
             return redirect('travel:dashboard')
+        else:
+            if request.htmx:
+                response = render(request, 'travel/partials/event_form.html', {'form': form, 'day': day})
+                response['HX-Retarget'] = '#modal-container'
+                return response
     else:
         form = EventForm()
     
@@ -99,8 +253,17 @@ def event_edit(request, pk):
         if form.is_valid():
             form.save()
             if request.htmx:
-                return render(request, 'travel/partials/trip_list.html', {'active_trip': event.day.trip})
+                response = HttpResponse("")
+                response['HX-Refresh'] = 'true'
+                return response
             return redirect('travel:dashboard')
+        else:
+            if request.htmx:
+                response = render(request, 'travel/partials/event_form.html', {
+                    'form': form, 'event': event, 'day': event.day
+                })
+                response['HX-Retarget'] = '#modal-container'
+                return response
     else:
         form = EventForm(instance=event)
     
@@ -113,11 +276,18 @@ def event_edit(request, pk):
 def event_delete(request, pk):
     event = get_object_or_404(Event, pk=pk)
     trip = event.day.trip
+    # AJAX delete support (vanilla fetch in grid)
+    if (request.headers.get('X-Requested-With') == 'XMLHttpRequest') and not request.headers.get('HX-Request'):
+        event.delete()
+        return HttpResponse(status=204)
+        
     if request.method == 'POST':
         event.delete()
         if request.htmx:
-            return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
-        return redirect('travel:dashboard')
+            response = HttpResponse("")
+            response['HX-Refresh'] = 'true'
+            return response
+        return render(request, 'travel/partials/trip_list.html', get_dashboard_context(request, trip))
     return HttpResponse(status=405)
 
 def event_inline_create(request, day_id):
@@ -155,23 +325,35 @@ def event_inline_update(request, pk=None, day_id=None):
     value = request.POST.get('value')
     event_type = request.POST.get('type')
     
-    # Auto-format "10" to "10:00" for time fields
-    if field in ['time', 'end_time'] and value and ':' not in value:
-        if value.isdigit():
-            if len(value) <= 2:
-                value = f"{value.zfill(2)}:00"
-            elif len(value) == 4:
-                value = f"{value[:2]}:{value[2:]}"
+    # Improved time/number cleaning for backend robustness
+    if value == "":
+        value = None
+    
+    if value and field in ['time', 'end_time']:
+        value = str(value).strip().lower()
+        if 'uhr' in value: value = value.replace('uhr', '').strip()
+        if ':' not in value:
+            if value.isdigit():
+                if len(value) <= 2: value = f"{value.zfill(2)}:00"
+                elif len(value) == 4: value = f"{value[:2]}:{value[2:]}"
+        # Final validation/cleanup
+        if ':' in value:
+            parts = value.split(':')
+            if len(parts) >= 2:
+                value = f"{parts[0].zfill(2)}:{parts[1].zfill(2)}"[:5]
     
     if pk:
         event = get_object_or_404(Event, pk=pk)
     elif day_id:
         day = get_object_or_404(Day, pk=day_id)
         if not event_type:
-            if field in ['hotel_title', 'cost_booked', 'cost_estimated', 'cost_per_person', 'cost_total', 'is_paid'] or 'hotel' in field:
-                event_type = 'HOTEL'
-            else:
+            # Smart defaults based on field names
+            if field in ['cost_booked', 'cost_estimated', 'cost_per_person', 'cost_total', 'is_paid']:
+                event_type = 'ACTIVITY' # Default to activity for costs if unknown
+            elif field in ['time', 'end_time', 'distance_km']:
                 event_type = 'TRANSPORT'
+            else:
+                event_type = 'ACTIVITY'
         event, created = Event.objects.get_or_create(day=day, type=event_type, defaults={'title': 'Planung'})
     else:
         return HttpResponse(status=400)
@@ -181,6 +363,8 @@ def event_inline_update(request, pk=None, day_id=None):
             event.is_paid = (value == 'true')
         elif field == 'hotel_title':
             event.title = value
+        elif field == 'location':
+            event.location = value
         else:
             setattr(event, field, value)
         event.save()
@@ -201,7 +385,7 @@ def event_quick_add(request, day_id):
     title = request.POST.get('title')
     if title:
         # Check if it's a hotel or flight based on keywords for smart defaults
-        type_choice = 'ACTIVITY'
+        type_choice = 'NONE' # Default to neutral
         hotel_keywords = ['hotel', 'unterkunft', 'bungalow', 'camping', 'stellplatz', 'raststätte', 'zimmer', 'guesthouse']
         if any(kw in title.lower() for kw in hotel_keywords):
             type_choice = 'HOTEL'
@@ -210,43 +394,446 @@ def event_quick_add(request, day_id):
             
         Event.objects.create(day=day, title=title, type=type_choice)
         
-    return render(request, 'travel/partials/trip_list.html', {'active_trip': day.trip})
+    return render(request, 'travel/partials/trip_list.html', get_dashboard_context(request, day.trip))
 
 def day_bulk_edit(request):
-    """Updates multiple days (location, hotel) at once. Returns full list to refresh stations."""
+    """Updates multiple days (location, hotel) at once. Triggers full refresh."""
     if request.method == 'POST':
         day_ids = request.POST.getlist('day_ids')
         location = request.POST.get('location')
-        hotel_title = request.POST.get('hotel_title')
-        # Preserve view type
-        view_type = request.GET.get('view', 'table')
-        
-        days = Day.objects.filter(id__in=day_ids)
-        if location:
-            days.update(location=location)
-        
-        if hotel_title:
-            for day in days:
-                # Update existing hotel or create new one
-                hotel = day.events.filter(type='HOTEL').first()
-                if hotel:
-                    hotel.title = hotel_title
-                    hotel.save()
-                else:
-                    Event.objects.create(day=day, title=hotel_title, type='HOTEL')
-        
-        if days.exists():
-            return render(request, 'travel/partials/trip_list.html', {
-                'active_trip': days.first().trip,
-                'view_type': view_type
-            })
-            
-    return HttpResponse(status=400)
+        if day_ids:
+            Day.objects.filter(id__in=day_ids).update(location=location)
+            if request.htmx:
+                response = HttpResponse("")
+                response['HX-Refresh'] = 'true'
+                return response
+    return redirect('travel:dashboard')
 def day_inline_update(request, pk):
     """Updates the location of a day via HTMX."""
     day = get_object_or_404(Day, pk=pk)
-    location = request.POST.get('location')
-    if location:
-        day.location = location
-        day.save()
+    location = request.POST.get('value', request.POST.get('location'))
+    # Allow empty location
+    day.location = location if location is not None else day.location
+    day.save()
     return HttpResponse(day.location)
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+
+@csrf_exempt
+def event_upload_voucher(request, pk):
+    """Directly uploads a file to an existing event via AJAX/HTMX."""
+    if request.method == 'POST' and request.FILES.get('voucher'):
+        event = get_object_or_404(Event, pk=pk)
+        event.voucher = request.FILES['voucher']
+        event.save()
+        return JsonResponse({'status': 'success', 'voucher_url': event.voucher.url})
+    return JsonResponse({'status': 'error'}, status=400)
+
+def event_bulk_delete(request):
+    """Deletes multiple events selected in the grid."""
+    if request.method == 'POST':
+        event_ids = request.POST.getlist('event_ids')
+        events = Event.objects.filter(id__in=event_ids)
+        if events.exists():
+            trip = events.first().day.trip
+            events.delete()
+            if request.htmx:
+                response = HttpResponse("")
+                response['HX-Refresh'] = 'true'
+                return response
+            return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
+    return HttpResponse(status=405)
+
+def event_bulk_move(request):
+    """Moves selected events to a new target date."""
+    if request.method == 'POST':
+        event_ids = request.POST.getlist('event_ids')
+        target_date_str = request.POST.get('target_date')
+        if not event_ids or not target_date_str:
+            return HttpResponse(status=400)
+            
+        events = Event.objects.filter(id__in=event_ids)
+        if events.exists():
+            trip = events.first().day.trip
+            from datetime import datetime
+            try:
+                target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+                target_day, _ = Day.objects.get_or_create(trip=trip, date=target_date, defaults={'location': 'Planung...'})
+                
+                # Update all events to the new day
+                events.update(day=target_day)
+                
+                if request.htmx:
+                    response = HttpResponse("")
+                    response['HX-Refresh'] = 'true'
+                    return response
+                return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
+            except ValueError:
+                return HttpResponse("Ungültiges Datum", status=400)
+    return HttpResponse(status=405)
+
+# --- AI & SETTINGS VIEWS ---
+
+def get_setting(key, default=''):
+    try:
+        return GlobalSetting.objects.get(key=key).value
+    except GlobalSetting.DoesNotExist:
+        return default
+
+def settings_modal(request):
+    """View to manage API Keys, Provider and Trip Templates."""
+    templates = TripTemplate.objects.all().order_by('-created_at')
+    gemini_key = GlobalSetting.objects.filter(key='gemini_api_key').first()
+    groq_key = GlobalSetting.objects.filter(key='groq_api_key').first()
+    active_provider = GlobalSetting.objects.filter(key='active_ai_provider').first()
+    ollama_model = get_setting('ollama_model_name', 'llama3')
+    ollama_url = get_setting('ollama_url', 'http://192.168.123.107:11434')
+    
+    # Vehicle Profiles
+    v1_name = get_setting('vehicle1_name', 'Wohnmobil')
+    v1_consump = get_setting('vehicle1_consumption', '12')
+    v1_fuel = get_setting('vehicle1_fuel_type', 'Diesel')
+    v1_weight = get_setting('vehicle1_weight', '3.5t')
+    v1_range = get_setting('vehicle1_range', '600')
+
+    v2_name = get_setting('vehicle2_name', 'Privat-PKW')
+    v2_consump = get_setting('vehicle2_consumption', '8')
+    v2_fuel = get_setting('vehicle2_fuel_type', 'Benzin')
+    v2_range = get_setting('vehicle2_range', '500')
+
+    
+    # User Profile & Participants
+    home_city = get_setting('user_home_city', 'München')
+    home_addr = get_setting('user_home_address', '')
+    def_p_count = get_setting('default_persons_count', '2')
+    def_p_ages = get_setting('default_persons_ages', '40, 38')
+
+    
+    if request.method == 'POST':
+        # Handle Provider/Keys/Vehicles update
+        if 'active_ai_provider' in request.POST:
+            provider = request.POST.get('active_ai_provider', 'gemini')
+            gemini_val = request.POST.get('gemini_api_key', '').strip()
+            groq_val = request.POST.get('groq_api_key', '').strip()
+            
+            GlobalSetting.objects.update_or_create(key='active_ai_provider', defaults={'value': provider or 'gemini'})
+            GlobalSetting.objects.update_or_create(key='gemini_api_key', defaults={'value': gemini_val or ''})
+            GlobalSetting.objects.update_or_create(key='groq_api_key', defaults={'value': groq_val or ''})
+            # Vehicles & Profile
+            for k in [
+                'vehicle1_name', 'vehicle1_consumption', 'vehicle1_fuel_type', 'vehicle1_weight', 'vehicle1_range',
+                'vehicle2_name', 'vehicle2_consumption', 'vehicle2_fuel_type', 'vehicle2_range',
+                'user_home_city', 'user_home_address', 'default_persons_count', 'default_persons_ages',
+                'ollama_model_name', 'ollama_url'
+            ]:
+                val = request.POST.get(k, '').strip()
+                GlobalSetting.objects.update_or_create(key=k, defaults={'value': val})
+
+
+            
+            return render(request, 'travel/partials/settings_modal.html', {
+                'templates': templates,
+                'gemini_key': gemini_val,
+                'groq_key': groq_val,
+                'active_provider': provider,
+                'v1_name': request.POST.get('v1_name'),
+                'v1_consumption': request.POST.get('v1_consumption'),
+                'v1_fuel': request.POST.get('v1_fuel'),
+                'v1_weight': request.POST.get('v1_weight'),
+                'v1_range': request.POST.get('v1_range'),
+                'v2_name': request.POST.get('v2_name'),
+                'v2_consumption': request.POST.get('v2_consumption'),
+                'v2_fuel': request.POST.get('v2_fuel'),
+                'v2_range': request.POST.get('v2_range'),
+
+                'user_home_city': request.POST.get('user_home_city'),
+                'user_home_address': request.POST.get('user_home_address'),
+                'default_persons_count': request.POST.get('default_persons_count'),
+                'default_persons_ages': request.POST.get('default_persons_ages'),
+                'ollama_model_name': request.POST.get('ollama_model_name'),
+                'ollama_url': request.POST.get('ollama_url'),
+                'success': True
+            })
+
+
+    return render(request, 'travel/partials/settings_modal.html', {
+        'templates': templates,
+        'gemini_key': gemini_key.value if gemini_key else '',
+        'groq_key': groq_key.value if groq_key else '',
+        'active_provider': active_provider.value if active_provider else 'gemini',
+        'v1_name': v1_name, 'v1_consumption': v1_consump, 'v1_fuel': v1_fuel, 'v1_weight': v1_weight, 'v1_range': v1_range,
+        'v2_name': v2_name, 'v2_consumption': v2_consump, 'v2_fuel': v2_fuel, 'v2_range': v2_range,
+        'user_home_city': home_city, 'user_home_address': home_addr,
+
+        'default_persons_count': def_p_count, 'default_persons_ages': def_p_ages,
+        'ollama_model_name': ollama_model, 'ollama_url': ollama_url
+    })
+
+
+def ai_test_connection(request):
+    """Diagnostic view using the new lightweight test function."""
+    result = ai_service.test_ai_connection()
+    
+    if "error" in result:
+        return HttpResponse(f"<span style='color: #e74c3c;'>❌ Fehler: {result['error']}</span>")
+    
+    msg = result.get('message', 'Unbekannte Antwort')
+    return HttpResponse(f"<span style='color: #2ecc71;'>✅ KI sagt: {msg}</span>")
+
+def template_create(request):
+    """Simple view to create a new trip template."""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        prefs = request.POST.get('preferences')
+        if name and prefs:
+            TripTemplate.objects.create(name=name, preferences=prefs)
+            return settings_modal(request) # Return refreshed settings list
+    return render(request, 'travel/partials/template_form.html')
+
+def template_edit(request, pk):
+    """View to edit an existing trip template."""
+    template = get_object_or_404(TripTemplate, pk=pk)
+    if request.method == 'POST':
+        template.name = request.POST.get('name')
+        template.preferences = request.POST.get('preferences')
+        template.save()
+        return settings_modal(request)
+    return render(request, 'travel/partials/template_form.html', {'template': template})
+
+def template_delete(request, pk):
+    """View to delete a trip template."""
+    template = get_object_or_404(TripTemplate, pk=pk)
+    if request.method == 'POST':
+        template.delete()
+        return settings_modal(request)
+    return HttpResponse(status=405)
+
+def ai_wizard(request):
+    """
+    Step-by-step wizard for AI trip generation.
+    Supports initial prompt and refinement instructions.
+    """
+    step = request.GET.get('step', 'select')
+    templates = TripTemplate.objects.all()
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'generate':
+            template_id = request.POST.get('template_id')
+            days = request.POST.get('days', 28)
+            start_date = request.POST.get('start_date')
+            
+            if not start_date:
+                templates = TripTemplate.objects.all().order_by('-created_at')
+                return render(request, 'travel/partials/ai_wizard.html', {
+                    'step': 'select', 
+                    'templates': templates,
+                    'error': 'Bitte wähle ein Startdatum aus!'
+                })
+
+            start_location = request.POST.get('start_location', 'Zuhause')
+            persons_count = request.POST.get('persons_count', 2)
+            persons_ages = request.POST.get('persons_ages', '')
+            
+            template = get_object_or_404(TripTemplate, pk=template_id)
+            user_prefs = request.POST.get('user_preferences', '').strip()
+            
+            # Combine template + user wishes
+            final_preferences = template.preferences
+            if user_prefs:
+                final_preferences = f"Style: {template.preferences}. Specific Wishes/Destination: {user_prefs}. (Note: Prioritize specific wishes over style if they conflict)."
+            
+            result = ai_service.generate_itinerary(final_preferences, start_date, days, start_location, persons_count, persons_ages)
+            
+            if "error" in result:
+                msg = result['error']
+                if "429" in msg or "Too Many Requests" in msg:
+                    msg = "Die KI-Anbieter brauchen gerade eine kurze Pause (Anfrage-Limit). Bitte warte ca. 60 Sekunden und versuche es erneut."
+                return render(request, 'travel/partials/ai_wizard.html', {
+                    'step': 'error', 'error': msg
+                })
+            
+            # Normalize for consistent template rendering
+            return render(request, 'travel/partials/ai_wizard.html', {
+                'step': 'preview', 
+                'itinerary': result,
+                'itinerary_json': json.dumps(result),
+                'start_date': start_date,
+                'user_preferences': user_prefs,
+                'persons_count': persons_count,
+                'persons_ages': persons_ages
+            })
+            
+        elif action == 'manual_step':
+            template_id = request.POST.get('template_id')
+            user_prefs = request.POST.get('user_preferences', '')
+            start_location = request.POST.get('start_location', 'Zuhause')
+            persons_count = request.POST.get('persons_count', 2)
+            persons_ages = request.POST.get('persons_ages', '')
+            start_date = request.POST.get('start_date')
+            days = request.POST.get('days', 28)
+            
+            template = get_object_or_404(TripTemplate, id=template_id)
+            final_preferences = template.preferences
+            if user_prefs:
+                final_preferences = f"Style: {template.preferences}. Specific Wishes: {user_prefs}."
+                
+            prompt = ai_service.get_itinerary_prompt(final_preferences, start_date, days, start_location, persons_count, persons_ages)
+            
+            return render(request, 'travel/partials/ai_wizard.html', {
+                'step': 'manual',
+                'prompt': prompt,
+                'start_date': start_date,
+                'persons_count': persons_count,
+                'persons_ages': persons_ages
+            })
+            
+        elif action == 'manual_import':
+            pasted_text = request.POST.get('pasted_text', '').strip()
+            start_date = request.POST.get('start_date')
+            persons_count = request.POST.get('persons_count', 2)
+            persons_ages = request.POST.get('persons_ages', '')
+            
+            try:
+                # Use the new repair_json utility to handle malformed/truncated output
+                pasted_text = ai_service.repair_json(pasted_text)
+                
+                trip_data = json.loads(pasted_text)
+                trip = ai_service.save_itinerary_to_db(trip_data, start_date, persons_count, persons_ages)
+                
+                # Set as active trip
+                request.session['active_trip_id'] = trip.id
+                
+                # Redirect to dashboard without old GET parameters to ensure new trip is loaded
+                if request.htmx:
+                    response = HttpResponse("")
+                    response['HX-Redirect'] = f"/?trip_id={trip.id}"
+                    return response
+                return redirect('travel:dashboard')
+            except Exception as e:
+                return render(request, 'travel/partials/ai_wizard.html', {
+                    'step': 'error', 'error': f"Fehler beim Einlesen: {str(e)}"
+                })
+            
+        elif action == 'import':
+            itinerary_json = request.POST.get('itinerary_json')
+            start_date = request.POST.get('start_date')
+            persons_count = request.POST.get('persons_count', 2)
+            persons_ages = request.POST.get('persons_ages', '')
+            user_trip_name = request.POST.get('trip_name')
+            
+            trip_data = json.loads(itinerary_json)
+            if user_trip_name:
+                trip_data['name'] = user_trip_name
+                
+            try:
+                trip = ai_service.save_itinerary_to_db(trip_data, start_date, persons_count, persons_ages)
+                
+                # Set as active trip
+                request.session['active_trip_id'] = trip.id
+
+                if request.htmx:
+                    response = HttpResponse("")
+                    response['HX-Redirect'] = f"/?trip_id={trip.id}"
+                    return response
+                return redirect('travel:dashboard')
+            except Exception as e:
+                return render(request, 'travel/partials/ai_wizard.html', {
+                    'step': 'error', 'error': f"Fehler beim Speichern: {str(e)}"
+                })
+            
+        elif action == 'refine':
+            instructions = request.POST.get('instructions')
+            itinerary_json = request.POST.get('itinerary_json')
+            start_date = request.POST.get('start_date')
+            
+            current_itinerary = json.loads(itinerary_json)
+            result = ai_service.refine_itinerary(current_itinerary, instructions)
+            
+            if "error" in result:
+                msg = result['error']
+                if "429" in msg or "Too Many Requests" in msg:
+                    msg = "Die KI-Anbieter brauchen gerade eine kurze Pause (Anfrage-Limit). Bitte warte ca. 60 Sekunden und versuche es erneut."
+                return render(request, 'travel/partials/ai_wizard.html', {
+                    'step': 'error', 'error': msg
+                })
+            
+            # Normalize for consistent template rendering
+            result = ai_service.normalize_itinerary(result)
+                
+            return render(request, 'travel/partials/ai_wizard.html', {
+                'step': 'preview', 
+                'itinerary': result,
+                'itinerary_json': json.dumps(result),
+                'start_date': start_date,
+                'user_preferences': request.POST.get('user_preferences', ''),
+                'persons_count': request.POST.get('persons_count'),
+                'persons_ages': request.POST.get('persons_ages'),
+                'refined': True
+            })
+
+    if step == 'select':
+        templates = TripTemplate.objects.all().order_by('-created_at')
+        home_city = get_setting('user_home_city', 'München')
+        p_count = get_setting('default_persons_count', '2')
+        p_ages = get_setting('default_persons_ages', '40, 38')
+        
+        return render(request, 'travel/partials/ai_wizard.html', {
+            'step': 'select', 
+            'templates': templates,
+            'start_location': home_city,
+            'persons_count': p_count,
+            'persons_ages': p_ages
+        })
+
+    return render(request, 'travel/partials/ai_wizard.html', {
+        'step': step
+    })
+
+# --- LOGIC & GLOBAL EXPENSE VIEWS ---
+
+def trip_logic_check(request, pk):
+    """Runs consistency checks and returns the results modal."""
+    trip = get_object_or_404(Trip, pk=pk)
+    findings = logic_service.check_trip_logic(trip)
+    return render(request, 'travel/partials/logic_check_modal.html', {
+        'trip': trip,
+        'findings': findings
+    })
+
+def global_expense_create(request, trip_id):
+    trip = get_object_or_404(Trip, pk=trip_id)
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        expense_type = request.POST.get('expense_type', 'OTHER')
+        unit_price = request.POST.get('unit_price', 0)
+        units = request.POST.get('units', 1)
+        
+        GlobalExpense.objects.create(
+            trip=trip, title=title, expense_type=expense_type,
+            unit_price=unit_price, units=units
+        )
+        return HttpResponse(headers={'HX-Refresh': 'true'})
+    return render(request, 'travel/partials/global_expense_form.html', {'trip': trip})
+
+def global_expense_delete(request, pk):
+    expense = get_object_or_404(GlobalExpense, pk=pk)
+    expense.delete()
+    return HttpResponse(headers={'HX-Refresh': 'true'})
+
+def add_adjustment_food(request, trip_id):
+    """Smart fix to add missing food budget."""
+    trip = get_object_or_404(Trip, pk=trip_id)
+    missing_count = int(request.POST.get('count', 0))
+    if missing_count > 0:
+        GlobalExpense.objects.create(
+            trip=trip,
+            title=f"Ausgleich: Verpflegung ({missing_count} Tage)",
+            expense_type='FOOD',
+            unit_price=50,
+            units=missing_count,
+            is_auto_calculated=True
+        )
+    return HttpResponse(headers={'HX-Refresh': 'true'})

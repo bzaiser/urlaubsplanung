@@ -7,6 +7,8 @@ class Trip(models.Model):
     end_date = models.DateField(_("Enddatum"), null=True, blank=True)
     base_currency = models.CharField(_("Basis-Währung"), max_length=10, default="EUR")
     local_currency = models.CharField(_("Lokal-Währung"), max_length=10, default="THB")
+    persons_count = models.PositiveIntegerField(_("Anzahl Personen"), default=2)
+    persons_ages = models.CharField(_("Alter der Personen"), max_length=100, blank=True, help_text=_("Komma-separiert, z.B. '40, 38, 12'"))
     
     class Meta:
         verbose_name = _("Reise")
@@ -32,14 +34,16 @@ class Trip(models.Model):
         for day in days[1:]:
             if day.location == current_station['location']:
                 current_station['days'].append(day)
-                current_station['nights'] += 1
             else:
+                current_station['days_count'] = len(current_station['days'])
+                current_station['nights_count'] = max(0, current_station['days_count'] - 1)
                 stations.append(current_station)
                 current_station = {
                     'location': day.location,
                     'days': [day],
-                    'nights': 1
                 }
+        current_station['days_count'] = len(current_station['days'])
+        current_station['nights_count'] = max(0, current_station['days_count'] - 1)
         stations.append(current_station)
         return stations
 
@@ -70,16 +74,29 @@ class Day(models.Model):
 
 class Event(models.Model):
     TYPE_CHOICES = [
-        ('FLIGHT', _('Flug')),
-        ('HOTEL', _('Unterkunft')),
-        ('ACTIVITY', _('Aktivität')),
-        ('TRANSPORT', _('Transport')),
-        ('OTHER', _('Sonstiges')),
+        ('NONE', _('---')),
+        ('FLIGHT', _('✈️ Flug')),
+        ('HOTEL', _('🏨 Hotel')),
+        ('CAMPING', _('⛺ Camping')),
+        ('PITCH', _('🚐📍 Stellplatz')),
+        ('BUNGALOW', _('🏡 Bungalow')),
+        ('CAMPER', _('🚐 Wohnmobil')),
+        ('CAR', _('🚗 Auto')),
+        ('SCOOTER', _('🛵 Roller')),
+        ('BOAT', _('🛥️ Boot')),
+        ('FERRY', _('⛴️ Fähre')),
+        ('TAXI', _('🚕 Taxi')),
+        ('BUS', _('🚌 Bus')),
+        ('TRAIN', _('🚆 Zug')),
+        ('ACTIVITY', _('🎒 Aktivität')),
+        ('RESTAURANT', _('🍽️ Essen')),
+        ('OTHER', _('❓ Sonstiges')),
     ]
     
     day = models.ForeignKey(Day, on_delete=models.CASCADE, related_name="events")
     title = models.CharField(_("Titel"), max_length=200)
-    type = models.CharField(_("Typ"), max_length=20, choices=TYPE_CHOICES, default='ACTIVITY')
+    location = models.CharField(_("Ort / Ziel"), max_length=200, blank=True)
+    type = models.CharField(_("Typ"), max_length=20, choices=TYPE_CHOICES, default='NONE')
     time = models.TimeField(_("Uhrzeit"), null=True, blank=True)
     end_time = models.TimeField(_("Endzeit"), null=True, blank=True)
     notes = models.TextField(_("Notizen"), blank=True)
@@ -98,7 +115,32 @@ class Event(models.Model):
     cost_per_person = models.DecimalField(_("Pro Nase"), max_digits=12, decimal_places=2, default=0)
     cost_total = models.DecimalField(_("Summe"), max_digits=12, decimal_places=2, default=0)
     cost_actual = models.DecimalField(_("Kosten tatsächlich"), max_digits=12, decimal_places=2, default=0)
+    distance_km = models.PositiveIntegerField(_("Entfernung (km)"), null=True, blank=True)
     
+    # Stay Logic [NEW]
+    nights = models.PositiveIntegerField(_("Nächte"), null=True, blank=True)
+    linked_checkout = models.OneToOneField(
+        'self', on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name="linked_checkin"
+    )
+    
+    # New status tracking fields
+    PAYMENT_METHODS = [
+        ('NONE', _('---')),
+        ('CC', _('Kreditkarte')),
+        ('PAYPAL', _('PayPal')),
+        ('CASH', _('Bar')),
+        ('TRANSFER', _('Überweisung')),
+        ('EC', _('EC-Karte')),
+    ]
+    cancellation_deadline = models.DateField(_("Kostenlos stornierbar bis"), null=True, blank=True)
+    payment_method = models.CharField(_("Zahlungsmethode"), max_length=20, choices=PAYMENT_METHODS, default='NONE')
+    amount_paid = models.DecimalField(_("Bereits gezahlt"), max_digits=12, decimal_places=2, default=0)
+    
+    # Breakfast Logic [NEW]
+    breakfast_included = models.BooleanField(_("Frühstück inkl."), default=False)
+    breakfast_cost = models.DecimalField(_("Frühstück Preis"), max_digits=12, decimal_places=2, default=0)
+
     # Legacy fields
     cost_local = models.DecimalField(_("Kosten lokal (legacy)"), max_digits=12, decimal_places=2, default=0)
     cost_base = models.DecimalField(_("Kosten Basis EUR (legacy)"), max_digits=12, decimal_places=2, default=0)
@@ -114,15 +156,77 @@ class Event(models.Model):
         return f"{self.get_type_display()}: {self.title}"
 
     @property
+    def is_checkin(self):
+        """Identifies if this event is a check-in for an accommodation."""
+        stay_types = ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']
+        if self.type in stay_types and 'check-in' in self.title.lower():
+            return True
+        return False
+
+    @property
+    def is_checkout(self):
+        """Identifies if this event is a check-out."""
+        return 'check-out' in self.title.lower()
+
+    def save(self, *args, **kwargs):
+        """Overridden save to handle automatic Check-out creation/update."""
+        # Save naturally first so we have an ID for relations
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        # Automatic Checkout Logic
+        if self.is_checkin and self.nights and self.nights > 0:
+            from datetime import timedelta
+            checkout_date = self.day.date + timedelta(days=self.nights)
+            
+            # Find the Day object for the checkout
+            from .models import Day
+            checkout_day, _ = Day.objects.get_or_create(
+                trip=self.day.trip, 
+                date=checkout_date,
+                defaults={'location': self.day.location}
+            )
+
+            checkout_title = self.title.lower().replace('check-in', 'Check-out').title()
+            
+            if not self.linked_checkout:
+                # Create new checkout
+                checkout = Event.objects.create(
+                    day=checkout_day,
+                    title=checkout_title,
+                    type=self.type,
+                    time=self.end_time or "11:00",
+                    location=self.location,
+                    cost_booked=0,
+                    cost_estimated=0,
+                    notes=f"Automatisch generiert von Check-in: {self.title}"
+                )
+                self.linked_checkout = checkout
+                # Save self again to store the link (prevent recursion with a flag)
+                self.save(update_fields=['linked_checkout'])
+            else:
+                # Update existing checkout
+                checkout = self.linked_checkout
+                checkout.day = checkout_day
+                checkout.title = checkout_title
+                checkout.type = self.type
+                checkout.location = self.location
+                # Clear costs on checkout to avoid double counting
+                checkout.cost_booked = 0
+                checkout.cost_estimated = 0
+                checkout.save()
+
+    @property
     def duration(self):
         """Calculates duration between time and end_time."""
         if self.time and self.end_time:
-            from datetime import datetime, date
+            from datetime import datetime, date, timedelta
             d1 = datetime.combine(date.min, self.time)
             d2 = datetime.combine(date.min, self.end_time)
             diff = d2 - d1
             if diff.total_seconds() < 0:
-                return None # Overnight not handled yet simple
+                # Crossed midnight
+                diff += timedelta(days=1)
             
             hours, remainder = divmod(int(diff.total_seconds()), 3600)
             minutes = remainder // 60
@@ -148,3 +252,60 @@ class DiaryImage(models.Model):
     class Meta:
         verbose_name = _("Tagebuch Bild")
         verbose_name_plural = _("Tagebuch Bilder")
+
+class TripTemplate(models.Model):
+    name = models.CharField(_("Name der Vorlage"), max_length=100)
+    preferences = models.TextField(_("Reise-Präferenzen"), help_text=_("Beschreibe hier deine Standard-Wünsche für diese Art von Reise."))
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Reise-Vorlage")
+        verbose_name_plural = _("Reise-Vorlagen")
+
+    def __str__(self):
+        return self.name
+
+class GlobalSetting(models.Model):
+    key = models.CharField(max_length=50, unique=True)
+    value = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name = _("Globale Einstellung")
+        verbose_name_plural = _("Globale Einstellungen")
+
+    def __str__(self):
+        return self.key
+
+class GlobalExpense(models.Model):
+    TYPE_CHOICES = [
+        ('FOOD', _('🍟 Verpflegung')),
+        ('RENTAL', _('🛴 Miete (Roller/Surf/etc)')),
+        ('FEE', _('🎟️ Eintritt/Gebühr')),
+        ('OTHER', _('📦 Sonstiges')),
+    ]
+    
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="global_expenses")
+    title = models.CharField(_("Titel"), max_length=200)
+    expense_type = models.CharField(_("Typ"), max_length=20, choices=TYPE_CHOICES, default='OTHER')
+    
+    unit_price = models.DecimalField(_("Preis pro Einheit"), max_digits=12, decimal_places=2, default=0)
+    units = models.PositiveIntegerField(_("Anzahl Einheiten"), default=1)
+    
+    total_amount = models.DecimalField(_("Gesamtbetrag"), max_digits=12, decimal_places=2, default=0)
+    
+    notes = models.TextField(_("Notizen"), blank=True)
+    is_auto_calculated = models.BooleanField(_("Automatisch berechnet"), default=False)
+
+    class Meta:
+        ordering = ['expense_type', 'id']
+        verbose_name = _("Globale Ausgabe")
+        verbose_name_plural = _("Globale Ausgaben")
+
+    def save(self, *args, **kwargs):
+        if self.unit_price > 0 and self.units > 0:
+            self.total_amount = self.unit_price * self.units
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.get_expense_type_display()}: {self.title}"
+
