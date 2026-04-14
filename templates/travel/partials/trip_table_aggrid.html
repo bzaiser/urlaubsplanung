@@ -299,19 +299,16 @@
                     this.container = document.createElement('div');
                     this.container.className = 'ag-type-editor-container';
                     
-                    const map = {
-                        'NONE': '➖', 'FLIGHT': '✈️', 'HOTEL': '🏨', 'CAMPING': '⛺',
-                        'PITCH': '🚐📍', 'BUNGALOW': '🏡', 'CAMPER': '🚐',
-                        'CAR': '🚗', 'RENTAL_CAR': '🔑🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
-                        'TAXI': '🚕', 'BUS': '🚌',
-                        'TRAIN': '🚆🚌', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓'
+                        'TRAIN': '🚆🚌', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓',
+                        'FOOD': '🍕', 'FEE': '🎟️', 'RENTAL': '🛴'
                     };
                     const labels = {
                         'NONE': '---', 'FLIGHT': 'Flug', 'HOTEL': 'Hotel', 'CAMPING': 'Camping',
                         'PITCH': 'Stellplatz', 'BUNGALOW': 'Bungalow', 'CAMPER': 'Wohnmobil',
                         'CAR': 'Auto', 'RENTAL_CAR': 'Mietwagen', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
                         'TAXI': 'Taxi', 'BUS': 'Bus',
-                        'TRAIN': 'Zug / Bus', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges'
+                        'TRAIN': 'Zug / Bus', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges',
+                        'FOOD': 'Verpflegung', 'FEE': 'Gebühr', 'RENTAL': 'Miete'
                     };
                     
                     const list = document.createElement('ul');
@@ -380,14 +377,16 @@
                                 'PITCH': '🚐📍', 'BUNGALOW': '🏡', 'CAMPER': '🚐',
                                 'CAR': '🚗', 'RENTAL_CAR': '🔑🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
                                 'TAXI': '🚕', 'BUS': '🚌',
-                                'TRAIN': '🚆🚌', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓'
+                                'TRAIN': '🚆🚌', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓',
+                                'FOOD': '🍕', 'FEE': '🎟️', 'RENTAL': '🛴'
                             };
                             const labels = {
                                 'NONE': '---', 'FLIGHT': 'Flug', 'HOTEL': 'Hotel', 'CAMPING': 'Camping',
                                 'PITCH': 'Stellplatz', 'BUNGALOW': 'Bungalow', 'CAMPER': 'Wohnmobil',
                                 'CAR': 'Auto', 'RENTAL_CAR': 'Mietwagen', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
                                 'TAXI': 'Taxi', 'BUS': 'Bus',
-                                'TRAIN': 'Zug / Bus', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges'
+                                'TRAIN': 'Zug / Bus', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges',
+                                'FOOD': 'Verpflegung', 'FEE': 'Gebühr', 'RENTAL': 'Miete'
                             };
                             if (!p.value || p.value === 'NONE') return '';
                             return `<span title="${labels[p.value] || ''}">${map[p.value] || ''}</span>`;
