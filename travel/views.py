@@ -703,22 +703,28 @@ def ai_wizard(request):
             if user_prefs:
                 final_preferences = f"Style: {template.preferences}. Specific Wishes/Destination: {user_prefs}. (Note: Prioritize specific wishes over style if they conflict)."
             
-            result = ai_service.generate_itinerary(final_preferences, start_date, days, start_location, persons_count, persons_ages)
-            
-            if "error" in result:
-                msg = result['error']
-                if "429" in msg or "Too Many Requests" in msg:
-                    msg = "Die KI-Anbieter brauchen gerade eine kurze Pause (Anfrage-Limit). Bitte warte ca. 60 Sekunden und versuche es erneut."
-                context.update({'step': 'error', 'error': msg})
+            try:
+                result = ai_service.generate_itinerary(final_preferences, start_date, days, start_location, persons_count, persons_ages)
+                
+                if "error" in result:
+                    msg = result['error']
+                    if "429" in msg or "Too Many Requests" in msg:
+                        msg = "Die KI-Anbieter brauchen gerade eine kurze Pause (Anfrage-Limit). Bitte warte ca. 60 Sekunden und versuche es erneut."
+                    context.update({'step': 'error', 'error': msg})
+                    return render(request, 'travel/partials/ai_wizard.html', context)
+                
+                # Normalize for consistent template rendering
+                context.update({
+                    'step': 'preview', 
+                    'itinerary': result,
+                    'itinerary_json': json.dumps(result),
+                })
                 return render(request, 'travel/partials/ai_wizard.html', context)
-            
-            # Normalize for consistent template rendering
-            context.update({
-                'step': 'preview', 
-                'itinerary': result,
-                'itinerary_json': json.dumps(result),
-            })
-            return render(request, 'travel/partials/ai_wizard.html', context)
+            except Exception as e:
+                import traceback
+                error_detail = f"CRITICAL CRASH: {str(e)}\n{traceback.format_exc()}"
+                context.update({'step': 'error', 'error': error_detail})
+                return render(request, 'travel/partials/ai_wizard.html', context)
 
         elif action == 'manual_import':
             pasted_text = request.POST.get('pasted_text', '').strip()
