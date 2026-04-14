@@ -587,14 +587,22 @@ def normalize_itinerary(data):
                     else:
                         event['type'] = etype 
 
-                    # 4.5 Smart Correction for Accommodations (Pitch/Camping)
-                    if event.get('type') == 'HOTEL' or event.get('type') == 'OTHER':
-                        title_lower = event.get('title', '').lower()
                         # Pitch / Area Sosta signals (International)
-                        if any(k in title_lower for k in ['sosta', 'stellplatz', 'pitch', 'camper stop', 'wohnmobilstellplatz', 'parcheggio', 'area camper', 'aire', 'stopover']):
-                            event['type'] = 'PITCH'
+                        pitch_keywords = [
+                            'sosta', 'stellplatz', 'wohnmobilstellplatz', 'weingutstellplatz', 'pitch', 'camper stop', 'aire de camping', 'aire municipale', 
+                            'aire de service', 'area sosta', 'agricampeggio', 'area attrezzata', 'área autocaravanas', 'parque autocaravanas', 'asa', 'camperplaats', 
+                            'jachthaven', 'motorhomeplaats', 'autocamperplads', 'ställplats', 'gårdsställplatz', 'bobilplass', 'gårdscamping', 'matkailuauto paikka', 
+                            'caravan-area', 'motorhome stopover', 'pub stopover', 'miejsce camperowe', 'karavanové stání', 'camper stop', 'mini-camp', 'χωρος αυτοκινουμενων',
+                            'bodega camper', 'parking autocaravanas', 'stopover'
+                        ]
                         # Camping signals
-                        elif any(k in title_lower for k in ['camping', 'campingplatz', 'holiday park', 'caravan park', 'camp area']):
+                        camping_keywords = [
+                            'camping', 'campingplatz', 'holiday park', 'caravan park', 'camp area', 'minicamping', 'bondegård camping', 'agroturystyka', 'autocamp', 'agrotourism camping'
+                        ]
+                        
+                        if any(k in title_lower for k in pitch_keywords):
+                            event['type'] = 'PITCH'
+                        elif any(k in title_lower for k in camping_keywords):
                             event['type'] = 'CAMPING'
 
         # 5. Smart Promotion (Trip-wide context)
