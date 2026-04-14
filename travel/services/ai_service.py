@@ -287,8 +287,9 @@ def groq_generate(preferences, start_date, days, start_location, v1, v2, persons
         return {"error": "Groq API Key missing"}
     
     system_prompt = (
-        "REGELN: 1. Sprache: DEUTSCH. 2. Dauer: EXAKT " + str(days) + " Tage. 3. Unterkünfte: Alles Feste als 'HOTEL', Womo als 'CAMPING'/'PITCH'. 4. Gebühren: Maut in 'global_expenses'. 5. Verpflegung: Nutze 'food_preferences' (cooking_ratio, dining_out_ratio, price_level) statt manueller FOOD-Einträge.\n"
-        "Beispiel: {\"name\": \"...\", \"days\": [...], \"food_preferences\": {\"cooking_ratio\": 0.5, \"dining_out_ratio\": 0.5, \"price_level\": \"low\"}}"
+        "Du bist ein Weltklasse-Reiseplaner. Antworte AUSSCHLIESSLICH im JSON-Format.\n"
+        "REGELN: 1. Sprache: DEUTSCH. 2. Dauer: EXAKT " + str(days) + " Tage. 3. Unterkünfte: Alles Feste als 'HOTEL', Womo als 'CAMPING'/'PITCH'. 4. Gebühren: Maut in 'global_expenses'. 5. Verpflegung: Nutze 'food_preferences' (ratios: 0.0-1.0, level: low/med/high).\n"
+        "Beispiel: {\"name\": \"...\", \"days\": [...], \"food_preferences\": {\"cooking_ratio\": 0.5, \"dining_out_ratio\": 0.5, \"price_level\": \"med\"}}"
     )
     # Context: Food Budgets
     food_ctx = f"Tagessätze: Selbst: {get_setting('food_self_med')}€, Restaurant: {get_setting('food_out_med')}€."
@@ -434,7 +435,7 @@ def refine_itinerary(current_itinerary, instructions):
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         payload = {
             "model": "llama-3.3-70b-versatile",
-            "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            "messages": [{"role": "system", "content": system_prompt + " HINWEIS: Antworte im JSON-Format."}, {"role": "user", "content": user_prompt}],
             "response_format": {"type": "json_object"}
         }
         try:
