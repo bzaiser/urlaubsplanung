@@ -135,7 +135,10 @@
             <!-- LINK INFO SECTION -->
             <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px dashed #333;">
                 <p style="font-size: 0.7rem; color: #888; margin: 0;">
-                    <b>Tipp:</b> Du kannst auch den Button <a href="javascript:(function(){const t=document.body.innerText;const m=t.match(/\{[\s\S]*\}/);if(!m){alert('Kein Plan gefunden!');return;}window.open('{% if request.is_secure %}https{% else %}http{% endif %}://{{ request.get_host }}{% url 'travel:ai_wizard' %}?bridge_data='+encodeURIComponent(m[0])+'&start_date={{ start_date }}','_blank');})()" style="color: var(--accent-gold); text-decoration: underline;">➡️ AN APP SENDEN</a> in deine Lesezeichenleiste ziehen.
+                    <b>Tipp (Schneller):</b> Ziehe diesen Button in deine Lesezeichenleiste: 
+                    <a href="javascript:(function(){try{const t=document.body.innerText;const m=t.match(/\{[\s\S]*\}/);if(!m){alert('Kein Plan gefunden!');return;}const j=JSON.stringify(JSON.parse(m[0]));window.open('{% if request.is_secure %}https{% else %}http{% endif %}://{{ request.get_host }}{% url 'travel:ai_wizard' %}?bridge_data='+encodeURIComponent(j)+'&start_date={{ start_date }}','_blank');}catch(e){alert('Fehler: '+e);}})()" 
+                       style="color: var(--accent-gold); text-decoration: underline; font-weight: bold;">➡️ AN APP SENDEN</a>. 
+                    Damit kannst du Ergebnisse bei Gemini/ChatGPT mit einem Klick übertragen!
                 </p>
             </div>
 
