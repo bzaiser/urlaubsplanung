@@ -304,14 +304,14 @@
                         'PITCH': '🚐📍', 'BUNGALOW': '🏡', 'CAMPER': '🚐',
                         'CAR': '🚗', 'RENTAL_CAR': '🔑🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
                         'TAXI': '🚕', 'BUS': '🚌',
-                        'TRAIN': '🚆', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓'
+                        'TRAIN': '🚆🚌', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓'
                     };
                     const labels = {
                         'NONE': '---', 'FLIGHT': 'Flug', 'HOTEL': 'Hotel', 'CAMPING': 'Camping',
                         'PITCH': 'Stellplatz', 'BUNGALOW': 'Bungalow', 'CAMPER': 'Wohnmobil',
                         'CAR': 'Auto', 'RENTAL_CAR': 'Mietwagen', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
                         'TAXI': 'Taxi', 'BUS': 'Bus',
-                        'TRAIN': 'Zug', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges'
+                        'TRAIN': 'Zug / Bus', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges'
                     };
                     
                     const list = document.createElement('ul');
@@ -370,7 +370,7 @@
                     { 
                         headerName: 'Typ', 
                         field: 'type', 
-                        width: 50, 
+                        width: 65, 
                         editable: true,
                         headerTooltip: 'Art des Events (Flug, Hotel, etc.)',
                         cellEditor: TypeCellEditor,
@@ -380,14 +380,14 @@
                                 'PITCH': '🚐📍', 'BUNGALOW': '🏡', 'CAMPER': '🚐',
                                 'CAR': '🚗', 'RENTAL_CAR': '🔑🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
                                 'TAXI': '🚕', 'BUS': '🚌',
-                                'TRAIN': '🚆', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓'
+                                'TRAIN': '🚆🚌', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓'
                             };
                             const labels = {
                                 'NONE': '---', 'FLIGHT': 'Flug', 'HOTEL': 'Hotel', 'CAMPING': 'Camping',
                                 'PITCH': 'Stellplatz', 'BUNGALOW': 'Bungalow', 'CAMPER': 'Wohnmobil',
                                 'CAR': 'Auto', 'RENTAL_CAR': 'Mietwagen', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
                                 'TAXI': 'Taxi', 'BUS': 'Bus',
-                                'TRAIN': 'Zug', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges'
+                                'TRAIN': 'Zug / Bus', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges'
                             };
                             if (!p.value || p.value === 'NONE') return '';
                             return `<span title="${labels[p.value] || ''}">${map[p.value] || ''}</span>`;
