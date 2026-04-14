@@ -459,6 +459,11 @@ def normalize_itinerary(data):
         
     if not isinstance(data, dict):
         return {"error": f"KI lieferte Text statt Daten: {str(data)[:100]}..."}
+
+    # 0. Prevent collision if 'days' is just a number (AI sometimes does this)
+    if 'days' in data and not isinstance(data['days'], (list, dict)):
+        data['days_count_raw'] = data['days']
+        del data['days']
         
     # 1. Handle wrapping
     for key in ['itinerary', 'trip', 'travel_plan']:
