@@ -74,11 +74,17 @@
             </div>
             <div style="grid-column: span 4;">
                 <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Start" %}</label>
-                <input type="time" name="time" value="{{ form.time.value|time:'H:i'|default:'' }}" style="font-size: 0.85rem;">
+                <input type="text" name="time" value="{{ form.time.value|time:'H:i'|default:'' }}" 
+                       placeholder="HH:MM" maxlength="5"
+                       oninput="this.value = this.value.replace(/[^0-9:]/g, ''); if(this.value.length === 2 && !this.value.includes(':')) this.value += ':';"
+                       style="font-size: 0.85rem; font-family: monospace; letter-spacing: 1px;">
             </div>
             <div style="grid-column: span 4;">
                 <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Ende" %}</label>
-                <input type="time" name="end_time" value="{{ form.end_time.value|time:'H:i'|default:'' }}" style="font-size: 0.85rem;">
+                <input type="text" name="end_time" value="{{ form.end_time.value|time:'H:i'|default:'' }}" 
+                       placeholder="HH:MM" maxlength="5"
+                       oninput="this.value = this.value.replace(/[^0-9:]/g, ''); if(this.value.length === 2 && !this.value.includes(':')) this.value += ':';"
+                       style="font-size: 0.85rem; font-family: monospace; letter-spacing: 1px;">
             </div>
 
             <!-- Row 3: Final Costs & Paid -->
@@ -203,6 +209,14 @@
                 </div>
                 <input type="file" name="voucher" style="font-size: 0.75rem; color: var(--text-secondary); border: none; padding: 0; background: none;">
             </div>
+
+            <!-- Conflict Warning -->
+            {% if conflict_warning %}
+            <div style="grid-column: span 12; background: rgba(197, 160, 89, 0.15); border: 1px solid var(--accent-gold); padding: 10px; border-radius: 8px; margin-top: 5px; margin-bottom: 5px; display: flex; align-items: start; gap: 10px;">
+                <span style="font-size: 1.2rem;">⚠️</span>
+                <p style="margin: 0; font-size: 0.8rem; color: #eee; line-height: 1.4;">{{ conflict_warning }}</p>
+            </div>
+            {% endif %}
 
             <!-- Action Toolbar -->
             <div style="grid-column: span 12; display: flex; gap: 8px; margin-top: 4px; border-top: 1px solid var(--glass-border); padding-top: 10px;">

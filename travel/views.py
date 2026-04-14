@@ -246,11 +246,42 @@ def event_create(request, day_id):
                 return response
     else:
         initial_type = request.GET.get('type', 'NONE')
-        form = EventForm(initial={'type': initial_type})
+        initial_data = {'type': initial_type}
+        conflict_warning = None
+        
+        if initial_type == 'RENTAL_CAR':
+            # 1. Suggest days based on station length
+            future_days = Day.objects.filter(trip=day.trip, date__gte=day.date).order_by('date')
+            count = 0
+            for d in future_days:
+                if d.location == day.location:
+                    count += 1
+                else:
+                    break
+            initial_data['nights'] = count
+            
+            # 2. Check for conflicts (Flights, Trains, etc. during these days)
+            # We check the next 'count' days for other transport events
+            if count > 0:
+                end_date = day.date + timedelta(days=count)
+                conflicts = Event.objects.filter(
+                    day__trip=day.trip,
+                    day__date__gt=day.date,
+                    day__date__lte=end_date
+                ).filter(
+                    type__in=['FLIGHT', 'TRAIN', 'BUS', 'FERRY', 'RENTAL_CAR']
+                ).select_related('day')
+                
+                if conflicts.exists():
+                    c_types = ", ".join(list(set([c.get_type_display() for c in conflicts])))
+                    conflict_warning = f"Achtung: Du hast in diesem Zeitraum bereits andere Buchungen ({c_types}). Sicher, dass die Mietdauer stimmt?"
+
+        form = EventForm(initial=initial_data)
     
     return render(request, 'travel/partials/event_form.html', {
         'form': form,
-        'day': day
+        'day': day,
+        'conflict_warning': conflict_warning if 'conflict_warning' in locals() else None
     })
 
 def event_edit(request, pk):

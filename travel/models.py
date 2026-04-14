@@ -87,7 +87,7 @@ class Event(models.Model):
         ('FERRY', _('⛴️ Fähre')),
         ('TAXI', _('🚕 Taxi')),
         ('BUS', _('🚌 Bus')),
-        ('TRAIN', _('🚆 Zug')),
+        ('TRAIN', _('🚆 Zug / Bus')),
         ('RENTAL_CAR', _('🔑🚗 Mietwagen')),
         ('ACTIVITY', _('🎒 Aktivität')),
         ('RESTAURANT', _('🍽️ Essen')),
@@ -160,9 +160,12 @@ class Event(models.Model):
     def is_checkin(self):
         """Identifies if this event is a check-in or pick-up (Abholung)."""
         stay_types = ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']
-        if self.type in stay_types and 'check-in' in self.title.lower():
+        if self.type in stay_types and ('check-in' in self.title.lower() or 'ankunft' in self.title.lower()):
             return True
-        if self.type == 'RENTAL_CAR' and ('abholung' in self.title.lower() or 'start' in self.title.lower()):
+        if self.type == 'RENTAL_CAR' and ('abholung' in self.title.lower() or 'start' in self.title.lower() or 'mietbeginn' in self.title.lower() or 'übernahme' in self.title.lower()):
+            return True
+        # If type is RENTAL_CAR and it's a new entry without a specific 'drop-off' keyword
+        if self.type == 'RENTAL_CAR' and not self.is_checkout and not self.linked_checkout:
             return True
         return False
 
@@ -174,6 +177,13 @@ class Event(models.Model):
 
     def save(self, *args, **kwargs):
         """Overridden save to handle automatic Check-out creation/update."""
+        # Auto-complete titles for better logic recognition
+        if not self.title:
+            if self.type == 'RENTAL_CAR':
+                self.title = "Mietwagen Abholung"
+            elif self.type in ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']:
+                self.title = f"{self.get_type_display()} Check-in"
+        
         # Save naturally first so we have an ID for relations
         is_new = self.pk is None
         super().save(*args, **kwargs)
