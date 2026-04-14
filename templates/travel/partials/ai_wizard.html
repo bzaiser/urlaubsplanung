@@ -47,17 +47,17 @@
                     </div>
                 </div>
 
-                <div class="modal-action-grid" style="margin-top: 15px;">
-                    <button type="submit" class="btn-primary btn-xl" style="flex-direction: column;">
+                <div class="modal-action-grid" style="margin-top: 20px;">
+                    <button type="submit" class="btn-primary btn-xl" style="flex-direction: column; width: 100%;">
                         <span style="font-size: 1.5rem;">🪄</span>
                         <span style="letter-spacing: 0.5px;">Auto-Generieren</span>
-                        <small style="font-size: 0.6rem; opacity: 0.8; font-weight: 400; text-transform: none;">(Empfohlen)</small>
+                        <small style="font-size: 0.6rem; opacity: 0.7; font-weight: 400; text-transform: none;">(Empfohlen)</small>
                     </button>
                     
-                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary btn-xl" style="flex-direction: column;">
+                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary btn-xl" style="flex-direction: column; width: 100%;">
                         <span style="font-size: 1.5rem;">📋</span>
                         <span style="letter-spacing: 0.5px;">Manueller Modus</span>
-                        <small style="font-size: 0.6rem; opacity: 0.8; font-weight: 400; text-transform: none;">(Prompt kopieren)</small>
+                        <small style="font-size: 0.6rem; opacity: 0.7; font-weight: 400; text-transform: none;">(Prompt kopieren)</small>
                     </button>
                 </div>
             </form>
@@ -85,7 +85,6 @@
                     {% endfor %}
                 {% endif %}
 
-                <!-- Preview Global Expenses & Food -->
                 {% if itinerary.global_expenses or itinerary.food_preferences %}
                     <div style="margin-top: 20px; border-top: 2px solid var(--accent-gold); padding-top: 15px; background: rgba(197, 160, 89, 0.05); border-radius: 8px; padding: 10px;">
                         <h4 style="margin: 0 0 10px 0; font-size: 0.8rem; color: var(--accent-gold); text-transform: uppercase; letter-spacing: 0.5px;">📊 Budget & Pauschalen</h4>
