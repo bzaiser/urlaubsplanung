@@ -695,15 +695,8 @@ def ai_wizard(request):
             persons_count = request.POST.get('persons_count', 2)
             persons_ages = request.POST.get('persons_ages', '')
             
-            template = get_object_or_404(TripTemplate, pk=template_id)
-            user_prefs = request.POST.get('user_preferences', '').strip()
-            
-            # Combine template + user wishes
-            final_preferences = template.preferences
-            if user_prefs:
-                final_preferences = f"Style: {template.preferences}. Specific Wishes/Destination: {user_prefs}. (Note: Prioritize specific wishes over style if they conflict)."
-            
             try:
+                template = get_object_or_404(TripTemplate, pk=template_id)
                 result = ai_service.generate_itinerary(final_preferences, start_date, days, start_location, persons_count, persons_ages)
                 
                 if "error" in result:
