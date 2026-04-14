@@ -345,7 +345,7 @@
 
             const initGrid = () => {
                 const gridDiv = document.querySelector('#ag-trip-grid');
-                if (!gridDiv || window.gridCreated) return;
+                if (!gridDiv) return;
 
                 const dataEl = document.getElementById('grid-data');
                 if (!dataEl) return;
@@ -598,7 +598,6 @@
 
                 const api = agGrid.createGrid(gridDiv, gridOptions);
                 window.agGridApi = api; // Use returned API instance
-                window.gridCreated = true;
                 
                 window.toggleStation = (key) => {
                     if (window.collapsedStations.has(key)) {

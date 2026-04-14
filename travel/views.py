@@ -25,15 +25,6 @@ def _generate_days(trip):
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 
-class TripDashboardView(ListView):
-    model = Trip
-    template_name = 'travel/trip_dashboard.html'
-    context_object_name = 'trips'
-
-    def get_template_names(self):
-        if self.request.htmx:
-            return ['travel/partials/trip_list.html']
-        return [self.template_name]
 
 def get_dashboard_context(request, active_trip=None):
     """Helper to prepare the full context for trip_list.html, 
