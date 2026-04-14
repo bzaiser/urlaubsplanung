@@ -236,6 +236,19 @@ class Event(models.Model):
                 checkout.cost_booked = 0
                 checkout.cost_estimated = 0
                 checkout.save()
+        
+        elif self.linked_checkout and (not self.is_checkin or not self.nights or self.nights <= 0):
+            # Cleanup: Delete the checkout if it's no longer needed
+            checkout = self.linked_checkout
+            self.linked_checkout = None
+            self.save(update_fields=['linked_checkout'])
+            checkout.delete()
+
+    def delete(self, *args, **kwargs):
+        """Ensure linked events are also deleted (Cascading)."""
+        if self.linked_checkout:
+            self.linked_checkout.delete()
+        super().delete(*args, **kwargs)
 
     @property
     def duration(self):
