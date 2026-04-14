@@ -38,7 +38,7 @@ class TripDashboardView(ListView):
 def get_dashboard_context(request, active_trip=None):
     """Helper to prepare the full context for trip_list.html, 
     ensuring AG Grid and view types are always synchronized."""
-    view_type = request.GET.get('view', request.session.get('view_type', 'timeline'))
+    view_type = request.GET.get('view', request.session.get('view_type', 'table'))
     request.session['view_type'] = view_type
     
     # Trip Selection logic (if not provided)
