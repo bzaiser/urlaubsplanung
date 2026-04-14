@@ -83,7 +83,7 @@
                 <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 5px; text-transform: uppercase;">🚀 NEU: Die "Brücke" verwenden</h3>
                 <p style="font-size: 0.75rem; color: #ccc; margin-bottom: 10px;">Ziehe diesen Button einmalig in deine <b>Lesezeichenleiste</b> (Strg+Shift+B zum Einblenden):</p>
                 
-                <a href="javascript:(function(){const t=document.body.innerText;const m=t.match(/\{[\s\S]*\}/);if(!m){alert('Kein Plan gefunden!');return;}const j=m[0];fetch('http://localhost:8001/ai/bridge-import/',{method:'POST',headers:{'Content-Type':'application/json'},body:j}).then(r=>r.json()).then(d=>{if(d.status==='success')alert('✅ Plan erfolgreich an die App übertragen! Wechsel zurück zur App.');else alert('⚠️ Fehler: '+d.message)}).catch(e=>alert('❌ Fehler: App nicht erreichbar?'))})()" 
+                <a href="javascript:(function(){const t=document.body.innerText;const m=t.match(/\{[\s\S]*\}/);if(!m){alert('Kein Plan gefunden!');return;}const f=document.createElement('form');f.method='POST';f.action='http://localhost:8001/ai/bridge-import/';f.target='_blank';const i=document.createElement('input');i.type='hidden';i.name='itinerary_data';i.value=m[0];f.appendChild(i);document.body.appendChild(f);f.submit();document.body.removeChild(f);})()" 
                    style="display: inline-block; padding: 8px 15px; background: #333; color: var(--accent-gold); border: 2px solid var(--accent-gold); border-radius: 50px; font-size: 0.8rem; font-weight: bold; text-decoration: none; cursor: grab;"
                    onclick="return false;">
                     ➡️ AN APP SENDEN

@@ -663,15 +663,43 @@ def ai_bridge_import(request):
 
     if request.method == 'POST':
         try:
-            # Decode and repair JSON before loading
-            raw_text = request.body.decode('utf-8')
-            repaired = ai_service.repair_json(raw_text)
-            data = json.loads(repaired)
+            # Check if it is a standard Form POST (for CSP bypass) or JSON body
+            itinerary_data = request.POST.get('itinerary_data')
+            is_form_post = itinerary_data is not None
+            
+            if not is_form_post:
+                # Fallback to direct JSON body (Fetch)
+                raw_text = request.body.decode('utf-8')
+                repaired = ai_service.repair_json(raw_text)
+                data = json.loads(repaired)
+            else:
+                # Form POST data
+                repaired = ai_service.repair_json(itinerary_data)
+                data = json.loads(repaired)
+                
             request.session['latest_ai_import'] = data
-            response = JsonResponse({'status': 'success'})
-            response['Access-Control-Allow-Origin'] = '*'
-            return response
+            
+            if is_form_post:
+                # Return HTML for browser navigations (Form submits)
+                html = """
+                <html><body style="font-family: sans-serif; text-align: center; padding-top: 50px; background: #1a1a1a; color: #fff;">
+                    <div style="background: rgba(197, 160, 89, 0.2); border: 1px solid #c5a059; padding: 20px; border-radius: 12px; display: inline-block;">
+                        <h2 style="color: #c5a059;">✅ Plan erfolgreich übertragen!</h2>
+                        <p>Dieses Fenster schließt sich in Kürze...</p>
+                    </div>
+                    <script>setTimeout(() => window.close(), 1500);</script>
+                </body></html>
+                """
+                return HttpResponse(html)
+            else:
+                # Return JSON for background Fetch requests
+                response = JsonResponse({'status': 'success'})
+                response['Access-Control-Allow-Origin'] = '*'
+                return response
+                
         except Exception as e:
+            if request.POST.get('itinerary_data'):
+                return HttpResponse(f"⚠️ Fehler beim Import: {str(e)}", status=400)
             response = JsonResponse({'status': 'error', 'message': str(e)}, status=400)
             response['Access-Control-Allow-Origin'] = '*'
             return response
