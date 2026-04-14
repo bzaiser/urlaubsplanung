@@ -649,98 +649,12 @@ def template_delete(request, pk):
 
 from django.views.decorators.csrf import csrf_exempt
 
-@csrf_exempt
-def ai_bridge_import(request):
-    """Endpoint for the bookmarklet to POST JSON data directly with CORS support."""
-    if request.method == 'OPTIONS':
-        # Handle browser preflight requests including Private Network Access (PNA)
-        response = HttpResponse()
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        response['Access-Control-Allow-Headers'] = 'Content-Type'
-        response['Access-Control-Allow-Private-Network'] = 'true' # Required by Chrome for Localhost connections
-        return response
-
-    if request.method == 'POST':
-        try:
-            # Check if it is a standard Form POST (for CSP bypass) or JSON body
-            itinerary_data = request.POST.get('itinerary_data')
-            is_form_post = itinerary_data is not None
-            
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.info(f"AI Bridge: Received POST. Form={is_form_post}, PayloadLen={len(itinerary_data or request.body)}")
-
-            if not is_form_post:
-                # Fallback to direct JSON body (Fetch)
-                raw_text = request.body.decode('utf-8')
-                repaired = ai_service.repair_json(raw_text)
-                data = json.loads(repaired)
-            else:
-                # Form POST data
-                repaired = ai_service.repair_json(itinerary_data)
-                data = json.loads(repaired)
-                
-            request.session['latest_ai_import'] = data
-            
-            if is_form_post:
-                # Return HTML for browser navigations (Form submits)
-                html = """
-                <html><body style="font-family: sans-serif; text-align: center; padding-top: 50px; background: #1a1a1a; color: #fff;">
-                    <div style="background: rgba(197, 160, 89, 0.2); border: 1px solid #c5a059; padding: 20px; border-radius: 12px; display: inline-block;">
-                        <h2 style="color: #c5a059;">✅ Plan erfolgreich übertragen!</h2>
-                        <p>Dieses Fenster schließt sich in Kürze...</p>
-                    </div>
-                    <script>setTimeout(() => window.close(), 1500);</script>
-                </body></html>
-                """
-                return HttpResponse(html)
-            else:
-                # Return JSON for background Fetch requests
-                response = JsonResponse({'status': 'success'})
-                response['Access-Control-Allow-Origin'] = '*'
-                return response
-                
-        except Exception as e:
-            if request.POST.get('itinerary_data'):
-                return HttpResponse(f"⚠️ Fehler beim Import: {str(e)}", status=400)
-            response = JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-            response['Access-Control-Allow-Origin'] = '*'
-            return response
-    
-    response = JsonResponse({'status': 'error'}, status=405)
-    response['Access-Control-Allow-Origin'] = '*'
-    return response
-
 def ai_wizard(request):
     """
     Step-by-step wizard for AI trip generation.
     Supports initial prompt and refinement instructions.
     """
     step = request.GET.get('step', 'select')
-    bridge_data = request.GET.get('bridge_data')
-    
-    # Final CSP-Bypass: Detect bridge data in GET parameters (URL Navigation)
-    if bridge_data:
-        try:
-            raw_json = ai_service.repair_json(bridge_data)
-            itinerary = ai_service.normalize_itinerary(json.loads(raw_json))
-            request.session['latest_ai_import'] = itinerary
-            
-            # Return Success page and close tab (Messenger mode)
-            html = """
-            <html><body style="font-family: sans-serif; text-align: center; padding-top: 50px; background: #1a1a1a; color: #fff;">
-                <div style="background: rgba(197, 160, 89, 0.2); border: 1px solid #c5a059; padding: 20px; border-radius: 12px; display: inline-block;">
-                    <h2 style="color: #c5a059;">✅ Plan erfolgreich übertragen!</h2>
-                    <p>Dieses Fenster schließt sich... Wechsel zurück zur App.</p>
-                </div>
-                <script>setTimeout(() => window.close(), 1500);</script>
-            </body></html>
-            """
-            return HttpResponse(html)
-        except Exception as e:
-            return HttpResponse(f"⚠️ Fehler beim URL-Import: {str(e)}", status=400)
-
     templates = TripTemplate.objects.all()
     
     if request.method == 'POST':
@@ -823,29 +737,6 @@ def ai_wizard(request):
                 'persons_count': persons_count,
                 'persons_ages': persons_ages
             })
-            
-        elif action == 'check_bridge':
-            # Pick up data sent via bridge-import endpoint
-            latest_data = request.session.get('latest_ai_import')
-            if not latest_data:
-                return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'error', 'error': "Noch keine Daten von der Brücke empfangen. Bitte erst bei Gemini auf 'AN APP SENDEN' klicken."
-                })
-            
-            # Fill the manual text area with this data so user can see/edit it
-            # We don't delete from session yet, so they can try again if they mess up the text
-            itinerary_str = json.dumps(latest_data, indent=2, ensure_ascii=False)
-            
-            return render(request, 'travel/partials/ai_wizard.html', {
-                'step': 'manual',
-                'pasted_text': itinerary_str,
-                'start_date': request.POST.get('start_date'),
-                'persons_count': request.POST.get('persons_count'),
-                'persons_ages': request.POST.get('persons_ages'),
-            })
-                return render(request, 'travel/partials/ai_wizard.html', {
-                    'step': 'error', 'error': f"Datenformat-Fehler: {str(e)}"
-                })
 
         elif action == 'manual_import':
             pasted_text = request.POST.get('pasted_text', '').strip()
