@@ -723,7 +723,6 @@ def ai_wizard(request):
     # Final CSP-Bypass: Detect bridge data in GET parameters (URL Navigation)
     if bridge_data:
         try:
-            from django.utils.http import urlunquote
             raw_json = ai_service.repair_json(bridge_data)
             itinerary = ai_service.normalize_itinerary(json.loads(raw_json))
             
