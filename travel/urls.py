@@ -9,7 +9,8 @@ from .views import (
     settings_modal, ai_wizard, template_create,
     template_edit, template_delete, ai_test_connection,
     trip_logic_check, global_expense_create, global_expense_edit, global_expense_delete,
-    add_adjustment_food, expense_upload_voucher, ai_bridge_import
+    add_adjustment_food, expense_upload_voucher, ai_bridge_import, export_trip_ics,
+    event_type_picker
 )
 
 app_name = 'travel'
@@ -20,6 +21,7 @@ urlpatterns = [
     path('trip/<int:pk>/edit/', trip_edit, name='trip_edit'),
     path('trip/<int:pk>/delete/', trip_delete, name='trip_delete'),
     path('day/<int:day_id>/event/new/', event_create, name='event_create'),
+    path('day/<int:day_id>/event/type-picker/', event_type_picker, name='event_type_picker'),
     path('event/<int:pk>/edit/', event_edit, name='event_edit'),
     path('event/<int:pk>/delete/', event_delete, name='event_delete'),
     path('event/<int:pk>/inline-update/', event_inline_update, name='event_inline_update'),
@@ -47,4 +49,5 @@ urlpatterns = [
     path('expense/<int:pk>/delete/', global_expense_delete, name='global_expense_delete'),
     path('trip/<int:trip_id>/add-food-adjustment/', add_adjustment_food, name='add_adjustment_food'),
     path('ai/bridge-import/', ai_bridge_import, name='ai_bridge_import'),
+    path('trip/<int:pk>/export-ics/', export_trip_ics, name='export_trip_ics'),
 ]
