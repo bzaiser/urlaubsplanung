@@ -131,7 +131,7 @@ def get_dashboard_context(request, active_trip=None):
                 'is_global_expense': True,
                 'type': exp.expense_type,
                 'title': exp.title,
-                'location': 'REISEWEIT',
+                'location': 'Reiseweit',
                 'unit_price': float(exp.unit_price),
                 'units': exp.units,
                 'cost_booked': float(exp.total_amount),
