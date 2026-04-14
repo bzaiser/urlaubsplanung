@@ -9,7 +9,7 @@ from .views import (
     settings_modal, ai_wizard, template_create,
     template_edit, template_delete, ai_test_connection,
     trip_logic_check, global_expense_create, global_expense_edit, global_expense_delete,
-    add_adjustment_food, expense_upload_voucher, ai_bridge_import, export_trip_ics,
+    add_adjustment_food, expense_upload_voucher, export_trip_ics,
     event_type_picker
 )
 
@@ -48,6 +48,4 @@ urlpatterns = [
     path('expense/<int:pk>/edit/', global_expense_edit, name='global_expense_edit'),
     path('expense/<int:pk>/delete/', global_expense_delete, name='global_expense_delete'),
     path('trip/<int:trip_id>/add-food-adjustment/', add_adjustment_food, name='add_adjustment_food'),
-    path('ai/bridge-import/', ai_bridge_import, name='ai_bridge_import'),
-    path('trip/<int:pk>/export-ics/', export_trip_ics, name='export_trip_ics'),
-]
+    path('trip/<int:pk>/export-ics/', export_trip_ics, name='export_trip_ics'),]
