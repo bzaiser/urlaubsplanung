@@ -28,24 +28,8 @@
                 </div>
 
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Spontane Änderungen oder Ergänzungen zur Vorlage (Optional):</label>
-                    <textarea name="user_preferences" placeholder="Z.B. diesmal nach Norwegen, mit Hund, extra viel Wellness oder andere Zielwünsche..." style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff; height: 60px; font-family: 'Inter', sans-serif; font-size: 0.85rem;"></textarea>
-                </div>
-
-                <div style="margin-bottom: 15px;">
                     <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Wohnort / Startort:</label>
                     <input type="text" name="start_location" placeholder="z.B. München" required value="{{ start_location|default:'Zuhause' }}" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin-bottom: 15px;">
-                    <div>
-                        <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Personen:</label>
-                        <input type="number" name="persons_count" value="{{ persons_count|default:2 }}" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
-                    </div>
-                    <div>
-                        <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Alter (z.B. 40, 38, 12):</label>
-                        <input type="text" name="persons_ages" value="{{ persons_ages }}" placeholder="Alter kommagetrennt" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
-                    </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
@@ -55,72 +39,19 @@
                     </div>
                     <div>
                         <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Dauer (Tage):</label>
-                        <input type="number" name="days" value="28" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                        <input type="number" name="days" value="21" style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <button type="submit" class="btn-primary" style="padding: 10px; font-weight: bold;">🪄 Automatisch erstellen</button>
-                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary" style="padding: 10px; font-weight: bold; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer;">📋 Manueller Weg (Brücke)</button>
+                    <button type="submit" class="btn-primary" style="padding: 10px; font-weight: bold;">🪄 Vorschlag erstellen</button>
+                    <button type="submit" onclick="this.form.action.value='manual_step'" class="btn-secondary" style="padding: 10px; font-weight: bold; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer;">📋 Manueller Weg</button>
                 </div>
             </form>
-            <div id="loading-ai" class="htmx-indicator" style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--accent-gold);">🤖 KI arbeitet...</div>
+            <div id="loading-ai" class="htmx-indicator" style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--accent-gold);">🤖 KI arbeitet... häng dich rein!</div>
 
-        {% elif step == 'manual' %}
-            <div style="margin-bottom: 20px;">
-                <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 10px; text-transform: uppercase;">1. Prompt kopieren & Gemini öffnen</h3>
-                <p style="font-size: 0.75rem; color: #ccc; margin-bottom: 10px;">Klicke auf den Button, um den Prompt zu kopieren und Gemini in einem neuen Tab zu öffnen.</p>
-                <div style="display: flex; gap: 10px; align-items: stretch;">
-                    <textarea id="manual-prompt-text" readonly style="flex: 1; height: 60px; background: #000; border: 1px solid #444; border-radius: 6px; color: #aaa; font-size: 0.75rem; padding: 10px; font-family: monospace;">{{ prompt }}</textarea>
-                    <button type="button" onclick="const ta = document.getElementById('manual-prompt-text'); ta.select(); document.execCommand('copy'); window.open('https://gemini.google.com/app', '_blank');" 
-                            style="width: 120px; padding: 10px; background: var(--accent-gold); color: #000; border: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">
-                        Kopieren &<br>Gemini öffnen
-                    </button>
-                </div>
-            </div>
-
-            <div style="margin-bottom: 20px; border-top: 1px solid #333; padding-top: 15px; background: rgba(197, 160, 89, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--accent-gold);">
-                <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 5px; text-transform: uppercase;">🚀 NEU: Die "Brücke" verwenden</h3>
-                <p style="font-size: 0.75rem; color: #ccc; margin-bottom: 10px;">Ziehe diesen Button einmalig in deine <b>Lesezeichenleiste</b> (Strg+Shift+B zum Einblenden):</p>
-                
-                <a href="javascript:(function(){const t=document.body.innerText;const m=t.match(/\{[\s\S]*\}/);if(!m){alert('Kein Plan gefunden!');return;}window.open('{% if request.is_secure %}https{% else %}http{% endif %}://{{ request.get_host }}{% url 'travel:ai_wizard' %}?bridge_data='+encodeURIComponent(m[0])+'&start_date={{ start_date }}','_blank');})()" 
-                   style="display: inline-block; padding: 8px 15px; background: #333; color: var(--accent-gold); border: 2px solid var(--accent-gold); border-radius: 50px; font-size: 0.8rem; font-weight: bold; text-decoration: none; cursor: grab;"
-                   onclick="return false;">
-                    ➡️ AN APP SENDEN
-                </a>
-
-                <p style="font-size: 0.7rem; color: #888; margin-top: 15px;">
-                    <b>Anleitung:</b><br>
-                    1. In Gemini den Prompt einfügen und abschicken.<br>
-                    2. Sobald die KI fertig ist, oben auf <b>"➡️ AN APP SENDEN"</b> in deiner Lesezeichenleiste klicken.<br>
-                    3. Hier in der App einmal "Refresh" oder den Button unten klicken.
-                </p>
-            </div>
-
-            <div style="margin-bottom: 20px; border-top: 1px solid #333; padding-top: 15px;">
-                <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 10px; text-transform: uppercase;">2. Ergebnis importieren</h3>
-                <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#modal-container">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="check_bridge">
-                    <input type="hidden" name="start_date" value="{{ start_date }}">
-                    <input type="hidden" name="persons_count" value="{{ persons_count }}">
-                    <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
-                    
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" 
-                                style="flex: 1; padding: 10px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Abbrechen</button>
-                        <button type="submit" class="btn-primary" style="flex: 2; padding: 10px; font-weight: bold;">🔄 GEFUNDENE DATEN LADEN</button>
-                    </div>
-                </form>
-            </div>
-            {% if itinerary.assistant_reasoning %}
-                <div style="margin-bottom: 15px; background: rgba(197, 160, 89, 0.15); border: 1px solid var(--accent-gold); padding: 15px; border-radius: 8px;">
-                    <h4 style="margin: 0 0 8px 0; color: var(--accent-gold); font-size: 0.85rem; text-transform: uppercase;">🧭 KI-Empfehlung & Begründung</h4>
-                    <p style="margin: 0; font-size: 0.9rem; line-height: 1.5; color: #eee; font-style: italic;">"{{ itinerary.assistant_reasoning }}"</p>
-                </div>
-            {% endif %}
-
-            <div style="margin-bottom: 15px; background: #000; border: 1px solid #444; border-radius: 6px; padding: 12px; max-height: 350px; overflow-y: auto;">
+        {% elif step == 'preview' %}
+            <div style="margin-bottom: 15px; background: #000; border: 1px solid #444; border-radius: 6px; padding: 12px; max-height: 400px; overflow-y: auto;">
                 {% if itinerary.days %}
                     {% for day in itinerary.days %}
                         <div style="margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 8px;">
@@ -138,85 +69,60 @@
                 {% endif %}
             </div>
 
-            <div style="margin-bottom: 15px; padding: 10px; border: 1px dashed #555; border-radius: 6px;">
-                <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#modal-container" hx-indicator="#loading-refine">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="refine">
-                    <input type="hidden" name="itinerary_json" value="{{ itinerary_json|escape }}">
-                    <input type="hidden" name="start_date" value="{{ start_date }}">
-                    <input type="hidden" name="persons_count" value="{{ persons_count }}">
-                    <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
-                    <input type="hidden" name="user_preferences" value="{{ user_preferences }}">
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <input type="text" name="instructions" placeholder="Was soll sich ändern? (z.B. Mehr Strand)" style="flex: 3; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
-                        <button type="submit" style="flex: 1; padding: 8px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Anwenden</button>
-                        <button type="submit" 
-                                name="instructions" 
-                                value="Schlag ein komplett anderes Land oder Ziel für diese Reise vor. Budget ist zweitrangig, schlag etwas Hochwertiges vor und erkläre den Mehrwert in deiner Begründung." 
-                                style="flex: 1; padding: 8px; background: rgba(197, 160, 89, 0.2); color: var(--accent-gold); border: 1px solid var(--accent-gold); border-radius: 4px; cursor: pointer; font-size: 0.75rem;">
-                            🔄 Alternative
-                        </button>
-                    </div>
-                    <div id="loading-refine" class="htmx-indicator" style="font-size: 0.7rem; color: var(--accent-gold); margin-top: 5px;">🤖 KI überarbeitet...</div>
-                </form>
-            </div>
-
             <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#dashboard-refresh" hx-on::after-request="if(event.detail.successful) closeModal()">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="import">
                 <input type="hidden" name="itinerary_json" value="{{ itinerary_json|escape }}">
                 <input type="hidden" name="start_date" value="{{ start_date }}">
-                <input type="hidden" name="persons_count" value="{{ persons_count }}">
-                <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
                 
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 0.75rem; color: var(--accent-gold); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Reise-Name (Vorschlag bearbeitbar)</label>
+                    <label style="display: block; font-size: 0.75rem; color: var(--accent-gold); margin-bottom: 5px;">Name für diese Reise:</label>
                     <input type="text" name="trip_name" value="{{ itinerary.name|default:'Meine KI-Reise' }}" required
-                           style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: #fff; font-size: 1rem; font-family: 'Outfit', sans-serif; padding: 10px; border-radius: 6px; outline: none; transition: all 0.2s;"
-                           onmouseover="this.style.borderColor='rgba(197, 160, 89, 0.5)'"
-                           onfocus="this.style.borderColor='var(--accent-gold)'; this.style.background='rgba(255,255,255,0.08)'"
-                           onblur="this.style.borderColor='var(--glass-border)'; this.style.background='rgba(255,255,255,0.05)'">
+                           style="width: 100%; background: #000; border: 1px solid var(--accent-gold); color: #fff; padding: 10px; border-radius: 6px;">
                 </div>
 
                 <div style="display: flex; gap: 10px;">
                     <button type="button" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" 
-                            style="flex: 1; padding: 10px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Abbrechen</button>
-                    <button type="submit" class="btn-primary" style="flex: 2; padding: 10px; font-weight: bold; width: auto;">✅ Reise in Kalender übernehmen</button>
+                            style="flex: 1; padding: 10px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Zurück</button>
+                    <button type="submit" class="btn-primary" style="flex: 2; padding: 10px; font-weight: bold;">✅ In Kalender übernehmen</button>
                 </div>
             </form>
 
         {% elif step == 'manual' %}
+            <!-- STEP 1: PROMPT COPY -->
             <div style="margin-bottom: 20px;">
                 <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 10px; text-transform: uppercase;">1. Prompt kopieren</h3>
-                <p style="font-size: 0.75rem; color: #ccc; margin-bottom: 10px;">Kopiere diesen Text und füge ihn in Chrome bei Gemini, ChatGPT oder Claude ein:</p>
-                <div style="position: relative;">
-                    <textarea id="manual-prompt-text" readonly style="width: 100%; height: 120px; background: #000; border: 1px solid #444; border-radius: 6px; color: #aaa; font-size: 0.75rem; padding: 10px; font-family: monospace;">{{ prompt }}</textarea>
-                    <button type="button" onclick="const ta = document.getElementById('manual-prompt-text'); ta.select(); document.execCommand('copy'); this.innerText='✅ Kopiert!';" 
-                            style="position: absolute; top: 10px; right: 10px; padding: 4px 8px; background: var(--accent-gold); color: #000; border: none; border-radius: 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer;">
-                        Kopieren
+                <div style="display: flex; gap: 10px; align-items: stretch;">
+                    <textarea id="manual-prompt-text" readonly style="flex: 1; height: 60px; background: #000; border: 1px solid #444; border-radius: 6px; color: #aaa; font-size: 0.75rem; padding: 10px; font-family: monospace;">{{ prompt }}</textarea>
+                    <button type="button" onclick="const ta = document.getElementById('manual-prompt-text'); ta.select(); document.execCommand('copy'); window.open('https://gemini.google.com/app', '_blank');" 
+                            style="width: 120px; padding: 10px; background: var(--accent-gold); color: #000; border: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">
+                        Kopieren &<br>Gemini öffnen
                     </button>
                 </div>
             </div>
 
-            <div style="margin-bottom: 20px; border-top: 1px solid #333; padding-top: 15px;">
-                <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 10px; text-transform: uppercase;">2. Ergebnis einfügen</h3>
-                <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#dashboard-refresh" hx-on::after-request="if(event.detail.successful) closeModal()">
+            <!-- STEP 2: IMPORT SECTION -->
+            <div style="margin-bottom: 20px; border-top: 1px solid #444; padding-top: 15px;">
+                <h3 style="font-size: 0.9rem; color: var(--accent-gold); margin-bottom: 10px; text-transform: uppercase;">2. Ergebnis einfügen oder laden</h3>
+                
+                <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#modal-container">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="manual_import">
                     <input type="hidden" name="start_date" value="{{ start_date }}">
-                    <input type="hidden" name="persons_count" value="{{ persons_count }}">
-                    <input type="hidden" name="persons_ages" value="{{ persons_ages }}">
-
-                    <div style="margin-bottom: 10px;">
-                    <div style="margin-bottom: 10px;">
-                        <button type="button" onclick="navigator.clipboard.readText().then(t => { document.querySelector('textarea[name=\'pasted_text\']').value = t; }).catch(e => alert('Bitte erlaube den Zugriff auf die Zwischenablage!'))" 
-                                style="width: 100%; padding: 8px; background: rgba(26, 188, 156, 0.2); color: #1abc9c; border: 1px solid #1abc9c; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            📋 AUS ZWISCHENABLAGE EINFÜGEN
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <button type="submit" onclick="this.form.action.value='check_bridge'" 
+                                style="padding: 8px; background: rgba(52, 152, 219, 0.2); color: #3498db; border: 1px solid #3498db; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.75rem;">
+                            🔄 VON BRÜCKE LADEN
+                        </button>
+                        <button type="button" onclick="navigator.clipboard.readText().then(t => { document.getElementById('manual-import-area').value = t; }).catch(e => alert('Bitte erlaube Zugriff auf ClipBoard'))" 
+                                style="padding: 8px; background: rgba(26, 188, 156, 0.2); color: #1abc9c; border: 1px solid #1abc9c; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.75rem;">
+                            📋 CLIPBOARD EINFÜGEN
                         </button>
                     </div>
 
-                    <textarea name="pasted_text" placeholder="Füge hier die Antwort der KI ein (JSON oder kompletter Text)..." 
-                              required style="width: 100%; height: 200px; background: #000; border: 1px solid var(--accent-gold); border-radius: 6px; color: #fff; font-size: 0.85rem; padding: 12px; margin-bottom: 15px; outline: none;"></textarea>
+                    <textarea name="pasted_text" id="manual-import-area" placeholder="Füge hier die Antwort der KI ein..." 
+                              required style="width: 100%; height: 280px; background: #000; border: 1px solid var(--accent-gold); border-radius: 6px; color: #fff; font-size: 0.85rem; padding: 12px; margin-bottom: 15px; outline: none; display: block;"></textarea>
                     
                     <div style="display: flex; gap: 10px;">
                         <button type="button" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container" 
@@ -224,6 +130,13 @@
                         <button type="submit" class="btn-primary" style="flex: 2; padding: 10px; font-weight: bold;">✅ Reise importieren</button>
                     </div>
                 </form>
+            </div>
+
+            <!-- LINK INFO SECTION -->
+            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px dashed #333;">
+                <p style="font-size: 0.7rem; color: #888; margin: 0;">
+                    <b>Tipp:</b> Du kannst auch den Button <a href="javascript:(function(){const t=document.body.innerText;const m=t.match(/\{[\s\S]*\}/);if(!m){alert('Kein Plan gefunden!');return;}window.open('{% if request.is_secure %}https{% else %}http{% endif %}://{{ request.get_host }}{% url 'travel:ai_wizard' %}?bridge_data='+encodeURIComponent(m[0])+'&start_date={{ start_date }}','_blank');})()" style="color: var(--accent-gold); text-decoration: underline;">➡️ AN APP SENDEN</a> in deine Lesezeichenleiste ziehen.
+                </p>
             </div>
 
         {% elif step == 'error' %}
@@ -234,4 +147,3 @@
         {% endif %}
     </div>
 </div>
-
