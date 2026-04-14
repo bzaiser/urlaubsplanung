@@ -177,12 +177,14 @@ class Event(models.Model):
 
     def save(self, *args, **kwargs):
         """Overridden save to handle automatic Check-out creation/update."""
-        # Auto-complete titles for better logic recognition
-        if not self.title:
-            if self.type == 'RENTAL_CAR':
-                self.title = "Mietwagen Abholung"
-            elif self.type in ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']:
-                self.title = f"{self.get_type_display()} Check-in"
+        # Auto-complete/Format titles for better logic recognition
+        if self.type == 'RENTAL_CAR':
+            if not self.title:
+                self.title = "Abholen: Mietwagen"
+            elif not self.title.startswith('Abholen:'):
+                self.title = f"Abholen: {self.title}"
+        elif self.type in ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW'] and not self.title:
+            self.title = f"{self.get_type_display()} Check-in"
         
         # Save naturally first so we have an ID for relations
         is_new = self.pk is None
@@ -202,7 +204,7 @@ class Event(models.Model):
             )
 
             if self.type == 'RENTAL_CAR':
-                checkout_title = self.title.lower().replace('abholung', 'Rückgabe').replace('start', 'Ende').title()
+                checkout_title = self.title.replace('Abholen:', 'Abgeben:')
                 default_time = "10:00"
             else:
                 checkout_title = self.title.lower().replace('check-in', 'Check-out').title()
