@@ -233,7 +233,7 @@ def gemini_generate(preferences, start_date, days, start_location, v1, v2, perso
         "3. LOGISTIK: Berücksichtige Startort " + start_location + ". Bei Flügen MUSS die Anfahrt als eigenes Event davor stehen.\n"
         "4. UNTERKÜNFTE: Erstelle für jeden Aufenthalt ZWEI Events (Check-in, Check-out). Gruppiere Bungalow/Airbnb/Ferienhaus als 'HOTEL'.\n"
         "5. FAHRZEUGE: Nutze ein Wohnmobil NUR bei expliziten Womotouren oder Roadtrips (z.B. NZ, Island). Sonst bevorzuge TAXI, FERRY, SCOOTER oder PKW.\n"
-        "6. TYPEN: FLIGHT, HOTEL, CAMPING, PITCH, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT.\n"
+        "6. TYPEN: Nutze EXAKT FLIGHT, HOTEL, CAMPING, PITCH, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT. (KEIN 'TRANSPORT' nutzen!)\n"
         "7. LÜCKENLOS: JEDER der " + str(days) + " Tage muss befüllt sein.\n"
         "8. KONSTANZ: Die 'location' muss während eines Aufenthalts (Check-in bis Check-out) an jedem Tag exakt gleich geschrieben sein.\n"
         "9. DETAILS (PFLICHT): Fülle IMMER 'end_time' (HH:MM) und 'distance_km' (Zahl) aus.\n"
@@ -556,9 +556,10 @@ def normalize_itinerary(data):
                         'ACCOMMODATION': 'HOTEL',
                         'FLIGHT': 'FLIGHT',
                         'PLANE': 'FLIGHT',
-                        'DRIVE': 'TRANSPORT',
-                        'DRIVING': 'TRANSPORT',
-                        'TRAVEL': 'TRANSPORT',
+                        'DRIVE': 'CAR',
+                        'DRIVING': 'CAR',
+                        'TRAVEL': 'CAR',
+                        'TRANSPORT': 'CAR',
                         'PKW': 'CAR',
                         'CAMPINGPLATZ': 'CAMPING',
                         'STELLPLATZ': 'PITCH',
@@ -568,7 +569,14 @@ def normalize_itinerary(data):
                     }
                     if etype in type_map:
                         event['type'] = type_map[etype]
-                    elif etype not in ['FLIGHT', 'HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW', 'CAMPER', 'CAR', 'BOAT', 'TAXI', 'BUS', 'TRAIN', 'ACTIVITY', 'RESTAURANT', 'OTHER']:
+                    
+                    # Smart promotion for Camper trips
+                    if event.get('type') in ['CAR', 'TRANSPORT', 'OTHER']:
+                        title_lower = event.get('title', '').lower()
+                        if any(k in title_lower for k in ['wohnmobil', 'camper', 'womo', 'mobil']):
+                            event['type'] = 'CAMPER'
+
+                    if etype not in ['FLIGHT', 'HOTEL', 'CAMPING', 'PITCH', 'CAMPER', 'CAR', 'BOAT', 'TAXI', 'BUS', 'TRAIN', 'ACTIVITY', 'RESTAURANT', 'OTHER']:
                         event['type'] = 'OTHER'
                     else:
                         event['type'] = etype # Keep if it's already valid uppercase
