@@ -233,7 +233,8 @@ def gemini_generate(preferences, start_date, days, start_location, v1, v2, perso
         "3. LOGISTIK: Berücksichtige Startort " + start_location + ". Bei Flügen MUSS die Anfahrt als eigenes Event davor stehen.\n"
         "4. UNTERKÜNFTE: Erstelle für jeden Aufenthalt ZWEI Events (Check-in, Check-out). Gruppiere Bungalow/Airbnb/Ferienhaus als 'HOTEL'.\n"
         "5. FAHRZEUGE: Nutze ein Wohnmobil NUR bei expliziten Womotouren oder Roadtrips (z.B. NZ, Island). Sonst bevorzuge TAXI, FERRY, SCOOTER oder PKW.\n"
-        "6. TYPEN: Nutze EXAKT FLIGHT, HOTEL, CAMPING, PITCH, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT. (KEIN 'TRANSPORT' nutzen!)\n"
+        "6. TYPEN: Nutze EXAKT FLIGHT, HOTEL, CAMPING, PITCH, CAMPER, CAR, SCOOTER, BOAT, FERRY, TAXI, BUS, TRAIN, ACTIVITY, RESTAURANT. (KEIN 'TRANSPORT' nutzen!).\n"
+        "7. WICHTIG: Wenn die Reise eine Wohnmobil-Tour ist, MUSS jedes Fahr-Event (Driving) den Typ 'CAMPER' haben (NICHT 'CAR' oder 'TRANSPORT').\n"
         "7. LÜCKENLOS: JEDER der " + str(days) + " Tage muss befüllt sein.\n"
         "8. KONSTANZ: Die 'location' muss während eines Aufenthalts (Check-in bis Check-out) an jedem Tag exakt gleich geschrieben sein.\n"
         "9. DETAILS (PFLICHT): Fülle IMMER 'end_time' (HH:MM) und 'distance_km' (Zahl) aus.\n"
@@ -570,16 +571,38 @@ def normalize_itinerary(data):
                     if etype in type_map:
                         event['type'] = type_map[etype]
                     
-                    # Smart promotion for Camper trips
-                    if event.get('type') in ['CAR', 'TRANSPORT', 'OTHER']:
-                        title_lower = event.get('title', '').lower()
-                        if any(k in title_lower for k in ['wohnmobil', 'camper', 'womo', 'mobil']):
-                            event['type'] = 'CAMPER'
-
                     if etype not in ['FLIGHT', 'HOTEL', 'CAMPING', 'PITCH', 'CAMPER', 'CAR', 'BOAT', 'TAXI', 'BUS', 'TRAIN', 'ACTIVITY', 'RESTAURANT', 'OTHER']:
                         event['type'] = 'OTHER'
                     else:
-                        event['type'] = etype # Keep if it's already valid uppercase
+                        event['type'] = etype 
+
+        # 5. Smart Promotion (Trip-wide context)
+        # If the trip contains any CAMPER/CAMPING/PITCH signal, promote all generic drives to CAMPER
+        is_camper_trip = False
+        trip_title = str(data.get('name', '')).lower()
+        if any(k in trip_title for k in ['wohnmobil', 'camper', 'womo', 'mobil']):
+            is_camper_trip = True
+        
+        if not is_camper_trip:
+            # Check if any event is already camper/camping related
+            for day in data['days']:
+                for event in day.get('events', []):
+                    if event.get('type') in ['CAMPER', 'CAMPING', 'PITCH']:
+                        is_camper_trip = True
+                        break
+                if is_camper_trip: break
+        
+        if is_camper_trip:
+            for day in data['days']:
+                for event in day.get('events', []):
+                    if event.get('type') in ['CAR', 'TRANSPORT', 'OTHER']:
+                        title_lower = event.get('title', '').lower()
+                        # If it's a driving/transport event in a camper trip, it's a CAMPER
+                        if any(k in title_lower for k in ['fahrt', 'drive', 'reise', 'überfahrt', 'route']):
+                            event['type'] = 'CAMPER'
+                        # Extra safety: if it was already marked as CAR or TRANSPORT by AI, but it's a camper trip
+                        elif event.get('type') in ['CAR', 'TRANSPORT']:
+                            event['type'] = 'CAMPER'
         
     return data
 
