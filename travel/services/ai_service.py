@@ -600,6 +600,7 @@ def normalize_itinerary(data):
                             'camping', 'campingplatz', 'holiday park', 'caravan park', 'camp area', 'minicamping', 'bondegård camping', 'agroturystyka', 'autocamp', 'agrotourism camping'
                         ]
                         
+                        title_lower = event.get('title', '').lower()
                         if any(k in title_lower for k in pitch_keywords):
                             event['type'] = 'PITCH'
                         elif any(k in title_lower for k in camping_keywords):

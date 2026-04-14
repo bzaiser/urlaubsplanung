@@ -21,6 +21,7 @@
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; font-size: 0.8rem; margin-bottom: 5px;">Vorlage / Grundstil:</label>
                     <select name="template_id" required style="width: 100%; padding: 8px; background: #000; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                        <option value="" disabled selected>-- Bitte Vorlage wählen --</option>
                         {% for t in templates %}
                             <option value="{{ t.id }}">{{ t.name }}</option>
                         {% endfor %}
