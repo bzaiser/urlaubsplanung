@@ -10,9 +10,15 @@
 
         <div class="modal-body">
             {% if success %}
-            <div class="alert alert-success small">
-                <i class="bi bi-check-circle me-1"></i>{% trans "Einstellungen gespeichert!" %}
+            <div class="alert alert-success small shadow-sm border-0 bg-success bg-opacity-25 text-success">
+                <i class="bi bi-check-circle-fill me-2"></i><strong>{% trans "Gespeichert!" %}</strong> {% trans "Deine Einstellungen wurden erfolgreich übernommen." %}
             </div>
+            <script>
+                // Auto-close after 1.5 seconds on success
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
+            </script>
             {% endif %}
 
             <!-- Vehicles & Profile Section -->

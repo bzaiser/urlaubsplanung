@@ -144,11 +144,47 @@
 </style>
 
 <div id="ag-grid-wrapper" style="width: 100%; position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-    <div id="ag-trip-grid" class="ag-theme-quartz-dark" style="width: 100%; min-width: 1000px;" data-persons="{{ active_trip.persons_count|default:1 }}"></div>
+    <div id="ag-trip-grid" class="ag-theme-quartz-dark" style="width: 100%; min-width: 1000px; font-family: 'Outfit', sans-serif;" 
+         data-persons="{{ active_trip.persons_count|default:1 }}"
+         data-trip-id="{{ active_trip.id }}"></div>
+
+    <style>
+        /* Force UI Font & User Custom Variables for the Grid */
+        .ag-theme-quartz-dark {
+            --ag-font-family: 'Outfit', sans-serif !important;
+            --ag-font-size: 13px;
+            --ag-border-radius: 4px;
+        }
+        
+        /* Fix ghosting/overlapping checkboxes */
+        .ag-theme-quartz-dark input[type="checkbox"] {
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            opacity: 0 !important;
+            position: absolute;
+            width: 0;
+            height: 0;
+        }
+
+        /* Style manual Day Header checkbox to match Quartz theme */
+        .day-header-grid input[type="checkbox"] {
+            appearance: auto !important;
+            -webkit-appearance: checkbox !important;
+            opacity: 1 !important;
+            position: static;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: var(--accent-gold);
+        }
+    </style>
     
     <!-- Data source for grid -->
     <script id="grid-data" type="application/json">
         {{ grid_data_json|safe }}
+    </script>
+    <script id="ui-settings" type="application/json">
+        {{ ui_settings_json|safe }}
     </script>
 
     <script>
@@ -369,7 +405,8 @@
                         width: 140, 
                         editable: params => params.node.rowPinned !== 'bottom',
                         headerTooltip: 'Zielort der Reiseetappe', 
-                        cellClass: 'event-row-indent'
+                        cellClass: 'event-row-indent',
+                        cellStyle: { 'font-weight': '400' }
                     },
                     { 
                         headerName: 'Typ', 
@@ -403,7 +440,8 @@
                     { 
                         headerName: 'Info', 
                         field: 'title', 
-                        width: 220, // Slightly wider for badges
+                        minWidth: 200,
+                        flex: 1,
                         colSpan: params => {
                             if (params.data && params.data.is_global_expense) return 5;
                             return 1;
@@ -425,11 +463,15 @@
                                 return gHtml;
                             }
 
-                            let html = `<div style="font-weight: 600; line-height: 1.2;">${d.title || ''}`;
+                            let html = `<div style="font-weight: 500; line-height: 1.1; margin-bottom: 2px;">${d.title || ''}</div>`;
                             if (d.nights && d.is_checkin) {
-                                html += ` <span style="background: var(--accent-teal); color: #fff; font-size: 8px; padding: 1px 4px; border-radius: 3px; margin-left: 5px;">${d.nights} NÄCHTE</span>`;
+                                const label = d.nights === 1 ? 'Nacht' : 'Nächte';
+                                html += `<div style="display: block; line-height: 1; margin-bottom: 4px;">
+                                            <span style="background: var(--accent-teal); color: #fff; font-size: 8px; padding: 2px 5px; border-radius: 3px; white-space: nowrap; font-weight: 700; display: inline-block;">
+                                                ${d.nights} ${label}
+                                            </span>
+                                         </div>`;
                             }
-                            html += '</div>';
                             
                             html += '<div class="badge-row">';
                             
@@ -574,13 +616,13 @@
                         }
                     },
                     getRowHeight: (params) => {
-                        if (params.data.is_station_header) return 32;
-                        if (params.data.is_day_header) return 28;
+                        if (params.data.is_station_header) return 40;
+                        if (params.data.is_day_header) return 48;
                         // Determine if it has badges
                         if (!params.data.is_day_header && (params.data.cancellation_deadline || params.data.payment_method || params.data.cost_booked > 0)) {
-                            return 42; // Taller for badges
+                            return 44; // Slightly taller for badges
                         }
-                        return 30; 
+                        return 32; 
                     },
                     onCellDoubleClicked: (params) => {
                         if (params.data && !params.data.is_day_header && !params.data.is_station_header) {
@@ -605,8 +647,34 @@
                     getRowId: (params) => params.data.id,
                     onGridReady: (p) => {
                         window.agGridApi = p.api;
+                        
+                        // Load saved column state (Prioritize Server, fallback to LocalStorage)
+                        const settingsEl = document.getElementById('ui-settings');
+                        const serverSettings = settingsEl ? JSON.parse(settingsEl.textContent) : null;
+                        const savedState = (serverSettings && serverSettings.columnState) 
+                                            ? JSON.parse(serverSettings.columnState) 
+                                            : localStorage.getItem('ag-trip-column-state');
+                        
+                        if (savedState) {
+                            try {
+                                const parsedState = typeof savedState === 'string' ? JSON.parse(savedState) : savedState;
+                                p.api.applyColumnState({
+                                    state: parsedState,
+                                    applyOrder: true
+                                });
+                            } catch (e) {
+                                console.error('Failed to restore column state', e);
+                                p.api.sizeColumnsToFit();
+                            }
+                        } else {
+                            p.api.sizeColumnsToFit();
+                        }
+                        
                         updateSummary();
                     },
+                    onColumnResized: (p) => saveColumnState(p),
+                    onColumnMoved: (p) => saveColumnState(p),
+                    onColumnVisible: (p) => saveColumnState(p),
                     onSelectionChanged: (p) => {
                         const selectedRows = p.api.getSelectedRows();
                         updateBulkToolbar(selectedRows);
@@ -615,6 +683,12 @@
                         syncChange(p);
                         updateSummary();
                     },
+                    onRowClicked: (params) => {
+                        // Bidirectional Sync: Panning the map when row is clicked
+                        if (params.data && params.data.lat && params.data.lon && typeof window.flyToLocation === 'function') {
+                            window.flyToLocation(params.data.lat, params.data.lon, params.data.station_index);
+                        }
+                    },
                     isExternalFilterPresent: () => window.collapsedStations.size > 0,
                     doesExternalFilterPass: (node) => {
                         if (node.data.is_station_header) return true;
@@ -622,8 +696,76 @@
                     }
                 };
 
+                let saveTimeout;
+                function saveColumnState(p) {
+                    const state = p.api.getColumnState();
+                    // 1. Local backup
+                    localStorage.setItem('ag-trip-column-state', JSON.stringify(state));
+                    
+                    // 2. Server Sync with Debounce
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => {
+                        const tripId = document.getElementById('ag-trip-grid').dataset.tripId;
+                        if (!tripId) return;
+
+                        fetch(`/trip/${tripId}/save-ui-settings/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                columnState: JSON.stringify(state)
+                            })
+                        }).then(r => r.json()).then(data => {
+                            if (data.status === 'success') {
+                                console.log('UI Settings saved to server');
+                            }
+                        }).catch(err => console.error('Save failed', err));
+                    }, 1500); // 1.5s debounce to protect DB
+                }
+
                 const api = agGrid.createGrid(gridDiv, gridOptions);
                 window.agGridApi = api; // Use returned API instance
+
+                // Grab-to-Scroll (Panning) for mouse users
+                setTimeout(() => {
+                    const viewport = gridDiv.querySelector('.ag-body-viewport');
+                    if (viewport) {
+                        let isDown = false;
+                        let startX;
+                        let scrollLeft;
+
+                        viewport.style.cursor = 'grab';
+
+                        viewport.addEventListener('mousedown', (e) => {
+                            // Don't trigger on checkboxes or inputs
+                            if (e.target.tagName === 'INPUT' || e.target.closest('button')) return;
+                            
+                            isDown = true;
+                            viewport.style.cursor = 'grabbing';
+                            startX = e.pageX - viewport.offsetLeft;
+                            scrollLeft = viewport.scrollLeft;
+                        });
+
+                        viewport.addEventListener('mouseleave', () => {
+                            isDown = false;
+                            viewport.style.cursor = 'grab';
+                        });
+
+                        viewport.addEventListener('mouseup', () => {
+                            isDown = false;
+                            viewport.style.cursor = 'grab';
+                        });
+
+                        viewport.addEventListener('mousemove', (e) => {
+                            if (!isDown) return;
+                            e.preventDefault();
+                            const x = e.pageX - viewport.offsetLeft;
+                            const walk = (x - startX) * 1.5; // Scroll-Speed factor
+                            viewport.scrollLeft = scrollLeft - walk;
+                        });
+                    }
+                }, 500);
                 
                 window.toggleStation = (key) => {
                     if (window.collapsedStations.has(key)) {
@@ -639,11 +781,10 @@
                 const toolbar = document.getElementById('bulk-toolbar');
                 const countEl = document.getElementById('selection-count');
                 const labelEl = document.getElementById('selection-label');
-                const dayTools = document.getElementById('day-specific-tools');
-                const eventTools = document.getElementById('event-specific-tools');
+                const dayToolset = document.getElementById('day-toolset');
+                const eventToolset = document.getElementById('event-toolset');
                 
                 if (!toolbar) return;
-
                 if (selectedRows.length === 0) {
                     toolbar.classList.add('bulk-toolbar-hidden');
                     toolbar.classList.remove('bulk-toolbar-show');
@@ -654,43 +795,44 @@
                 toolbar.classList.add('bulk-toolbar-show');
                 countEl.innerText = selectedRows.length;
 
-                // Check Types of selection
+                // Check types of selection
                 const hasDays = selectedRows.some(r => r.is_day_header);
                 const hasEvents = selectedRows.some(r => !r.is_day_header && !r.is_station_header);
 
                 if (hasDays) {
-                    // Prioritize Day Tools if any days are selected
-                    labelEl.innerText = '{% trans "TAGE AUSGEWÄHLT" %}';
-                    if (dayTools) dayTools.style.display = 'flex';
-                    if (eventTools) eventTools.style.display = 'none';
-                    // Collect all involved day IDs (from days or events)
+                    labelEl.innerText = selectedRows.length === 1 ? 'TAG' : 'TAGE';
+                    if (dayToolset) dayToolset.style.display = 'flex';
+                    if (eventToolset) eventToolset.style.display = 'none';
+                    
                     const dayIds = [...new Set(selectedRows.map(r => r.day_id))].filter(id => id !== undefined);
                     updateHiddenIds(dayIds, 'day_ids');
                 } else {
-                    labelEl.innerText = 'EINTRÄGE AUSGEWÄHLT';
-                    if (dayTools) dayTools.style.display = 'none';
-                    if (eventTools) eventTools.style.display = 'flex';
-                    updateHiddenIds(selectedRows.map(r => r.id), 'event_ids');
+                    labelEl.innerText = selectedRows.length === 1 ? 'EINTRAG' : 'EINTRÄGE';
+                    if (dayToolset) dayToolset.style.display = 'none';
+                    if (eventToolset) eventToolset.style.display = 'flex';
+                    
+                    const eventIds = selectedRows.filter(r => r.id && !r.is_day_header).map(r => r.id);
+                    updateHiddenIds(eventIds, 'event_ids');
                 }
             };
 
             function updateHiddenIds(ids, name) {
-                const dayForm = document.getElementById('bulk-edit-form');
-                const eventForm = document.getElementById('event-bulk-form');
+                const toolbar = document.getElementById('bulk-toolbar');
+                if (!toolbar) return;
+
+                // Clear existing hidden inputs for batch IDs
+                toolbar.querySelectorAll('input[type="hidden"][data-batch-id]').forEach(i => i.remove());
                 
-                [dayForm, eventForm].forEach(f => {
-                    if (!f) return;
-                    // CRITICAL: Clear BOTH types of IDs to prevent cross-form pollution
-                    f.querySelectorAll('input[name="day_ids"], input[name="event_ids"]').forEach(i => i.remove());
-                    
-                    ids.forEach(id => {
-                        if (id === undefined || id === null) return;
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = name;
-                        input.value = id;
-                        f.appendChild(input);
-                    });
+                // Add new hidden inputs into the common container so they can be included via hx-include
+                const actionsContainer = toolbar.querySelector('.toolbar-actions');
+                ids.forEach(id => {
+                    if (id === undefined || id === null) return;
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = id;
+                    input.setAttribute('data-batch-id', 'true');
+                    actionsContainer.appendChild(input);
                 });
             }
 
@@ -836,46 +978,7 @@
         }
     </script>
 
-    <!-- Floating Toolbar (Dynamic for Days or Events) -->
-    <div id="bulk-toolbar" class="bulk-toolbar-hidden" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(10, 25, 47, 0.95); backdrop-filter: blur(20px); border: 2px solid var(--accent-gold); padding: 12px 30px; border-radius: 60px; display: flex; gap: 20px; align-items: center; z-index: 9999; box-shadow: 0 15px 50px rgba(0,0,0,0.6); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-        <span style="color: var(--accent-gold); font-weight: 600; white-space: nowrap;"><span id="selection-count">0</span> <span id="selection-label">{% trans "TAGE AUSGEWÄHLT" %}</span></span>
-        <div style="height: 30px; width: 1px; background: rgba(255,255,255,0.2);"></div>
-        
-        <!-- Day Specific Tools (Station Setting) -->
-        <form id="bulk-edit-form" 
-              hx-post="{% url 'travel:day_bulk_edit' %}?view=table" 
-              hx-target="body" 
-              hx-on::after-request="this.reset(); clearSelection();"
-              style="display: flex; gap: 10px; align-items: center;">
-            <div id="day-specific-tools" style="display: flex; gap: 10px; align-items: center;">
-                <input type="text" name="location" placeholder="Station / Ort" style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: #fff; padding: 8px 15px; border-radius: 20px; outline: none; width: 180px; font-size: 0.85rem;">
-                <button type="submit" class="btn-primary" style="padding: 8px 25px; font-size: 0.8rem; margin: 0; border-radius: 20px; width: auto;">STATION SETZEN</button>
-            </div>
-        </form>
-
-        <!-- Event Specific Tools (Move/Delete) -->
-        <form id="event-bulk-form" 
-              style="display: none; gap: 10px; align-items: center;">
-            <div id="event-specific-tools" style="display: flex; gap: 10px; align-items: center;">
-                <input type="date" name="target_date" style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: #fff; padding: 8px 15px; border-radius: 20px; outline: none; width: 140px; font-size: 0.85rem;">
-                <button type="button" 
-                        hx-post="{% url 'travel:event_bulk_move' %}" 
-                        hx-target="body" 
-                        hx-include="[name='event_ids'], [name='target_date']"
-                        hx-on::after-request="clearSelection();"
-                        class="btn-primary" style="padding: 8px 20px; font-size: 0.8rem; margin: 0; border-radius: 20px; width: auto;">VERSCHIEBEN</button>
-                <button type="button" 
-                        hx-post="{% url 'travel:event_bulk_delete' %}" 
-                        hx-target="body" 
-                        hx-include="[name='event_ids']"
-                        hx-confirm="Markierte Einträge wirklich löschen?"
-                        hx-on::after-request="clearSelection();"
-                        style="background: #e74c3c; color: #fff; border: none; padding: 8px 20px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; transition: background 0.2s;" onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">LÖSCHEN</button>
-            </div>
-        </form>
-
-        <button type="button" onclick="clearSelection()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem;">&times;</button>
-    </div>
+    {% include 'travel/partials/bulk_toolbar.html' %}
 
     <style>
         .bulk-toolbar-hidden {

@@ -20,14 +20,25 @@
     
     <button hx-get="{% url 'travel:ai_wizard' %}?step=select" 
             hx-target="#modal-container"
-            class="btn btn-sm btn-premium-gold px-3 shadow-sm"
+            class="btn btn-sm btn-premium-gold px-2 px-md-3 shadow-sm"
             title="KI-Reise-Designer öffnen">
         <i class="bi bi-stars"></i>
         <span class="d-none d-md-inline">KI-Designer</span>
     </button>
+
+    {% if active_trip %}
+    <button class="btn btn-sm btn-outline-warning rounded-pill px-2 px-md-3 shadow-sm" 
+            type="button"
+            data-bs-toggle="offcanvas" 
+            data-bs-target="#offcanvasRouteMap" 
+            aria-controls="offcanvasRouteMap">
+        <i class="bi bi-map-fill me-1"></i>{% trans "Route" %}
+    </button>
+    {% endif %}
+
     <button hx-get="{% url 'travel:trip_create' %}" 
             hx-target="#modal-container"
-            class="btn btn-sm btn-outline-warning px-3"
+            class="btn btn-sm btn-outline-warning px-2 px-md-3 shadow-sm rounded-pill"
             title="Neue Reise anlegen">
         <i class="bi bi-plus-lg"></i>
         <span class="d-none d-md-inline">Neue Reise</span>

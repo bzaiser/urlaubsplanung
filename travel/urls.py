@@ -13,7 +13,8 @@ from .views import (
     trip_logic_check, global_expense_create, global_expense_edit,
     global_expense_delete, trip_checklist, checklist_item_toggle,
     checklist_item_delete, checklist_apply_template, checklist_item_add,
-    checklist_print
+    checklist_print, day_insert, day_delete_and_shift, trip_shift_dates,
+    save_ui_settings
 )
 
 app_name = 'travel'
@@ -36,6 +37,9 @@ urlpatterns = [
     path('event/bulk-delete/', event_bulk_delete, name='event_bulk_delete'),
     path('event/bulk-move/', event_bulk_move, name='event_bulk_move'),
     path('day/bulk-edit/', day_bulk_edit, name='day_bulk_edit'),
+    path('day/insert/', day_insert, name='day_insert'),
+    path('day/delete-shift/', day_delete_and_shift, name='day_delete_and_shift'),
+    path('trip/<int:pk>/shift-dates/', trip_shift_dates, name='trip_shift_dates'),
     
     # AI & Settings
     path('settings/', settings_modal, name='settings_modal'),
@@ -64,4 +68,5 @@ urlpatterns = [
     path('trip/<int:trip_id>/checklist/apply-template/', checklist_apply_template, name='checklist_apply_template'),
     path('trip/<int:trip_id>/checklist/add-item/', checklist_item_add, name='checklist_item_add'),
     path('trip/<int:trip_id>/checklist/print/', checklist_print, name='checklist_print'),
+    path('trip/<int:trip_id>/save-ui-settings/', save_ui_settings, name='save_ui_settings'),
 ]

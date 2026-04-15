@@ -13,7 +13,7 @@ from django.template.defaultfilters import date as _date
 from django.db.models import Prefetch
 from django.core.serializers.json import DjangoJSONEncoder
 import json
-from .services import ai_service, logic_service, checklist_service
+from .services import ai_service, logic_service, checklist_service, geo_service
 
 def _generate_days(trip):
     """Utility to generate Day objects for the trip duration."""
@@ -78,6 +78,7 @@ def get_dashboard_context(request, active_trip=None):
         grid_data = []
         for i, station in enumerate(active_trip.grouped_stations):
             station_key = f"st-{i}"
+            first_day = station['days'][0]
             grid_data.append({
                 'id': f"station-{i}",
                 'is_station_header': True,
@@ -85,11 +86,15 @@ def get_dashboard_context(request, active_trip=None):
                 'station_location': station['location'],
                 'days_count': station['days_count'],
                 'nights_count': station['nights_count'],
+                'lat': float(first_day.latitude) if first_day.latitude else None,
+                'lon': float(first_day.longitude) if first_day.longitude else None,
+                'station_index': i
             })
             
             for day in station['days']:
                 # Optimization: use Python sorting on prefetched queryset to avoid DB hits per day
-                events = sorted(day.events.all(), key=lambda x: (x.time or date.min, x.id))
+                from datetime import time
+                events = sorted(day.events.all(), key=lambda x: (x.time or time.min, x.id))
                 acc_events = [e for e in events if e.type in ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']]
                 
                 acc_status = 'MISSING'
@@ -109,6 +114,9 @@ def get_dashboard_context(request, active_trip=None):
                     'location': day.location,
                     'acc_status': acc_status,
                     'acc_name': acc_name,
+                    'lat': float(day.latitude) if day.latitude else None,
+                    'lon': float(day.longitude) if day.longitude else None,
+                    'station_index': i
                 })
                 
                 for event in events:
@@ -168,6 +176,37 @@ def get_dashboard_context(request, active_trip=None):
             })
 
         context['grid_data_json'] = json.dumps(grid_data, cls=DjangoJSONEncoder)
+        context['ui_settings_json'] = json.dumps(active_trip.ui_settings or {})
+        
+        # Prepare Map Data
+        if view_type == 'map' or (view_type == 'timeline' and active_trip.grouped_stations):
+            # Auto-geocode missing coordinates (max 2 per request to avoid timeout)
+            geocoding_pending = geo_service.update_trip_coordinates(active_trip, limit=2)
+            context['geocoding_pending'] = geocoding_pending
+            
+            map_data = []
+            coords_for_routing = []
+            for i, station in enumerate(active_trip.grouped_stations, 1):
+                first_day = station['days'][0]
+                if first_day.latitude and first_day.longitude:
+                    map_data.append({
+                        'location': station['location'],
+                        'lat': float(first_day.latitude),
+                        'lon': float(first_day.longitude),
+                        'days_count': station['days_count'],
+                        'nights_count': station['nights_count'],
+                        'day_id': first_day.id,
+                        'index': i
+                    })
+                    coords_for_routing.append([float(first_day.longitude), float(first_day.latitude)])
+            
+            context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
+            
+            # Fetch road routing geometry
+            route_geometry = []
+            if len(coords_for_routing) >= 2:
+                route_geometry = geo_service.get_route_geometry(coords_for_routing)
+            context['route_geometry_json'] = json.dumps(route_geometry)
         
     return context
 
@@ -178,6 +217,9 @@ class TripDashboardView(ListView):
 
     def get_template_names(self):
         if self.request.htmx:
+            # If map view is requested alone, return only the map partial
+            if self.request.GET.get('view') == 'map':
+                return ['travel/partials/trip_map.html']
             return ['travel/partials/trip_list.html']
         return [self.template_name]
 
@@ -467,6 +509,72 @@ def day_bulk_edit(request):
                 response['HX-Refresh'] = 'true'
                 return response
     return redirect('travel:dashboard')
+
+def day_insert(request):
+    """Inserts an empty day at a specific position and shifts everything else."""
+    if request.method == 'POST':
+        day_id = request.POST.get('day_id')
+        if not day_id:
+            # Fallback to first selected if multiple
+            day_id = request.POST.getlist('day_ids')[0] if request.POST.getlist('day_ids') else None
+        
+        if day_id:
+            from .services import logic_service
+            day = get_object_or_404(Day, pk=day_id)
+            trip = day.trip
+            insert_date = day.date
+            
+            # 1. Shift all days from this date onwards by 1
+            logic_service.shift_days(trip, insert_date, 1)
+            
+            # 2. Create the new empty day at the original date
+            Day.objects.create(trip=trip, date=insert_date, location=day.location)
+            
+            if request.htmx:
+                response = HttpResponse("")
+                response['HX-Refresh'] = 'true'
+                return response
+    return redirect('travel:dashboard')
+
+def day_delete_and_shift(request):
+    """Deletes selected days and shifts subsequent days forward to close the gap."""
+    if request.method == 'POST':
+        day_ids = request.POST.getlist('day_ids')
+        if day_ids:
+            from .services import logic_service
+            days = Day.objects.filter(id__in=day_ids).order_by('date')
+            if days.exists():
+                trip = days.first().trip
+                first_deleted_date = days.first().date
+                num_days = days.count()
+                
+                # Delete the days
+                days.delete()
+                
+                # Shift subsequent days forward by -num_days
+                logic_service.shift_days(trip, first_deleted_date, -num_days)
+                
+                if request.htmx:
+                    response = HttpResponse("")
+                    response['HX-Refresh'] = 'true'
+                    return response
+    return redirect('travel:dashboard')
+
+def trip_shift_dates(request, pk):
+    """Shifts the entire trip by a given offset."""
+    trip = get_object_or_404(Trip, pk=pk)
+    if request.method == 'POST':
+        offset = int(request.POST.get('offset', 0))
+        if offset != 0:
+            from .services import logic_service
+            logic_service.shift_entire_trip(trip, offset)
+            
+        if request.htmx:
+            response = HttpResponse("")
+            response['HX-Refresh'] = 'true'
+            return response
+    return render(request, 'travel/partials/trip_shift_modal.html', {'trip': trip})
+
 def day_inline_update(request, pk):
     """Updates the location of a day via HTMX."""
     day = get_object_or_404(Day, pk=pk)
@@ -950,8 +1058,17 @@ def set_diary_image_primary(request, image_id):
     image.is_primary = True
     image.save()
     
-    # Trigger refresh in timeline only, NOT closing the modal
-    return HttpResponse(status=204, headers={'HX-Trigger': 'diaryUpdatedTimeline'})
+    # Return the updated modal to reflect state changes (yellow star)
+    from .forms import DiaryEntryForm, DiaryImageFormSet
+    form = DiaryEntryForm(instance=diary)
+    formset = DiaryImageFormSet(instance=diary)
+    context = {
+        'day': diary.day,
+        'diary': diary,
+        'form': form,
+        'formset': formset,
+    }
+    return render(request, 'travel/partials/diary_modal.html', context)
 
 # --- Checklist Views ---
 
@@ -1040,3 +1157,20 @@ def checklist_print(request, trip_id):
         'items_by_cat': items_by_cat
     })
 
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def save_ui_settings(request, trip_id):
+    if request.method == 'POST':
+        trip = get_object_or_404(Trip, id=trip_id)
+        try:
+            data = json.loads(request.body)
+            # Merge with existing settings
+            current_settings = trip.ui_settings or {}
+            current_settings.update(data)
+            trip.ui_settings = current_settings
+            trip.save()
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'Only POST allowed'}, status=405)

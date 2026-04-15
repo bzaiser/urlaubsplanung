@@ -13,6 +13,7 @@ class Trip(models.Model):
     local_currency = models.CharField(_("Lokal-Währung"), max_length=10, default="THB")
     persons_count = models.PositiveIntegerField(_("Anzahl Personen"), default=2)
     persons_ages = models.CharField(_("Alter der Personen"), max_length=100, blank=True, help_text=_("Komma-separiert, z.B. '40, 38, 12'"))
+    ui_settings = models.JSONField(_("UI Einstellungen"), default=dict, blank=True)
     
     class Meta:
         verbose_name = _("Reise")
@@ -55,7 +56,19 @@ class Day(models.Model):
     trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="days")
     date = models.DateField(_("Datum"))
     location = models.CharField(_("Ort"), max_length=200)
+    latitude = models.DecimalField(_("Breitengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(_("Längengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
+    is_geocoded = models.BooleanField(_("Geokodierung versucht"), default=False)
     
+    def save(self, *args, **kwargs):
+        if self.pk:
+            old_day = Day.objects.get(pk=self.pk)
+            if old_day.location != self.location:
+                self.latitude = None
+                self.longitude = None
+                self.is_geocoded = False
+        super().save(*args, **kwargs)
+
     class Meta:
         ordering = ['date']
         verbose_name = _("Tag")
@@ -177,7 +190,7 @@ class Event(models.Model):
     
     # Breakfast Logic [NEW]
     breakfast_included = models.BooleanField(_("Frühstück inkl."), default=False)
-    breakfast_cost = models.DecimalField(_("Frühstück Preis"), max_digits=12, decimal_places=2, default=0)
+    breakfast_cost = models.DecimalField(_("Frühstück Preis"), max_digits=12, decimal_places=2, default=0, blank=True)
 
     # Legacy fields
     cost_local = models.DecimalField(_("Kosten lokal (legacy)"), max_digits=12, decimal_places=2, default=0)
@@ -247,11 +260,17 @@ class Event(models.Model):
                 checkout_date = self.day.date + timedelta(days=self.nights)
                 
                 from .models import Day
-                checkout_day, _ = Day.objects.get_or_create(
+                checkout_day = Day.objects.filter(
                     trip=self.day.trip, 
-                    date=checkout_date,
-                    defaults={'location': self.day.location}
-                )
+                    date=checkout_date
+                ).first()
+                
+                if not checkout_day:
+                    checkout_day = Day.objects.create(
+                        trip=self.day.trip,
+                        date=checkout_date,
+                        location=self.day.location
+                    )
 
                 if self.type == 'RENTAL_CAR':
                     checkout_title = self.title.replace('Abholen:', 'Abgeben:')

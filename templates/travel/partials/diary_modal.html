@@ -87,17 +87,47 @@
                         {% endfor %}
                     </div>
 
+                    <!-- Preview Container -->
+                    <div id="image-preview-container" class="row row-cols-3 row-cols-md-4 g-2 mb-3"></div>
+
                     <!-- Simplified Multiple Upload -->
                     <div class="upload-zone border border-secondary border-dashed rounded-3 p-4 text-center mb-0" 
                          onclick="document.getElementById('image-upload').click()" 
                          style="cursor: pointer; background: rgba(255,255,255,0.02); transition: background 0.2s;">
-                        <input type="file" name="images" id="image-upload" multiple class="d-none" accept="image/*">
+                        <input type="file" name="images" id="image-upload" multiple class="d-none" accept="image/*"
+                               onchange="previewImages(this)">
                         <i class="bi bi-cloud-upload fs-2 text-secondary mb-2 d-block"></i>
                         <span class="d-block small fw-bold text-uppercase opacity-75">Weitere Fotos hinzufügen</span>
                         <span class="d-block x-small text-secondary mt-1">Du kannst mehrere Bilder gleichzeitig aus deiner Galerie wählen</span>
                     </div>
                 </div>
             </div>
+
+            <script>
+                function previewImages(input) {
+                    const container = document.getElementById('image-preview-container');
+                    container.innerHTML = ''; // Clear old previews
+                    if (input.files) {
+                        Array.from(input.files).forEach(file => {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const div = document.createElement('div');
+                                div.className = 'col';
+                                div.innerHTML = `
+                                    <div class="card bg-dark border-warning h-100 overflow-hidden">
+                                        <img src="${e.target.result}" class="card-img-top object-fit-cover shadow-sm" style="aspect-ratio: 1; opacity: 0.6;">
+                                        <div class="position-absolute top-50 start-50 translate-middle">
+                                            <span class="badge bg-warning text-dark x-small">NEU</span>
+                                        </div>
+                                    </div>
+                                `;
+                                container.appendChild(div);
+                            }
+                            reader.readAsDataURL(file);
+                        });
+                    }
+                }
+            </script>
 
             <div class="modal-footer border-0 pt-4 gap-2">
                 <button type="submit" class="btn btn-premium-gold px-4">

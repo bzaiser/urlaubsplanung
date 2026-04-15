@@ -43,7 +43,7 @@
                 <div class="row g-2 mb-2">
                     <div class="col-4">
                         <label class="form-label small text-uppercase text-secondary">{% trans "Typ" %}</label>
-                        <select name="type" class="form-select form-select-sm">
+                        <select name="type" id="event-type-select" class="form-select form-select-sm" onchange="toggleTypeSections()">
                             {% for val, label in form.fields.type.choices %}
                                 <option value="{{ val }}" {% if form.type.value == val %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
@@ -90,52 +90,68 @@
                 </div>
 
                 <!-- Accommodation Specifics -->
-                {% if form.type.value in 'HOTEL CAMPING PITCH BUNGALOW' %}
-                <div class="row g-2 mb-2">
+                <div id="section-accommodation" class="row g-2 mb-2" style="display: none;">
                     <div class="col-3">
                         <label class="form-label small text-uppercase text-secondary">{% trans "Nächte" %}</label>
                         <input type="number" name="nights" value="{{ form.nights.value|default:'' }}" class="form-control form-control-sm">
                     </div>
                     <div class="col-4">
-                        <div class="border border-info rounded-2 p-2 h-100 d-flex align-items-center">
-                            <div class="form-check">
-                                <input type="checkbox" name="breakfast_included" {% if form.breakfast_included.value %}checked{% endif %} class="form-check-input" id="id_breakfast">
-                                <label class="form-check-label small text-info fw-bold" for="id_breakfast">{% trans "Frühstück inkl." %}</label>
-                            </div>
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Frühstück inkl." %}</label>
+                        <div class="form-check pt-1">
+                            <input type="checkbox" name="breakfast_included" {% if form.breakfast_included.value %}checked{% endif %} class="form-check-input" id="id_breakfast">
+                            <label class="form-check-label small text-secondary" for="id_breakfast">{% trans "Inklusive" %}</label>
                         </div>
                     </div>
                     <div class="col-5">
-                        <div class="border border-info rounded-2 p-2 h-100">
-                            <label class="form-label small text-uppercase text-info mb-1">{% trans "Preis Frühstück" %}</label>
-                            <div class="input-group input-group-sm">
-                                <input type="number" step="0.01" name="breakfast_cost" value="{{ form.breakfast_cost.value|stringformat:'.2f'|default:'0.00' }}" class="form-control">
-                                <span class="input-group-text text-info">€</span>
-                            </div>
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Preis Frühstück" %}</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="0.01" name="breakfast_cost" value="{{ form.breakfast_cost.value|stringformat:'.2f'|default:'0.00' }}" class="form-control">
+                            <span class="input-group-text">€</span>
                         </div>
                     </div>
                 </div>
-                {% endif %}
 
                 <!-- Rental Car Specifics -->
-                {% if form.type.value == 'RENTAL_CAR' %}
-                <div class="row g-2 mb-2">
+                <div id="section-rental" class="row g-2 mb-2" style="display: none;">
                     <div class="col-6">
                         <label class="form-label small text-uppercase text-secondary">{% trans "Dauer (Tage)" %}</label>
-                        <input type="number" name="nights" value="{{ form.nights.value|default:'' }}" placeholder="Anzahl Tage" class="form-control form-control-sm">
+                        <input type="number" name="nights" value="{{ form.nights.value|default:'' }}" placeholder="Anzahl Tage" class="form-control form-control-sm" id="id_nights_rental">
                         <div class="form-text small">Erzeugt automatisch die Rückgabe am Zielort.</div>
                     </div>
                 </div>
-                {% endif %}
                 
                 <!-- Flight Specifics -->
-                {% if form.type.value == 'FLIGHT' %}
-                <div class="row g-2 mb-2">
+                <div id="section-flight" class="row g-2 mb-2" style="display: none;">
                     <div class="col-12">
                         <label class="form-label small text-uppercase text-secondary">{% trans "Flug-Details (Nr, Terminal, etc.)" %}</label>
                         <input type="text" name="detail_info" value="{{ form.detail_info.value|default:'' }}" class="form-control form-control-sm" placeholder="z.B. LH402, Terminal 2">
                     </div>
                 </div>
-                {% endif %}
+
+                <script>
+                function toggleTypeSections() {
+                    const type = document.getElementById('event-type-select').value;
+                    const acc = document.getElementById('section-accommodation');
+                    const rental = document.getElementById('section-rental');
+                    const flight = document.getElementById('section-flight');
+                    const nightsRental = document.getElementById('id_nights_rental');
+
+                    // Hide all first
+                    acc.style.display = 'none';
+                    rental.style.display = 'none';
+                    flight.style.display = 'none';
+
+                    if (['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW'].includes(type)) {
+                        acc.style.display = 'flex';
+                    } else if (type === 'RENTAL_CAR') {
+                        rental.style.display = 'flex';
+                    } else if (type === 'FLIGHT') {
+                        flight.style.display = 'flex';
+                    }
+                }
+                // Run once on load
+                setTimeout(toggleTypeSections, 10);
+                </script>
 
                 <!-- Row 4: Estimations & KM -->
                 <div class="row g-2 mb-2">

@@ -34,27 +34,32 @@
                 </button>
             </div>
 
-            <!-- Trip Utilities -->
-            <button class="btn btn-sm btn-outline-success me-1" 
+            <button class="premium-pill-btn success me-1" 
                     hx-get="{% url 'travel:trip_logic_check' active_trip.id %}"
                     hx-target="#modal-container">
-                <i class="bi bi-check2-circle me-1"></i>Reise-Check
+                <i class="bi bi-check2-circle me-1"></i><span>Reise-Check</span>
             </button>
             <a href="{% url 'travel:export_trip_ics' active_trip.id %}" 
-               class="btn btn-sm btn-outline-success me-2">
-                <i class="bi bi-calendar-plus me-1"></i>ICS
+               class="premium-pill-btn me-2">
+                <i class="bi bi-calendar-plus me-1"></i><span>ICS</span>
             </a>
 
             <!-- Trip Management -->
-            <button class="btn btn-sm btn-outline-warning me-1" 
+            <button class="premium-pill-btn warning me-1" 
+                    hx-get="{% url 'travel:trip_shift_dates' active_trip.id %}"
+                    hx-target="#modal-container"
+                    title="Komplette Reise zeitlich verschieben">
+                <i class="bi bi-calendar-range me-1"></i><span>Verschieben</span>
+            </button>
+            <button class="premium-pill-btn warning me-1" 
                     hx-get="{% url 'travel:trip_edit' active_trip.id %}"
                     hx-target="#modal-container">
-                <i class="bi bi-pencil me-1"></i>Edit
+                <i class="bi bi-pencil me-1"></i><span>Edit</span>
             </button>
-            <button class="btn btn-sm btn-outline-danger" 
+            <button class="premium-pill-btn danger" 
                     hx-get="{% url 'travel:trip_delete' active_trip.id %}"
                     hx-target="#modal-container">
-                <i class="bi bi-trash me-1"></i>Löschen
+                <i class="bi bi-trash me-1"></i><span>Löschen</span>
             </button>
         </div>
     </div>
@@ -66,6 +71,24 @@
     {% else %}
         {% include 'travel/partials/trip_timeline.html' %}
     {% endif %}
+
+    <!-- Offcanvas for Route Map -->
+    <div class="offcanvas offcanvas-end bg-dark text-light border-start border-secondary" 
+         tabindex="-1" id="offcanvasRouteMap" 
+         data-bs-backdrop="false" 
+         data-bs-scroll="true"
+         aria-labelledby="offcanvasRouteMapLabel" 
+         style="width: 500px; --bs-offcanvas-bg: #1a1a1a;">
+        <div class="offcanvas-header border-bottom border-secondary">
+            <h5 class="offcanvas-title text-warning fw-bold" id="offcanvasRouteMapLabel">
+                <i class="bi bi-map-fill me-2"></i>{% trans "Reiseroute" %}
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-0 d-flex flex-column" id="map-panel-body">
+            {% include 'travel/partials/trip_map.html' %}
+        </div>
+    </div>
     {% else %}
     <div class="card bg-dark border-secondary text-center p-5 mt-4">
         <div class="card-body">

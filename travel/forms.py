@@ -16,11 +16,13 @@ class TripForm(forms.ModelForm):
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
-        fields = ['title', 'location', 'type', 'time', 'end_time', 'nights', 'notes', 'booking_reference', 'booking_via', 'booking_url', 'cost_booked', 'amount_paid', 'is_paid', 'cancellation_deadline', 'payment_method', 'distance_km', 'cost_estimated']
+        fields = ['title', 'location', 'type', 'time', 'end_time', 'nights', 'notes', 'booking_reference', 'booking_via', 'booking_url', 'cost_booked', 'amount_paid', 'is_paid', 'cancellation_deadline', 'payment_method', 'distance_km', 'cost_estimated', 'breakfast_included', 'breakfast_cost']
         widgets = {
             'cancellation_deadline': forms.DateInput(attrs={'type': 'date'}),
             'time': forms.TimeInput(attrs={'type': 'time', 'class': 'flatpickr-time'}),
             'end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'flatpickr-time'}),
+            'breakfast_included': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'breakfast_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
 
 

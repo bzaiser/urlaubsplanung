@@ -1,0 +1,83 @@
+{% load i18n %}
+<!-- Redesigned Floating Command Center (Bulk Toolbar) -->
+<div id="bulk-toolbar" class="bulk-toolbar-hidden">
+    <div class="toolbar-content-wrapper shadow-lg">
+        <!-- Counter & Context Info -->
+        <div class="toolbar-header">
+            <span id="selection-count">0</span>
+            <span id="selection-label">{% trans "TAGE" %}</span>
+        </div>
+        
+        <div class="toolbar-divider"></div>
+
+        <!-- Contextual Toolsets -->
+        <div class="toolbar-actions">
+            <!-- Day Action Set -->
+            <div id="day-toolset" class="toolset" style="display: flex; align-items: center; gap: 10px;">
+                <div class="tool-group">
+                    <form id="bulk-edit-form" hx-post="{% url 'travel:day_bulk_edit' %}" 
+                          hx-target="body" hx-on::after-request="clearSelection();"
+                          style="display: flex; align-items: center; gap: 5px;">
+                        <input type="text" name="location" placeholder="Station setzen..." class="premium-input-sm">
+                        <button type="submit" class="premium-icon-btn" title="Station für alle markierten Tage setzen">
+                            <i class="bi bi-geo-alt-fill"></i>
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="tool-group ms-2" style="display: flex; align-items: center; gap: 8px;">
+                    <button class="premium-pill-btn success" 
+                            hx-post="{% url 'travel:day_insert' %}" 
+                            hx-target="body" hx-include="[name='day_ids']"
+                            hx-on::after-request="clearSelection();">
+                        <i class="bi bi-plus-lg me-1"></i><span>Tag davor einfügen</span>
+                    </button>
+                    <button class="premium-pill-btn danger" 
+                            hx-post="{% url 'travel:day_delete_and_shift' %}" 
+                            hx-target="body" hx-include="[name='day_ids']"
+                            hx-confirm="Markierte Tage löschen? Nachfolgende Tage rücken automatisch nach."
+                            hx-on::after-request="clearSelection();">
+                        <i class="bi bi-trash3 me-1"></i><span>Löschen & Rücken</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Event Action Set (hidden by default) -->
+            <div id="event-toolset" class="toolset" style="display: none; align-items: center; gap: 10px;">
+                <div class="tool-group">
+                    <form id="event-move-form" hx-post="{% url 'travel:event_bulk_move' %}" 
+                          hx-target="body" hx-on::after-request="clearSelection();"
+                          style="display: flex; align-items: center; gap: 5px;">
+                        <input type="date" name="target_date" class="premium-input-sm">
+                        <button type="submit" class="premium-pill-btn" title="Verschieben">
+                            <i class="bi bi-arrow-right-short"></i> Schieben
+                        </button>
+                    </form>
+                </div>
+                <button class="premium-pill-btn danger ms-2" 
+                        hx-post="{% url 'travel:event_bulk_delete' %}" 
+                        hx-target="body" hx-include="[name='event_ids']"
+                        hx-confirm="Einträge wirklich löschen?"
+                        hx-on::after-request="clearSelection();">
+                    <i class="bi bi-trash3"></i> Alle löschen
+                </button>
+            </div>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <button type="button" class="toolbar-close" onclick="clearSelection()" title="Abbrechen">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+</div>
+
+<style>
+    #bulk-toolbar .toolset {
+        display: flex;
+        align-items: center;
+    }
+    .premium-input-sm {
+        min-width: 160px;
+    }
+</style>

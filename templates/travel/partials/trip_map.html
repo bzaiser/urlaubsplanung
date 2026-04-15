@@ -1,0 +1,240 @@
+{% load i18n %}
+<div class="h-100 d-flex flex-column" 
+     id="map-inner-container"
+     {% if geocoding_pending %}
+     hx-get="{% url 'travel:dashboard' %}?view=map"
+     hx-trigger="every 3s"
+     hx-target="#map-panel-body"
+     {% endif %}>
+    
+    <!-- Map Container -->
+    <div id="trip-map" class="flex-grow-1" style="width: 100%; min-height: 400px; z-index: 1; cursor: crosshair;">
+        {% if not map_data_json or map_data_json == '[]' %}
+            <div class="d-flex flex-column align-items-center justify-content-center h-100 bg-dark text-secondary">
+                <div class="spinner-border text-warning mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="fw-bold text-uppercase small opacity-75">Koordinaten werden ermittelt...</div>
+                <div class="x-small opacity-50 text-center px-4">Deine Route wird gerade berechnet.<br>Dies kann beim ersten Mal kurz dauern.</div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Legend / Overlay -->
+    <div class="p-3 bg-dark border-top border-secondary shadow-sm" style="z-index: 1000;">
+        <h6 class="text-warning small mb-2 text-uppercase fw-bold"><i class="bi bi-info-circle me-1"></i>Trip-Info</h6>
+        <div id="map-stats" class="text-secondary small">Wird geladen...</div>
+    </div>
+</div>
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    (function() {
+        const initMap = () => {
+            const mapId = 'trip-map';
+            const container = document.getElementById(mapId);
+            if (!container) return;
+
+            // 1. Memory: Save existing view state if available
+            let lastCenter = null;
+            let lastZoom = null;
+            let hadInteracted = false;
+
+            if (window.currentTripMap) {
+                try {
+                    lastCenter = window.currentTripMap.getCenter();
+                    lastZoom = window.currentTripMap.getZoom();
+                    // Detect if the user had moved the map from its original bounds
+                    hadInteracted = window.mapWasInteracted || false;
+                    
+                    window.currentTripMap.remove();
+                } catch (e) {
+                    console.warn("Error removing old map:", e);
+                }
+            }
+
+            // 2. Data Prep
+            const stations = {{ map_data_json|safe }};
+            const routeGeometry = {{ route_geometry_json|safe }};
+            
+            if (!stations || stations.length === 0) return;
+
+            // 3. Base Layers
+            const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 20
+            });
+
+            const standard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 19
+            });
+
+            const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            });
+
+            // 4. Init Map (Prefer stored view)
+            const initialView = lastCenter ? [lastCenter.lat, lastCenter.lng] : [stations[0].lat, stations[0].lon];
+            const initialZoom = lastZoom ? lastZoom : 6;
+
+            const map = L.map(mapId, {
+                layers: [dark],
+                zoomSnap: 0.5
+            }).setView(initialView, initialZoom);
+            
+            window.currentTripMap = map;
+            window.mapWasInteracted = hadInteracted;
+
+            map.on('movestart zoomstart', () => { window.mapWasInteracted = true; });
+
+            // Layer Switcher
+            const baseMaps = {
+                '<i class="bi bi-moon-stars me-2"></i>Dunkel': dark,
+                '<i class="bi bi-map me-2"></i>Standard': standard,
+                '<i class="bi bi-globe me-2"></i>Satellit': satellite
+            };
+            L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+            // 5. Markers
+            const markers = [];
+            stations.forEach((s) => {
+                if (s.lat && s.lon) {
+                    const pos = [s.lat, s.lon];
+                    const marker = L.circleMarker(pos, {
+                        radius: 12,
+                        fillColor: "#ffc107",
+                        color: "#fff",
+                        weight: 3,
+                        opacity: 1,
+                        fillOpacity: 0.9,
+                        className: 'map-clickable-marker'
+                    }).addTo(map);
+
+                    marker.bindPopup(`
+                        <div class="p-1">
+                            <strong class="text-dark">${s.location}</strong><br>
+                            <small class="text-muted">${s.days_count} Tage • ${s.nights_count} Nächte</small><br>
+                            <hr class="my-1 opacity-25">
+                            <a href="javascript:void(0)" 
+                               onclick="htmx.ajax('GET', '/day/${s.day_id}/diary/', {target:'#modal-container', swap:'innerHTML'})"
+                               class="text-primary small fw-bold d-block text-decoration-none py-1">
+                               <i class="bi bi-book me-1"></i>Tagebuch öffnen
+                            </a>
+                        </div>
+                    `);
+
+                    marker.on('click', function() {
+                        // 1. Sync with Timeline (Diary View)
+                        const targetId = `station-${s.index}`;
+                        const targetEl = document.getElementById(targetId);
+                        if (targetEl) {
+                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            targetEl.classList.add('station-highlight');
+                            setTimeout(() => targetEl.classList.remove('station-highlight'), 2000);
+                        }
+
+                        // 2. Sync with AG-Grid (Planner View)
+                        if (window.agGridApi) {
+                            try {
+                                const rowId = `day-header-${s.day_id}`;
+                                const rowNode = window.agGridApi.getRowNode(rowId);
+                                if (rowNode) {
+                                    window.agGridApi.ensureIndexVisible(rowNode.rowIndex, 'middle');
+                                    rowNode.setSelected(true, true); // Select and clear others
+                                }
+                            } catch (e) {
+                                console.warn("AG-Grid Sync Error:", e);
+                            }
+                        }
+                    });
+                    
+                    marker.on('mouseover', function() { this.setRadius(16); this.setStyle({fillColor: '#fff', color: '#ffc107'}); });
+                    marker.on('mouseout', function() { this.setRadius(12); this.setStyle({fillColor: '#ffc107', color: '#fff'}); });
+                    markers.push(marker);
+                }
+            });
+
+            // 6. Routing (Only fitBounds if user hasn't interacted yet)
+            if (routeGeometry && routeGeometry.length > 0) {
+                const roadLine = L.polyline(routeGeometry, {
+                    color: '#ffc107', weight: 5, opacity: 0.8, lineJoin: 'round'
+                }).addTo(map);
+                if (!window.mapWasInteracted) {
+                    map.fitBounds(roadLine.getBounds(), { padding: [50, 50] });
+                }
+            } else if (stations.length > 0 && !window.mapWasInteracted) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
+
+            // 7. Global Handlers
+            window.flyToLocation = (lat, lon, index) => {
+                const activeMap = window.currentTripMap;
+                if (!activeMap || !lat || !lon) return;
+                
+                const offcanvasEl = document.getElementById('offcanvasRouteMap');
+                if (offcanvasEl && !offcanvasEl.classList.contains('show')) {
+                    bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl).show();
+                }
+
+                window.mapWasInteracted = true; // Manual jump counts as interaction
+                activeMap.flyTo([lat, lon], activeMap.getZoom(), { duration: 1.2 });
+                
+                const targetMarker = markers.find(m => {
+                    const ll = m.getLatLng();
+                    return Math.abs(ll.lat - lat) < 0.0001 && Math.abs(ll.lng - lon) < 0.0001;
+                });
+                if (targetMarker) {
+                    setTimeout(() => targetMarker.openPopup(), 1300);
+                }
+            };
+
+            // Update Stats
+            const totalDays = stations.reduce((a,b) => a + b.days_count, 0);
+            document.getElementById('map-stats').innerHTML = `
+                <div class="d-flex justify-content-between">
+                    <span><i class="bi bi-geo-alt me-1"></i> ${stations.length} Stationen</span>
+                    <span><i class="bi bi-calendar3 me-1"></i> ${totalDays} Tage</span>
+                </div>
+            `;
+        };
+
+        // Initialize properly
+        setTimeout(initMap, 250);
+        
+        // Fix for offcanvas rendering issues
+        const offcanvas = document.getElementById('offcanvasRouteMap');
+        if (offcanvas) {
+            offcanvas.addEventListener('shown.bs.offcanvas', function () {
+                const mapContainer = document.getElementById('trip-map');
+                if (mapContainer && mapContainer._leaflet_id) {
+                    // Update size when drawer opens
+                    window.dispatchEvent(new Event('resize'));
+                } else {
+                    initMap();
+                }
+            });
+        }
+    })();
+</script>
+
+<style>
+    .map-clickable-marker { cursor: pointer; transition: all 0.2s; }
+    .leaflet-popup-content-wrapper { border-radius: 8px; border: 1px solid #dee2e6; }
+    
+    /* Animation for timeline highlights */
+    @keyframes stationPulse {
+        0% { background-color: rgba(255, 193, 7, 0); }
+        50% { background-color: rgba(255, 193, 7, 0.2); }
+        100% { background-color: rgba(255, 193, 7, 0); }
+    }
+    .station-highlight {
+        animation: stationPulse 2s ease-in-out;
+        border-radius: 12px;
+    }
+</style>

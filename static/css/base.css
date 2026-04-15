@@ -612,12 +612,180 @@ body {
     font-size: 0.75rem;
 }
 
-.segmented-item-danger:hover {
-    background: #e74c3c !important;
-    color: #fff !important;
+/* --- Bulk Action Toolbar (Floating Pill) --- */
+#bulk-toolbar {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.segmented-item-success:hover {
-    background: #1abc9c !important;
-    color: #fff !important;
+.bulk-toolbar-hidden {
+    opacity: 0;
+    bottom: -100px !important;
+    pointer-events: none;
+    transform: translateX(-50%) scale(0.9) !important;
+}
+
+.bulk-toolbar-show {
+    opacity: 1;
+    bottom: 30px !important;
+    transform: translateX(-50%) scale(1) !important;
+}
+
+.toolbar-content-wrapper {
+    background: rgba(10, 25, 47, 0.85); /* Deep glass navy */
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(197, 160, 89, 0.4);
+    border-radius: 60px;
+    padding: 8px 12px 8px 25px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 20px rgba(197, 160, 89, 0.1);
+}
+
+.toolbar-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent-gold);
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+}
+
+#selection-count {
+    font-size: 1.2rem;
+    min-width: 25px;
+    text-align: center;
+}
+
+#selection-label {
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+.toolbar-divider {
+    height: 30px;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+}
+
+.toolset {
+    gap: 10px;
+    align-items: center;
+}
+
+.tool-group {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+/* Premium Buttons in Toolbar */
+.premium-pill-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 50px;
+    padding: 6px 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.premium-pill-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.premium-pill-btn.success:hover {
+    background: rgba(26, 188, 156, 0.8);
+    border-color: #1abc9c;
+}
+
+.premium-pill-btn.danger:hover {
+    background: rgba(231, 76, 60, 0.8);
+    border-color: #e74c3c;
+}
+
+.premium-icon-btn {
+    background: var(--accent-gold);
+    color: #000;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.premium-icon-btn:hover {
+    transform: scale(1.1);
+}
+
+.premium-input-sm {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 6px 15px;
+    font-size: 0.8rem;
+    color: #fff;
+    outline: none;
+    width: 150px;
+}
+
+.premium-input-sm:focus {
+    border-color: var(--accent-gold);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.toolbar-close {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: var(--text-secondary);
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toolbar-close:hover {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+}
+
+/* Responsive Premium Pills: Collapse to icons on mobile */
+@media (max-width: 768px) {
+    .premium-pill-btn span, 
+    .segmented-item span {
+        display: none;
+    }
+    .premium-pill-btn i,
+    .segmented-item i {
+        margin-right: 0 !important;
+    }
+    .premium-pill-btn,
+    .segmented-item {
+        padding: 8px 12px;
+    }
 }

@@ -190,3 +190,81 @@ def check_checkout_links(trip):
                 'fix_type': 'GENERATE_CHECKOUT'
             })
     return findings
+def shift_days(trip, start_date, offset_days):
+    """
+    Shifts all days with date >= start_date by offset_days.
+    Also adjusts the trip's end_date.
+    """
+    if offset_days == 0:
+        return
+    
+    # We must update in a specific order to avoid potential (future) unique constraint collisions
+    if offset_days > 0:
+        # Shifting forward: Update latest days first
+        days_to_shift = trip.days.filter(date__gte=start_date).order_by('-date')
+    else:
+        # Shifting backward: Update earliest days first
+        days_to_shift = trip.days.filter(date__gte=start_date).order_by('date')
+    
+    for day in days_to_shift:
+        day.date = day.date + timedelta(days=offset_days)
+        day.save()
+    
+    # Adjust Trip end date
+    if trip.end_date:
+        trip.end_date = trip.end_date + timedelta(days=offset_days)
+        trip.save()
+
+    # Shift relevant deadlines
+    # Events: Cancellation deadlines
+    events = Event.objects.filter(day__trip=trip, cancellation_deadline__isnull=False)
+    for event in events:
+        # Only shift deadlines that are AFTER or AT the start of the shift?
+        # Actually, if the whole trip schedule moves, deadlines might move too.
+        # But for now, we only shift deadlines if they are attached to shifted days.
+        # Actually, if we just insert a day, only subsequent deadlines might move.
+        # Let's be conservative and only shift deadlines for events on shifted days
+        # or just shift all deadlines if we are shifting the WHOLE trip.
+        pass
+
+    # Checklist Items
+    if hasattr(trip, 'checklist'):
+        items = trip.checklist.items.filter(due_date__isnull=False)
+        for item in items:
+            # Shift due dates if they are >= start_date (or relative to end of trip)
+            item.due_date = item.due_date + timedelta(days=offset_days)
+            item.save()
+
+def shift_entire_trip(trip, days_offset):
+    """Shifts every single date associated with the trip."""
+    if days_offset == 0:
+        return
+    
+    # Shift trip metadata
+    if trip.start_date:
+        trip.start_date = trip.start_date + timedelta(days=days_offset)
+    if trip.end_date:
+        trip.end_date = trip.end_date + timedelta(days=days_offset)
+    trip.save()
+    
+    # Shift all days (ordered to avoid collision)
+    if days_offset > 0:
+        days = trip.days.all().order_by('-date')
+    else:
+        days = trip.days.all().order_by('date')
+        
+    for day in days:
+        day.date = day.date + timedelta(days=days_offset)
+        day.save()
+        
+    # Shift all event deadlines
+    events = Event.objects.filter(day__trip=trip, cancellation_deadline__isnull=False)
+    for event in events:
+        event.cancellation_deadline = event.cancellation_deadline + timedelta(days=days_offset)
+        event.save()
+        
+    # Shift checklist deadlines
+    if hasattr(trip, 'checklist'):
+        for item in trip.checklist.items.filter(due_date__isnull=False):
+            item.due_date = item.due_date + timedelta(days=days_offset)
+            item.save()
