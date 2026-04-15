@@ -1,44 +1,18 @@
 {% load i18n %}
-<style>
-    input, select, textarea {
-        width: 100%;
-        padding: 7px;
-        margin: 0px 0;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--glass-border);
-        color: white;
-        border-radius: 4px;
-        box-sizing: border-box;
-    }
-    input:focus, select:focus, textarea:focus {
-        border-color: var(--accent-gold);
-        outline: none;
-    }
-    select option {
-        background: #1a2438;
-        color: var(--text-primary);
-    }
-    .error-msg {
-        color: #e74c3c;
-        font-size: 0.75rem;
-        margin-top: 2px;
-        display: block;
-    }
-</style>
-<div class="modal-dialog">
-    <div class="modal-content" style="border: 1px solid var(--accent-gold); padding: 12px; font-size: 0.85rem; background: var(--card-bg); backdrop-filter: blur(10px); border-radius: 12px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">
-            <h2 style="margin: 0; font-family: 'Outfit', sans-serif; color: var(--accent-gold); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;">
-                {% if form.instance.id %}✏️ {% trans "EDIT_EVENT" %}{% else %}➕ {% trans "ADD_EVENT" %}{% endif %} 
-                <span style="opacity: 0.5; font-size: 0.8rem; font-weight: 400;">({{ day.date|date:"d. M" }})</span>
-            </h2>
-            <button type="button" onclick="closeModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.4rem; cursor: pointer; line-height: 1;">&times;</button>
+<div class="modal-dialog modal-lg">
+    <div class="modal-content bg-dark border">
+        <div class="modal-header border-secondary">
+            <h5 class="modal-title text-warning">
+                {% if form.instance.id %}<i class="bi bi-pencil me-1"></i>{% trans "EDIT_EVENT" %}{% else %}<i class="bi bi-plus-circle me-1"></i>{% trans "ADD_EVENT" %}{% endif %}
+                <small class="text-secondary fw-normal ms-2">({{ day.date|date:"d. M" }})</small>
+            </h5>
+            <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
         </div>
 
         {% if form.errors %}
-        <div style="background: rgba(231, 76, 60, 0.1); border: 1px solid #e74c3c; border-radius: 8px; padding: 10px; margin-bottom: 12px; color: #e74c3c; font-size: 0.8rem;">
-            <strong>⚠️ {% trans "Bitte korrigiere die Fehler:" %}</strong>
-            <ul style="margin: 5px 0 0 20px; padding: 0;">
+        <div class="alert alert-danger m-3 mb-0 small">
+            <strong><i class="bi bi-exclamation-triangle me-1"></i>{% trans "Bitte korrigiere die Fehler:" %}</strong>
+            <ul class="mb-0 mt-1">
                 {% for field, errors in form.errors.items %}
                     <li>{{ field }}: {{ errors|striptags }}</li>
                 {% endfor %}
@@ -49,193 +23,221 @@
         <form hx-post="{{ request.path }}" 
               hx-target="#trip-overview" 
               hx-on::after-request="if(event.detail.successful && event.detail.xhr.status === 200) closeModal()"
-              hx-encoding="multipart/form-data"
-              style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px;">
+              hx-encoding="multipart/form-data">
             {% csrf_token %}
 
-            <!-- Row 1: Title & Location -->
-            <div style="grid-column: span 6;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">{% trans "Titel" %}</label>
-                <input type="text" name="title" value="{{ form.title.value|default:'' }}" required style="font-size: 0.85rem;">
-            </div>
-            <div style="grid-column: span 6;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Ort / Ziel" %}</label>
-                <input type="text" name="location" value="{{ form.location.value|default:'' }}" style="font-size: 0.85rem;">
-            </div>
-
-            <!-- Row 2: Type, Start, End -->
-            <div style="grid-column: span 4;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Typ" %}</label>
-                <select name="type" style="font-size: 0.85rem;">
-                    {% for val, label in form.fields.type.choices %}
-                        <option value="{{ val }}" {% if form.type.value == val %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div style="grid-column: span 4;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Start" %}</label>
-                <input type="text" name="time" value="{{ form.time.value|time:'H:i'|default:'' }}" 
-                       placeholder="HH:MM" maxlength="5"
-                       oninput="this.value = this.value.replace(/[^0-9:]/g, ''); if(this.value.length === 2 && !this.value.includes(':')) this.value += ':';"
-                       style="font-size: 0.85rem; font-family: monospace; letter-spacing: 1px;">
-            </div>
-            <div style="grid-column: span 4;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Ende" %}</label>
-                <input type="text" name="end_time" value="{{ form.end_time.value|time:'H:i'|default:'' }}" 
-                       placeholder="HH:MM" maxlength="5"
-                       oninput="this.value = this.value.replace(/[^0-9:]/g, ''); if(this.value.length === 2 && !this.value.includes(':')) this.value += ':';"
-                       style="font-size: 0.85rem; font-family: monospace; letter-spacing: 1px;">
-            </div>
-
-            <!-- Row 3: Final Costs & Paid -->
-            <div style="grid-column: span 4;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Preis Gebucht" %}</label>
-                <div style="display: flex; align-items: center; gap: 3px;">
-                    <input type="number" step="0.01" name="cost_booked" value="{{ form.cost_booked.value|stringformat:'.2f'|default:'0.00' }}" style="flex: 1; font-size: 0.85rem;">
-                    <span style="color: var(--text-secondary); font-size: 0.75rem;">€</span>
+            <div class="modal-body">
+                <!-- Row 1: Title & Location -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Titel" %}</label>
+                        <input type="text" name="title" value="{{ form.title.value|default:'' }}" required class="form-control form-control-sm">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Ort / Ziel" %}</label>
+                        <input type="text" name="location" value="{{ form.location.value|default:'' }}" class="form-control form-control-sm">
+                    </div>
                 </div>
-            </div>
-            <div style="grid-column: span 4;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Ist (Gezahlt)" %}</label>
-                <div style="display: flex; align-items: center; gap: 3px;">
-                    <input type="number" step="0.01" name="amount_paid" value="{{ form.amount_paid.value|stringformat:'.2f'|default:'0.00' }}" style="flex: 1; font-size: 0.85rem;">
-                    <span style="color: var(--text-secondary); font-size: 0.75rem;">€</span>
+
+                <!-- Row 2: Type, Start, End -->
+                <div class="row g-2 mb-2">
+                    <div class="col-4">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Typ" %}</label>
+                        <select name="type" class="form-select form-select-sm">
+                            {% for val, label in form.fields.type.choices %}
+                                <option value="{{ val }}" {% if form.type.value == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Start" %}</label>
+                        <input type="text" name="time" value="{{ form.time.value|time:'H:i'|default:'' }}" 
+                               placeholder="HH:MM" maxlength="5"
+                               oninput="this.value = this.value.replace(/[^0-9:]/g, ''); if(this.value.length === 2 && !this.value.includes(':')) this.value += ':';"
+                               class="form-control form-control-sm font-monospace">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Ende" %}</label>
+                        <input type="text" name="end_time" value="{{ form.end_time.value|time:'H:i'|default:'' }}" 
+                               placeholder="HH:MM" maxlength="5"
+                               oninput="this.value = this.value.replace(/[^0-9:]/g, ''); if(this.value.length === 2 && !this.value.includes(':')) this.value += ':';"
+                               class="form-control form-control-sm font-monospace">
+                    </div>
                 </div>
-            </div>
-            <div style="grid-column: span 4; display: flex; align-items: flex-end; padding-bottom: 6px; padding-left: 4px;">
-                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-secondary); font-size: 0.75rem;">
-                    <input type="checkbox" name="is_paid" {% if form.is_paid.value %}checked{% endif %} style="width: 16px; height: 16px; margin: 0;">
-                    {% trans "Bezahlt" %}
-                </label>
-            </div>
 
-            <!-- Row 3.2: Accommodation Specifics (Hotel, etc.) -->
-            {% if form.type.value in 'HOTEL CAMPING PITCH BUNGALOW' %}
-            <div style="grid-column: span 3;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">{% trans "Nächte" %}</label>
-                <input type="number" name="nights" value="{{ form.nights.value|default:'' }}" style="font-size: 0.85rem;">
-            </div>
-            <div style="grid-column: span 4; background: rgba(0, 128, 128, 0.05); padding: 5px; border-radius: 4px; border: 1px solid rgba(0, 128, 128, 0.2);">
-                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--accent-teal); font-size: 0.75rem; font-weight: bold;">
-                    <input type="checkbox" name="breakfast_included" {% if form.breakfast_included.value %}checked{% endif %} style="width: 16px; height: 16px; margin: 0;">
-                    {% trans "Frühstück inkl." %}
-                </label>
-            </div>
-            <div style="grid-column: span 5; background: rgba(0, 128, 128, 0.05); padding: 5px; border-radius: 4px; border: 1px solid rgba(0, 128, 128, 0.2);">
-                <label style="display: block; color: var(--accent-teal); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 2px;">{% trans "Preis Frühstück" %}</label>
-                <div style="display: flex; align-items: center; gap: 3px;">
-                    <input type="number" step="0.01" name="breakfast_cost" value="{{ form.breakfast_cost.value|stringformat:'.2f'|default:'0.00' }}" style="flex: 1; font-size: 0.85rem; background: none; border: none; border-bottom: 1px solid var(--glass-border); border-radius: 0;">
-                    <span style="color: var(--accent-teal); font-size: 0.75rem;">€</span>
+                <!-- Row 3: Costs & Paid -->
+                <div class="row g-2 mb-2">
+                    <div class="col-4">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Preis Gebucht" %}</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="0.01" name="cost_booked" value="{{ form.cost_booked.value|stringformat:'.2f'|default:'0.00' }}" class="form-control">
+                            <span class="input-group-text">€</span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Ist (Gezahlt)" %}</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="0.01" name="amount_paid" value="{{ form.amount_paid.value|stringformat:'.2f'|default:'0.00' }}" class="form-control">
+                            <span class="input-group-text">€</span>
+                        </div>
+                    </div>
+                    <div class="col-4 d-flex align-items-end pb-1">
+                        <div class="form-check">
+                            <input type="checkbox" name="is_paid" {% if form.is_paid.value %}checked{% endif %} class="form-check-input" id="id_is_paid">
+                            <label class="form-check-label small text-secondary" for="id_is_paid">{% trans "Bezahlt" %}</label>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            {% endif %}
 
-            <!-- Row 3.3: Rental Car Specifics -->
-            {% if form.type.value == 'RENTAL_CAR' %}
-            <div style="grid-column: span 6;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase;">{% trans "Dauer (Tage)" %}</label>
-                <input type="number" name="nights" value="{{ form.nights.value|default:'' }}" placeholder="Anzahl Tage" style="font-size: 0.85rem;">
-                <small style="font-size: 0.6rem; color: var(--text-secondary); opacity: 0.7;">Erzeugt automatisch die Rückgabe am Zielort.</small>
-            </div>
-            {% endif %}
-            
-            <!-- Row 3.4: Flight Specifics -->
-            {% if form.type.value == 'FLIGHT' %}
-            <div style="grid-column: span 12;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase;">{% trans "Flug-Details (Nr, Terminal, etc.)" %}</label>
-                <input type="text" name="detail_info" value="{{ form.detail_info.value|default:'' }}" style="font-size: 0.85rem;" placeholder="z.B. LH402, Terminal 2">
-            </div>
-            {% endif %}
-
-            <!-- Row 4: Estimations & KM -->
-            <div style="grid-column: span 6;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Schätzung (Preis)" %}</label>
-                <div style="display: flex; align-items: center; gap: 4px;">
-                    <input type="number" step="0.01" name="cost_estimated" value="{{ form.cost_estimated.value|stringformat:'.2f'|default:'0.00' }}" style="flex: 1; font-size: 0.85rem;">
-                    <span style="color: var(--text-secondary); font-size: 0.8rem;">€</span>
+                <!-- Accommodation Specifics -->
+                {% if form.type.value in 'HOTEL CAMPING PITCH BUNGALOW' %}
+                <div class="row g-2 mb-2">
+                    <div class="col-3">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Nächte" %}</label>
+                        <input type="number" name="nights" value="{{ form.nights.value|default:'' }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-4">
+                        <div class="border border-info rounded-2 p-2 h-100 d-flex align-items-center">
+                            <div class="form-check">
+                                <input type="checkbox" name="breakfast_included" {% if form.breakfast_included.value %}checked{% endif %} class="form-check-input" id="id_breakfast">
+                                <label class="form-check-label small text-info fw-bold" for="id_breakfast">{% trans "Frühstück inkl." %}</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-5">
+                        <div class="border border-info rounded-2 p-2 h-100">
+                            <label class="form-label small text-uppercase text-info mb-1">{% trans "Preis Frühstück" %}</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" step="0.01" name="breakfast_cost" value="{{ form.breakfast_cost.value|stringformat:'.2f'|default:'0.00' }}" class="form-control">
+                                <span class="input-group-text text-info">€</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div style="grid-column: span 6;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Entfernung (km)" %}</label>
-                <div style="display: flex; align-items: center; gap: 4px;">
-                    <input type="number" name="distance_km" value="{{ form.distance_km.value|default:'' }}" style="flex: 1; font-size: 0.85rem;">
-                    <span style="color: var(--text-secondary); font-size: 0.8rem;">km</span>
+                {% endif %}
+
+                <!-- Rental Car Specifics -->
+                {% if form.type.value == 'RENTAL_CAR' %}
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Dauer (Tage)" %}</label>
+                        <input type="number" name="nights" value="{{ form.nights.value|default:'' }}" placeholder="Anzahl Tage" class="form-control form-control-sm">
+                        <div class="form-text small">Erzeugt automatisch die Rückgabe am Zielort.</div>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Row 5: Method & Deadline -->
-            <div style="grid-column: span 6;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Zahlungsweg" %}</label>
-                <select name="payment_method" style="font-size: 0.85rem;">
-                    {% for val, label in form.fields.payment_method.choices %}
-                        <option value="{{ val }}" {% if form.payment_method.value == val %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div style="grid-column: span 6;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Storno bis" %}</label>
-                <input type="date" name="cancellation_deadline" value="{{ form.cancellation_deadline.value|date:'Y-m-d'|default:'' }}" style="font-size: 0.8rem; height: auto;">
-            </div>
-
-            <!-- Row 6: Logistics -->
-            <div style="grid-column: span 6;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Buchungs-Ref" %}</label>
-                <input type="text" name="booking_reference" value="{{ form.booking_reference.value|default:'' }}" style="font-size: 0.85rem;">
-            </div>
-            <div style="grid-column: span 6;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Gebucht über" %}</label>
-                <input type="text" name="booking_via" value="{{ form.booking_via.value|default:'' }}" style="font-size: 0.85rem;">
-            </div>
-
-            <!-- Row 7: URL -->
-            <div style="grid-column: span 12;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Buchungs-URL" %}</label>
-                <input type="url" name="booking_url" value="{{ form.booking_url.value|default:'' }}" style="font-size: 0.85rem;" placeholder="https://...">
-            </div>
-
-            <!-- Notes -->
-            <div style="grid-column: span 12;">
-                <label style="display: block; color: var(--text-secondary); font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; margin-bottom: 0px;">{% trans "Notizen / Details" %}</label>
-                <textarea name="notes" rows="2" style="padding: 6px 8px; font-size: 0.85rem; min-height: 44px;">{{ form.notes.value|default:'' }}</textarea>
-            </div>
-
-            <!-- Media & Files -->
-            <div style="grid-column: span 12; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; border: 1px dashed var(--glass-border);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label style="display: block; color: var(--accent-gold); font-size: 0.65rem; text-transform: uppercase; font-weight: bold;">{% trans "Beleg / Anhang" %}</label>
-                    {% if form.instance.voucher %}
-                        <a href="{{ form.instance.voucher.url }}" target="_blank" style="font-size: 0.65rem; color: var(--accent-gold); text-decoration: none; border: 1px solid var(--accent-gold); padding: 2px 6px; border-radius: 4px;">ÖFFNEN</a>
-                    {% endif %}
+                {% endif %}
+                
+                <!-- Flight Specifics -->
+                {% if form.type.value == 'FLIGHT' %}
+                <div class="row g-2 mb-2">
+                    <div class="col-12">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Flug-Details (Nr, Terminal, etc.)" %}</label>
+                        <input type="text" name="detail_info" value="{{ form.detail_info.value|default:'' }}" class="form-control form-control-sm" placeholder="z.B. LH402, Terminal 2">
+                    </div>
                 </div>
-                <input type="file" name="voucher" style="font-size: 0.75rem; color: var(--text-secondary); border: none; padding: 0; background: none;">
+                {% endif %}
+
+                <!-- Row 4: Estimations & KM -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Schätzung (Preis)" %}</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="0.01" name="cost_estimated" value="{{ form.cost_estimated.value|stringformat:'.2f'|default:'0.00' }}" class="form-control">
+                            <span class="input-group-text">€</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Entfernung (km)" %}</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="distance_km" value="{{ form.distance_km.value|default:'' }}" class="form-control">
+                            <span class="input-group-text">km</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 5: Method & Deadline -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Zahlungsweg" %}</label>
+                        <select name="payment_method" class="form-select form-select-sm">
+                            {% for val, label in form.fields.payment_method.choices %}
+                                <option value="{{ val }}" {% if form.payment_method.value == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Storno bis" %}</label>
+                        <input type="date" name="cancellation_deadline" value="{{ form.cancellation_deadline.value|date:'Y-m-d'|default:'' }}" class="form-control form-control-sm">
+                    </div>
+                </div>
+
+                <!-- Row 6: Logistics -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Buchungs-Ref" %}</label>
+                        <input type="text" name="booking_reference" value="{{ form.booking_reference.value|default:'' }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Gebucht über" %}</label>
+                        <input type="text" name="booking_via" value="{{ form.booking_via.value|default:'' }}" class="form-control form-control-sm">
+                    </div>
+                </div>
+
+                <!-- Row 7: URL -->
+                <div class="row g-2 mb-2">
+                    <div class="col-12">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Buchungs-URL" %}</label>
+                        <input type="url" name="booking_url" value="{{ form.booking_url.value|default:'' }}" class="form-control form-control-sm" placeholder="https://...">
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="row g-2 mb-2">
+                    <div class="col-12">
+                        <label class="form-label small text-uppercase text-secondary">{% trans "Notizen / Details" %}</label>
+                        <textarea name="notes" rows="2" class="form-control form-control-sm">{{ form.notes.value|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Media & Files -->
+                <div class="border border-secondary border-dashed rounded-3 p-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small text-uppercase text-warning fw-bold mb-0">{% trans "Beleg / Anhang" %}</label>
+                        {% if form.instance.voucher %}
+                            <a href="{{ form.instance.voucher.url }}" target="_blank" class="btn btn-sm btn-outline-warning py-0 px-2">
+                                <small>ÖFFNEN</small>
+                            </a>
+                        {% endif %}
+                    </div>
+                    <input type="file" name="voucher" class="form-control form-control-sm">
+                </div>
+
+                <!-- Conflict Warning -->
+                {% if conflict_warning %}
+                <div class="alert alert-warning d-flex align-items-start gap-2 small">
+                    <i class="bi bi-exclamation-triangle fs-5"></i>
+                    <p class="mb-0">{{ conflict_warning }}</p>
+                </div>
+                {% endif %}
             </div>
 
-            <!-- Conflict Warning -->
-            {% if conflict_warning %}
-            <div style="grid-column: span 12; background: rgba(197, 160, 89, 0.15); border: 1px solid var(--accent-gold); padding: 10px; border-radius: 8px; margin-top: 5px; margin-bottom: 5px; display: flex; align-items: start; gap: 10px;">
-                <span style="font-size: 1.2rem;">⚠️</span>
-                <p style="margin: 0; font-size: 0.8rem; color: #eee; line-height: 1.4;">{{ conflict_warning }}</p>
-            </div>
-            {% endif %}
-
-            <!-- Action Toolbar -->
-            <div style="grid-column: span 12; display: flex; gap: 8px; margin-top: 4px; border-top: 1px solid var(--glass-border); padding-top: 10px;">
+            <!-- Footer Actions -->
+            <div class="modal-footer border-secondary">
                 {% if not form.instance.id %}
-                <button type="button" hx-get="{% url 'travel:event_type_picker' day.id %}" hx-target="#modal-container" style="flex: 1; height: 36px; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; border-radius: 8px; cursor: pointer;">
-                    ⬅️ ZURÜCK
+                <button type="button" class="btn btn-sm btn-outline-secondary" hx-get="{% url 'travel:event_type_picker' day.id %}" hx-target="#modal-container">
+                    <i class="bi bi-arrow-left me-1"></i>ZURÜCK
                 </button>
                 {% endif %}
-                <button type="submit" class="btn-primary" style="flex: 2; height: 36px; margin: 0; font-size: 0.9rem;">
-                    💾 {% trans "SAVE" %}
+                <button type="submit" class="btn btn-warning flex-grow-1">
+                    <i class="bi bi-save me-1"></i>{% trans "SAVE" %}
                 </button>
                 {% if form.instance.id %}
-                <button type="button" 
+                <button type="button" class="btn btn-sm btn-outline-danger"
                         hx-post="{% url 'travel:event_delete' form.instance.id %}"
                         hx-confirm="{% trans 'Event wirklich löschen?' %}"
                         hx-target="#trip-overview"
-                        hx-on::after-request="if(event.detail.successful) closeModal()"
-                        style="flex: 1; background: rgba(231, 76, 60, 0.1); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">
-                    🗑️
+                        hx-on::after-request="if(event.detail.successful) closeModal()">
+                    <i class="bi bi-trash"></i>
                 </button>
                 {% endif %}
             </div>

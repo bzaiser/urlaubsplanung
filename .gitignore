@@ -9,3 +9,8 @@ staticfiles/
 ~$*
 .venv/
 venv/
+# Office Documents
+*.doc
+*.docx
+*.xls
+*.xlsx

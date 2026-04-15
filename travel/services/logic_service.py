@@ -13,7 +13,23 @@ def check_trip_logic(trip):
     findings.extend(check_storno_deadlines(trip))
     findings.extend(check_time_anomalies(trip))
     findings.extend(check_checkout_links(trip))
+    findings.extend(check_checklist_deadlines(trip))
     
+    return findings
+
+def check_checklist_deadlines(trip):
+    findings = []
+    today = date.today()
+    
+    if hasattr(trip, 'checklist'):
+        overdue = trip.checklist.items.filter(is_checked=False, due_date__lt=today)
+        for item in overdue:
+            findings.append({
+                'id': 'CH_OVERDUE',
+                'level': 'warning',
+                'message': f"Checkliste: '{item.text}' ist seit {item.due_date.strftime('%d.%m.')} überfällig!",
+                'fix_type': 'VIEW_CHECKLIST'
+            })
     return findings
 
 def check_accommodation_gaps(trip):
@@ -22,16 +38,22 @@ def check_accommodation_gaps(trip):
     if not days:
         return []
 
+    covered_dates = set()
+    stay_types = ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']
+    
+    # Collect all covered dates
+    all_events = Event.objects.filter(day__trip=trip, type__in=stay_types)
+    for event in all_events:
+        # A stay covers the night if it's not a pure checkout
+        if not event.is_checkout:
+            duration = event.nights or 1
+            for i in range(duration):
+                covered_dates.add(event.day.date + timedelta(days=i))
+
     for day in days:
-        # A night is covered if there's a stay event (HOTEL, CAMPING, etc.)
-        # that is NOT a check-out only.
-        stays = day.events.filter(
-            type__in=['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']
-        ).exclude(title__icontains='check-out')
-        
-        if not stays.exists():
-            # Special case: check if it's the last day (last day usually doesn't need a stay)
-            if day.date != trip.end_date:
+        # The last day of the trip usually doesn't need a stay (Departure)
+        if day.date != trip.end_date:
+            if day.date not in covered_dates:
                 findings.append({
                     'id': 'AC_GAP',
                     'level': 'error',

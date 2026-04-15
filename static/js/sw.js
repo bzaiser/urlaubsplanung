@@ -1,11 +1,11 @@
-const CACHE_NAME = 'travel-hub-v1';
+const CACHE_NAME = 'travel-hub-v2';
 const ASSETS = [
-    '/',
-    '/static/css/base.css',
     '/static/img/icon-160.png',
 ];
 
 self.addEventListener('install', (event) => {
+    // Force activate immediately, don't wait
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS);
@@ -13,10 +13,26 @@ self.addEventListener('install', (event) => {
     );
 });
 
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request);
+self.addEventListener('activate', (event) => {
+    // Clean old caches
+    event.waitUntil(
+        caches.keys().then((keys) => {
+            return Promise.all(
+                keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+            );
         })
+    );
+});
+
+self.addEventListener('fetch', (event) => {
+    // Network-first: always try network, fall back to cache
+    event.respondWith(
+        fetch(event.request)
+            .then((response) => {
+                return response;
+            })
+            .catch(() => {
+                return caches.match(event.request);
+            })
     );
 });

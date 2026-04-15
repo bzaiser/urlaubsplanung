@@ -1,0 +1,116 @@
+{% load i18n %}{% load static %}
+
+<div class="mt-4 pb-5 timeline" 
+     hx-get="{% url 'travel:dashboard' %}?view=timeline" 
+     hx-trigger="diaryUpdated from:body, diaryUpdatedTimeline from:body" 
+     hx-target="this" 
+     hx-swap="outerHTML">
+    <div class="timeline-line"></div>
+    {% for station in active_trip.grouped_stations %}
+        <div class="position-relative {% if not forloop.first %}mt-5{% endif %}">
+            <div class="timeline-marker"></div>
+            
+            <!-- Station Header -->
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill shadow-sm">
+                    <i class="bi bi-geo-alt-fill me-1"></i>{{ station.location }}
+                </span>
+                <span class="badge bg-secondary bg-opacity-25 text-secondary rounded-pill">
+                    {{ station.days_count }} Tage • {{ station.nights_count }} Nächte
+                </span>
+            </div>
+
+            <div class="timeline-days">
+                {% for day in station.days %}
+                <div class="row g-3 mb-4 position-relative">
+                    <!-- Card 1: Main Day Card -->
+                    <div class="col-auto" id="day-main-{{ day.id }}">
+                        <div class="card bg-dark border-secondary h-100 main-day-card" 
+                             role="button"
+                             hx-get="{% url 'travel:edit_diary' day.id %}" 
+                             hx-target="#modal-container"
+                             hx-swap="innerHTML"
+                             style="z-index: 5;">
+                            
+                            {% if day.first_image_url %}
+                            <img src="{{ day.first_image_url }}" class="card-img-top shadow-sm" alt="{{ day.location }}" loading="lazy">
+                            {% endif %}
+                            
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold text-warning small">{{ day.date|date:"j. b D" }}</span>
+                                    <span class="text-secondary small text-uppercase">{{ day.location }}</span>
+                                </div>
+                                
+                                {% if day.diary_preview %}
+                                <p class="card-text text-light small mb-0 opacity-75">{{ day.diary_preview }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Event Details Card -->
+                    <div class="col-auto" id="day-events-{{ day.id }}">
+                        <div class="card bg-dark border-secondary h-100 event-details-card">
+                            <div class="card-header bg-transparent border-secondary py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-secondary x-small text-uppercase fw-bold">Tagesplan</span>
+                                        <span class="badge bg-secondary bg-opacity-25 text-warning">{{ day.events.count }}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button class="btn btn-xs btn-outline-warning rounded-circle p-0 d-flex align-items-center justify-content-center"
+                                                style="width: 24px; height: 24px;"
+                                                hx-get="{% url 'travel:edit_diary' day.id %}"
+                                                hx-target="#modal-container"
+                                                title="{% trans 'Tagebuch' %}">
+                                            <i class="bi bi-book"></i>
+                                        </button>
+                                        <button class="btn btn-xs btn-outline-warning rounded-circle p-0 d-flex align-items-center justify-content-center"
+                                                style="width: 24px; height: 24px;"
+                                                hx-get="{% url 'travel:event_type_picker' day.id %}"
+                                                hx-target="#modal-container"
+                                                title="{% trans 'Event hinzufügen' %}">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body p-0 overflow-auto" style="max-height: 250px;">
+                                <ul class="list-group list-group-flush">
+                                    {% for event in day.events.all %}
+                                    <li class="list-group-item bg-transparent border-secondary border-opacity-25 py-2 px-3 text-light" 
+                                        style="cursor: pointer;"
+                                        hx-get="{% url 'travel:event_edit' event.id %}"
+                                        hx-target="#modal-container">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-secondary small font-monospace" style="width: 45px;">
+                                                {% if event.time %}{{ event.time|time:"H:i" }}{% else %}--{% endif %}
+                                            </span>
+                                            <span class="small">
+                                                {% if event.type == 'FLIGHT' %}✈️{% elif event.type == 'HOTEL' %}🏨{% elif event.type == 'CAMPING' %}⛺{% elif event.type == 'PITCH' %}🚐📍{% elif event.type == 'CAMPER' %}🚐{% elif event.type == 'BUNGALOW' %}🏡{% elif event.type == 'CAR' %}🚗{% elif event.type == 'TRAIN' %}🚆{% elif event.type == 'BUS' %}🚌{% elif event.type == 'FERRY' %}⛴️{% elif event.type == 'RESTAURANT' %}🍽️{% elif event.type == 'ACTIVITY' %}🎒{% elif event.type == 'RENTAL_CAR' %}🔑{% elif event.type == 'METRO' %}🚇{% elif event.type == 'TRAM' %}🚋{% elif event.type == 'SCOOTER' %}🛵{% elif event.type == 'TAXI' %}🚕{% elif event.type == 'BOAT' %}🛥️{% elif event.type == 'FOOD' %}🍕{% elif event.type == 'FEE' %}🎟️{% elif event.type == 'RENTAL' %}🛴{% else %}🔹{% endif %}
+                                            </span>
+                                            <span class="small text-truncate flex-grow-1" title="{{ event.title }}">{{ event.title }}</span>
+                                        </div>
+                                    </li>
+                                    {% empty %}
+                                    <li class="list-group-item bg-transparent text-secondary p-3 small text-center italic">
+                                        Keine Events
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="card-footer bg-transparent border-top border-secondary p-2 mt-auto">
+                                <div class="d-flex justify-content-between text-secondary small opacity-75 px-1">
+                                    <span><i class="bi bi-map me-1"></i>{{ day.total_distance|floatformat:0 }} km</span>
+                                    <span><i class="bi bi-cash-stack me-1"></i>{{ day.total_cost|floatformat:2 }}€</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+</div>

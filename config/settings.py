@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     # Third party
     'django_htmx',
     'pwa',
+    'crispy_forms',
+    'crispy_bootstrap5',
     
     # Apps
     'core',
@@ -117,4 +119,8 @@ PWA_SERVICE_WORKER_PATH = os.path.join(BASE_DIR, 'static/js/sw.js')
 
 # Form limits for large matrix
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
+
+# Crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 

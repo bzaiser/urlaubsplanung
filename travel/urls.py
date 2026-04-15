@@ -8,9 +8,12 @@ from .views import (
     event_bulk_delete, event_bulk_move,
     settings_modal, ai_wizard, template_create,
     template_edit, template_delete,
-    trip_logic_check, global_expense_create, global_expense_edit, global_expense_delete,
     add_adjustment_food, expense_upload_voucher, export_trip_ics,
-    event_type_picker
+    event_type_picker, edit_diary, delete_diary_image, set_diary_image_primary,
+    trip_logic_check, global_expense_create, global_expense_edit,
+    global_expense_delete, trip_checklist, checklist_item_toggle,
+    checklist_item_delete, checklist_apply_template, checklist_item_add,
+    checklist_print
 )
 
 app_name = 'travel'
@@ -47,4 +50,18 @@ urlpatterns = [
     path('expense/<int:pk>/edit/', global_expense_edit, name='global_expense_edit'),
     path('expense/<int:pk>/delete/', global_expense_delete, name='global_expense_delete'),
     path('trip/<int:trip_id>/add-food-adjustment/', add_adjustment_food, name='add_adjustment_food'),
-    path('trip/<int:pk>/export-ics/', export_trip_ics, name='export_trip_ics'),]
+    path('trip/<int:pk>/export-ics/', export_trip_ics, name='export_trip_ics'),
+    
+    # Diary & Gallery
+    path('day/<int:day_id>/diary/', edit_diary, name='edit_diary'),
+    path('diary-image/<int:image_id>/delete/', delete_diary_image, name='delete_diary_image'),
+    path('diary-image/<int:image_id>/set-primary/', set_diary_image_primary, name='set_diary_image_primary'),
+    
+    # Checklists
+    path('trip/<int:trip_id>/checklist/', trip_checklist, name='trip_checklist'),
+    path('checklist/item/<int:item_id>/toggle/', checklist_item_toggle, name='checklist_item_toggle'),
+    path('checklist/item/<int:item_id>/delete/', checklist_item_delete, name='checklist_item_delete'),
+    path('trip/<int:trip_id>/checklist/apply-template/', checklist_apply_template, name='checklist_apply_template'),
+    path('trip/<int:trip_id>/checklist/add-item/', checklist_item_add, name='checklist_item_add'),
+    path('trip/<int:trip_id>/checklist/print/', checklist_print, name='checklist_print'),
+]

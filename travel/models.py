@@ -1,5 +1,9 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+import json
+import os
+from PIL import Image
+from PIL.ExifTags import TAGS
 
 class Trip(models.Model):
     name = models.CharField(_("Name"), max_length=200)
@@ -72,6 +76,37 @@ class Day(models.Model):
     def transport(self):
         return self.events.filter(type='TRANSPORT').first()
 
+    @property
+    def first_image_url(self):
+        """Returns the URL of the primary diary image or the first one as fallback."""
+        if hasattr(self, 'diary'):
+            primary = self.diary.images.filter(is_primary=True).first()
+            if primary:
+                return primary.image.url
+            
+            first = self.diary.images.first()
+            if first:
+                return first.image.url
+        return None
+
+    @property
+    def diary_preview(self):
+        """Returns a snippet of the diary text."""
+        if hasattr(self, 'diary') and self.diary.text:
+            text = self.diary.text
+            return (text[:150] + '...') if len(text) > 150 else text
+        return None
+
+    @property
+    def total_cost(self):
+        """Returns the total cost of all events on this day (booked or estimated fallback)."""
+        return sum((e.cost_booked if e.cost_booked > 0 else e.cost_estimated) for e in self.events.all())
+
+    @property
+    def total_distance(self):
+        """Returns the total distance of all events on this day."""
+        return sum(e.distance_km or 0 for e in self.events.all())
+
 class Event(models.Model):
     TYPE_CHOICES = [
         ('NONE', _('---')),
@@ -87,7 +122,9 @@ class Event(models.Model):
         ('FERRY', _('⛴️ Fähre')),
         ('TAXI', _('🚕 Taxi')),
         ('BUS', _('🚌 Bus')),
-        ('TRAIN', _('🚆 Zug / Bus')),
+        ('TRAIN', _('🚆 Zug / Bahn')),
+        ('METRO', _('🚇 Metro / U-Bahn')),
+        ('TRAM', _('🚋 Straßenbahn / Tram')),
         ('RENTAL_CAR', _('🔑🚗 Mietwagen')),
         ('ACTIVITY', _('🎒 Aktivität')),
         ('RESTAURANT', _('🍽️ Essen')),
@@ -160,8 +197,12 @@ class Event(models.Model):
     def is_checkin(self):
         """Identifies if this event is a check-in or pick-up (Abholung)."""
         stay_types = ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']
-        if self.type in stay_types and ('check-in' in self.title.lower() or 'ankunft' in self.title.lower()):
+        if self.type in stay_types:
+            # If it's a stay type, it's a check-in UNLESS it's explicitly a check-out
+            if self.is_checkout:
+                return False
             return True
+            
         if self.type == 'RENTAL_CAR' and ('abholung' in self.title.lower() or 'start' in self.title.lower() or 'mietbeginn' in self.title.lower() or 'übernahme' in self.title.lower()):
             return True
         # If type is RENTAL_CAR and it's a new entry without a specific 'drop-off' keyword
@@ -177,72 +218,87 @@ class Event(models.Model):
 
     def save(self, *args, **kwargs):
         """Overridden save to handle automatic Check-out creation/update."""
+        # Recursion Guard
+        if getattr(self, '_saving_internal', False):
+            return super().save(*args, **kwargs)
+
         # Auto-complete/Format titles for better logic recognition
         if self.type == 'RENTAL_CAR':
             if not self.title:
                 self.title = "Abholen: Mietwagen"
-            elif not self.title.startswith('Abholen:'):
+            elif not self.title.startswith('Abholen:') and not self.is_checkout:
                 self.title = f"Abholen: {self.title}"
         elif self.type in ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW'] and not self.title:
             self.title = f"{self.get_type_display()} Check-in"
         
-        # Save naturally first so we have an ID for relations
-        is_new = self.pk is None
+        # Initial save
         super().save(*args, **kwargs)
+
+        # Skip automated logic if specifically updating only certain fields (internal updates)
+        update_fields = kwargs.get('update_fields')
+        if update_fields and 'linked_checkout' in update_fields and len(update_fields) == 1:
+            return
 
         # Automatic Checkout Logic
         if self.is_checkin and self.nights and self.nights > 0:
-            from datetime import timedelta
-            checkout_date = self.day.date + timedelta(days=self.nights)
-            
-            # Find the Day object for the checkout
-            from .models import Day
-            checkout_day, _ = Day.objects.get_or_create(
-                trip=self.day.trip, 
-                date=checkout_date,
-                defaults={'location': self.day.location}
-            )
-
-            if self.type == 'RENTAL_CAR':
-                checkout_title = self.title.replace('Abholen:', 'Abgeben:')
-                default_time = "10:00"
-            else:
-                checkout_title = self.title.lower().replace('check-in', 'Check-out').title()
-                default_time = self.end_time or "11:00"
-            
-            if not self.linked_checkout:
-                # Create new checkout
-                checkout = Event.objects.create(
-                    day=checkout_day,
-                    title=checkout_title,
-                    type=self.type,
-                    time=default_time,
-                    location=self.location,
-                    cost_booked=0,
-                    cost_estimated=0,
-                    notes=f"Automatisch generiert von: {self.title}"
+            self._saving_internal = True
+            try:
+                from datetime import timedelta
+                checkout_date = self.day.date + timedelta(days=self.nights)
+                
+                from .models import Day
+                checkout_day, _ = Day.objects.get_or_create(
+                    trip=self.day.trip, 
+                    date=checkout_date,
+                    defaults={'location': self.day.location}
                 )
-                self.linked_checkout = checkout
-                # Save self again to store the link (prevent recursion with a flag)
-                self.save(update_fields=['linked_checkout'])
-            else:
-                # Update existing checkout
-                checkout = self.linked_checkout
-                checkout.day = checkout_day
-                checkout.title = checkout_title
-                checkout.type = self.type
-                checkout.location = self.location
-                # Clear costs on checkout to avoid double counting
-                checkout.cost_booked = 0
-                checkout.cost_estimated = 0
-                checkout.save()
+
+                if self.type == 'RENTAL_CAR':
+                    checkout_title = self.title.replace('Abholen:', 'Abgeben:')
+                    if 'Abgeben' not in checkout_title:
+                        checkout_title = f"Abgeben: {checkout_title}"
+                    default_time = "10:00"
+                else:
+                    checkout_title = self.title.lower().replace('check-in', 'Check-out').title()
+                    default_time = self.end_time or "11:00"
+                
+                if not self.linked_checkout:
+                    # Create new checkout
+                    checkout = Event.objects.create(
+                        day=checkout_day,
+                        title=checkout_title,
+                        type=self.type,
+                        time=default_time,
+                        location=self.location,
+                        cost_booked=0,
+                        cost_estimated=0,
+                        notes=f"Automatisch generiert von: {self.title}"
+                    )
+                    self.linked_checkout = checkout
+                    self.save(update_fields=['linked_checkout'])
+                else:
+                    # Update existing checkout
+                    checkout = self.linked_checkout
+                    checkout.day = checkout_day
+                    checkout.title = checkout_title
+                    checkout.type = self.type
+                    checkout.location = self.location
+                    checkout.cost_booked = 0
+                    checkout.cost_estimated = 0
+                    checkout.save()
+            finally:
+                self._saving_internal = False
         
         elif self.linked_checkout and (not self.is_checkin or not self.nights or self.nights <= 0):
-            # Cleanup: Delete the checkout if it's no longer needed
-            checkout = self.linked_checkout
-            self.linked_checkout = None
-            self.save(update_fields=['linked_checkout'])
-            checkout.delete()
+            self._saving_internal = True
+            try:
+                # Cleanup: Delete the checkout if it's no longer needed
+                checkout = self.linked_checkout
+                self.linked_checkout = None
+                self.save(update_fields=['linked_checkout'])
+                checkout.delete()
+            finally:
+                self._saving_internal = False
 
     def delete(self, *args, **kwargs):
         """Ensure linked events are also deleted (Cascading)."""
@@ -282,7 +338,31 @@ class DiaryImage(models.Model):
     diary_entry = models.ForeignKey(DiaryEntry, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to="diary/")
     caption = models.CharField(max_length=200, blank=True)
-    
+    is_primary = models.BooleanField(default=False)
+
+    @property
+    def exif_data(self):
+        """Extracts basic EXIF data from the image file."""
+        try:
+            with Image.open(self.image.path) as img:
+                info = img._getexif()
+                if not info:
+                    return None
+                
+                exif = {}
+                for tag, value in info.items():
+                    decoded = TAGS.get(tag, tag)
+                    exif[decoded] = value
+                
+                return {
+                    'date': exif.get('DateTimeOriginal') or exif.get('DateTime'),
+                    'model': exif.get('Model'),
+                    'width': exif.get('ExifImageWidth') or img.width,
+                    'height': exif.get('ExifImageHeight') or img.height,
+                }
+        except Exception:
+            return None
+
     class Meta:
         verbose_name = _("Tagebuch Bild")
         verbose_name_plural = _("Tagebuch Bilder")
@@ -350,3 +430,58 @@ class GlobalExpense(models.Model):
     def __str__(self):
         return f"{self.get_expense_type_display()}: {self.title}"
 
+
+class ChecklistCategory(models.Model):
+    name = models.CharField(_("Kategorie"), max_length=50)
+    icon = models.CharField(_("Icon (Bootstrap)"), max_length=50, default="bi-list-check")
+    order = models.PositiveIntegerField(default=10)
+
+    class Meta:
+        verbose_name = _("Checklisten-Kategorie")
+        verbose_name_plural = _("Checklisten-Kategorien")
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+class ChecklistTemplate(models.Model):
+    name = models.CharField(_("Vorlagen-Name"), max_length=100)
+    description = models.TextField(_("Beschreibung"), blank=True)
+
+    class Meta:
+        verbose_name = _("Checklisten-Vorlage")
+        verbose_name_plural = _("Checklisten-Vorlagen")
+
+    def __str__(self):
+        return self.name
+
+class ChecklistItemTemplate(models.Model):
+    template = models.ForeignKey(ChecklistTemplate, on_delete=models.CASCADE, related_name="items")
+    category = models.ForeignKey(ChecklistCategory, on_delete=models.SET_NULL, null=True, related_name="template_items")
+    text = models.CharField(_("Eintrag"), max_length=200)
+    due_days_before = models.IntegerField(_("Tage vor Abreise"), default=0)
+
+    class Meta:
+        verbose_name = _("Checklisten-Eintrag (Vorlage)")
+        verbose_name_plural = _("Checklisten-Einträge (Vorlage)")
+
+class TripChecklist(models.Model):
+    trip = models.OneToOneField(Trip, on_delete=models.CASCADE, related_name="checklist")
+    template = models.ForeignKey(ChecklistTemplate, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        verbose_name = _("Reise-Checkliste")
+        verbose_name_plural = _("Reise-Checklisten")
+
+class TripChecklistItem(models.Model):
+    checklist = models.ForeignKey(TripChecklist, on_delete=models.CASCADE, related_name="items")
+    category = models.ForeignKey(ChecklistCategory, on_delete=models.SET_NULL, null=True, related_name="trip_items")
+    text = models.CharField(_("Eintrag"), max_length=200)
+    is_checked = models.BooleanField(default=False)
+    due_date = models.DateField(_("Fällig am"), null=True, blank=True)
+    is_template_item = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = _("Reise-Checklisten-Eintrag")
+        verbose_name_plural = _("Reise-Checklisten-Einträge")
+        ordering = ['is_checked', 'category', 'id']

@@ -55,22 +55,23 @@
     }
 
     .btn-grid-add {
-        background: rgba(26, 188, 156, 0.15) !important;
-        border: 1px solid #1abc9c !important;
+        border-radius: var(--btn-radius);
+        background: rgba(26, 188, 156, 0.05) !important;
+        border: 1px solid rgba(26, 188, 156, 0.4) !important;
         color: #1abc9c !important;
-        font-weight: 700 !important;
-        text-shadow: 0 0 10px rgba(26, 188, 156, 0.3);
-        border-radius: 4px;
-        padding: 1px 8px;
-        font-size: 11px;
-        font-weight: 600;
+        padding: 2px 12px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: var(--transition);
         margin-right: 15px;
     }
     .btn-grid-add:hover {
-        background: var(--text-secondary) !important;
-        color: #000 !important;
+        background: #1abc9c !important;
+        color: #fff !important;
+        box-shadow: 0 0 15px rgba(26, 188, 156, 0.3);
     }
 
 
@@ -303,16 +304,17 @@
                         'NONE': '➖', 'FLIGHT': '✈️', 'HOTEL': '🏨', 'CAMPING': '⛺',
                         'PITCH': '🚐📍', 'BUNGALOW': '🏡', 'CAMPER': '🚐',
                         'CAR': '🚗', 'RENTAL_CAR': '🔑🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
-                        'TAXI': '🚕', 'BUS': '🚌',
-                        'TRAIN': '🚆🚌', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓',
+                        'TRAIN': '🚆', 'METRO': '🚇', 'TRAM': '🚋', 'TAXI': '🚕', 'BUS': '🚌',
+                        'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓',
                         'FOOD': '🍕', 'FEE': '🎟️', 'RENTAL': '🛴'
                     };
                     const labels = {
                         'NONE': '---', 'FLIGHT': 'Flug', 'HOTEL': 'Hotel', 'CAMPING': 'Camping',
                         'PITCH': 'Stellplatz', 'BUNGALOW': 'Bungalow', 'CAMPER': 'Wohnmobil',
                         'CAR': 'Auto', 'RENTAL_CAR': 'Mietwagen', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
+                        'TRAIN': 'Zug / Bahn', 'METRO': 'Metro / U-Bahn', 'TRAM': 'Tram / S-Bahn',
                         'TAXI': 'Taxi', 'BUS': 'Bus',
-                        'TRAIN': 'Zug / Bus', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges',
+                        'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges',
                         'FOOD': 'Verpflegung', 'FEE': 'Gebühr', 'RENTAL': 'Miete'
                     };
                     
@@ -381,16 +383,17 @@
                                 'NONE': '➖', 'FLIGHT': '✈️', 'HOTEL': '🏨', 'CAMPING': '⛺',
                                 'PITCH': '🚐📍', 'BUNGALOW': '🏡', 'CAMPER': '🚐',
                                 'CAR': '🚗', 'RENTAL_CAR': '🔑🚗', 'SCOOTER': '🛵', 'BOAT': '🛥️', 'FERRY': '⛴️',
-                                'TAXI': '🚕', 'BUS': '🚌',
-                                'TRAIN': '🚆🚌', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓',
+                                'TRAIN': '🚆', 'METRO': '🚇', 'TRAM': '🚋', 'TAXI': '🚕', 'BUS': '🚌',
+                                'ACTIVITY': '🎒', 'RESTAURANT': '🍽️', 'OTHER': '❓',
                                 'FOOD': '🍕', 'FEE': '🎟️', 'RENTAL': '🛴'
                             };
                             const labels = {
                                 'NONE': '---', 'FLIGHT': 'Flug', 'HOTEL': 'Hotel', 'CAMPING': 'Camping',
                                 'PITCH': 'Stellplatz', 'BUNGALOW': 'Bungalow', 'CAMPER': 'Wohnmobil',
                                 'CAR': 'Auto', 'RENTAL_CAR': 'Mietwagen', 'SCOOTER': 'Roller', 'BOAT': 'Boot', 'FERRY': 'Fähre',
+                                'TRAIN': 'Zug / Bahn', 'METRO': 'Metro / U-Bahn', 'TRAM': 'Tram / S-Bahn',
                                 'TAXI': 'Taxi', 'BUS': 'Bus',
-                                'TRAIN': 'Zug / Bus', 'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges',
+                                'ACTIVITY': 'Aktivität', 'RESTAURANT': 'Essen', 'OTHER': 'Sonstiges',
                                 'FOOD': 'Verpflegung', 'FEE': 'Gebühr', 'RENTAL': 'Miete'
                             };
                             if (!p.value || p.value === 'NONE') return '';
@@ -401,8 +404,13 @@
                         headerName: 'Info', 
                         field: 'title', 
                         width: 220, // Slightly wider for badges
+                        colSpan: params => {
+                            if (params.data && params.data.is_global_expense) return 5;
+                            return 1;
+                        },
                         autoHeight: true,
                         wrapText: true,
+                        tooltipField: 'notes',
                         headerTooltip: 'Titel & Status (Storno/Zahlung)',
                         cellStyle: { 'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'padding-top': '4px', 'padding-bottom': '4px' },
                         cellRenderer: p => {
@@ -525,14 +533,18 @@
                     fullWidthCellRenderer: (params) => {
                         const d = params.data;
                         if (d.station_key === 'global') {
-                            return `<div class="station-header-grid" 
-                                         style="padding: 0 15px; background: rgba(197, 160, 89, 0.1); border-left: 4px solid var(--accent-gold); color: var(--accent-gold); font-weight: 700; height: 100%; display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem;">
-                                <span>📦 PAUSCHALE POSTEN / BUDGET</span>
-                                <button onclick="htmx.ajax('GET', '/trip/{{ active_trip.id }}/expense/new/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add" style="border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(197, 160, 89, 0.1);">➕ BUDGET</button>
+                            const isCollapsed = window.collapsedStations.has('global');
+                            return `<div class="station-header-grid ${isCollapsed ? 'collapsed' : ''}" 
+                                         onclick="window.toggleStation('global')"
+                                         style="padding: 0 15px; background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal); font-weight: 600; height: 100%; display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem;">
+                                <div class="d-flex align-items-center">
+                                    <span class="caret-icon">▼</span>
+                                    <span>📦 Pauschale Posten / Budget</span>
+                                </div>
+                                <button onclick="event.stopPropagation(); htmx.ajax('GET', '/trip/{{ active_trip.id }}/expense/new/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add">➕ BUDGET</button>
                             </div>`;
                         } else if (d.is_station_header) {
                             const isCollapsed = window.collapsedStations.has(d.station_key);
-                            const icon = isCollapsed ? '▼' : '▼'; // We rotate the same icon with CSS
                             return `<div class="station-header-grid ${isCollapsed ? 'collapsed' : ''}" 
                                          onclick="window.toggleStation('${d.station_key}')"
                                          style="padding: 0 15px; background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal); font-weight: 600; height: 100%; display: flex; align-items: center; font-size: 0.95rem;">
@@ -542,7 +554,7 @@
                         } else if (d.is_day_header) {
                             const isSelected = params.node.isSelected();
                             
-                            return `<div class="day-header-grid" style="padding: 0; background: rgba(255, 255, 255, 0.12); border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); height: 100%; display: flex; align-items: center; justify-content: space-between;">
+                            return `<div class="day-header-grid" style="padding: 0; background: rgba(255, 255, 255, 0.12); border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
                                 <div style="display: flex; align-items: center; height: 100%;">
                                     <div style="width: 40px; display: flex; justify-content: center; align-items: center;">
                                         <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="window.agGridApi.getRowNode('${d.id}').setSelected(this.checked)">
@@ -552,7 +564,12 @@
                                         <span style="font-size: 0.8rem; opacity: 0.6; margin-left: 10px; width: 40px;">${d.day_name}</span>
                                     </div>
                                 </div>
-                                <button onclick="htmx.ajax('GET', '/day/${d.day_id}/event/type-picker/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add">➕ EINTRAG</button>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button onclick="htmx.ajax('GET', '/day/${d.day_id}/diary/', { target: '#modal-container', swap: 'innerHTML' })" 
+                                            class="btn-diary">📖 TAGEBUCH</button>
+                                    <button onclick="htmx.ajax('GET', '/day/${d.day_id}/event/type-picker/', { target: '#modal-container', swap: 'innerHTML' })" 
+                                            class="btn-grid-add">➕ EINTRAG</button>
+                                </div>
                             </div>`;
                         }
                     },

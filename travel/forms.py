@@ -1,5 +1,6 @@
 from django import forms
-from .models import Trip, Event, Day
+from .models import Trip, Event, Day, DiaryEntry, DiaryImage
+from django.forms import inlineformset_factory
 
 class TripForm(forms.ModelForm):
     name = forms.CharField(initial="Neue Leere Reise", label="Name")
@@ -22,3 +23,28 @@ class EventForm(forms.ModelForm):
             'end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'flatpickr-time'}),
         }
 
+
+class DiaryEntryForm(forms.ModelForm):
+    class Meta:
+        model = DiaryEntry
+        fields = ['text']
+        widgets = {
+            'text': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 5, 
+                'placeholder': 'Was hast du heute erlebt?'
+            }),
+        }
+
+class DiaryImageForm(forms.ModelForm):
+    class Meta:
+        model = DiaryImage
+        fields = ['image', 'caption']
+
+DiaryImageFormSet = inlineformset_factory(
+    DiaryEntry, 
+    DiaryImage, 
+    form=DiaryImageForm,
+    extra=1, 
+    can_delete=True
+)

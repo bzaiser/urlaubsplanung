@@ -4,7 +4,6 @@ import time
 import logging
 import re
 import os
-import google.generativeai as genai
 from json_repair import repair_json as pro_repair
 from ..models import GlobalSetting
 
@@ -63,8 +62,13 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "REGELN:\n"
         "1. SPRACHE: Alles auf DEUTSCH.\n"
         "2. KONKRET: Nenne echte Sehenswürdigkeiten, Hotels und Restaurants. Keine Platzhalter!\n"
-        "3. DAUER: Erzeuge EXAKT " + str(days) + " Tage. Ignoriere abweichende Zeitangaben in der Vorlage! Kein Abkürzen!\n"
-        "4. FLEXIBILITÄT: Du darfst das Startdatum um +-4 Tage und die Dauer um +-3 Tage variieren, um bessere Flüge/Preise zu finden.\n"
+        "3. DAUER & TERMINE: Erzeuge EXAKT " + str(days) + " Tage. " + ("Halte dich STRIKT an das Startdatum (" + str(start_date) + ")." if int(days) < 7 else "Das Startdatum ist " + str(start_date) + ".") + "\n"
+    )
+    
+    if int(days) >= 7:
+        system_text += "4. FLEXIBILITÄT: Du darfst das Startdatum um +-4 Tage und die Dauer um +-3 Tage variieren, um bessere Flüge/Preise zu finden.\n"
+    
+    system_text += (
         "5. SICHERHEIT: Bei Flügen KEINE Zwischenlandungen in Krisengebieten!\n"
         "6. LOGISTIK: Berücksichtige den Startort " + start_location + ". Wenn Flüge nötig sind, plane den Weg zum Flughafen ein.\n"
         "7. FAHRZEUGE: Nutze ein " + v1_name + " (Reichweite " + v1_range + "km) NUR, wenn die Reise explizit als Wohnmobil-Tour bezeichnet wird oder das Ziel dafür bekannt ist (z.B. Neuseeland, Island, Roadtrip). In allen anderen Fällen (wie Strand-Bungalow-Urlaub) nutze " + v2_name + ", Roller (SCOOTER), TAXI oder Fähre für Teilstrecken.\n"
@@ -78,16 +82,32 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "16. UNTERKÜNFTE: Gruppiere ALLE festen Unterkünfte (Hotel, Bungalow, Airbnb, Ferienhaus) als 'HOTEL'. Nutze 'CAMPING' (Campingplatz) oder 'PITCH' (Stellplatz/Freies Stehen) NUR bei Wohnmobil-Touren.\n"
         "17. VERPFLEGUNG: Wenn Verpflegungswünsche (Selbstkochen vs. Restaurant) vorhanden sind, berechne KEINE Euro-Beträge. Gib stattdessen ein Objekt 'food_preferences' mit den Feldern 'cooking_ratio' (0.0-1.0), 'dining_out_ratio' (0.0-1.0) und 'price_level' ('low', 'med', 'high') aus.\n"
         "18. GLOBAL_EXPENSES: Erfasse NUR zusätzliche Gebühren wie 'Maut', 'Vignette' oder 'Fähre-Pauschale' in der Liste 'global_expenses'. (KEINE Verpflegung hier eintragen!).\n"
+        "20. REISEGRUPPE: Berücksichtige bei der Planung (Zimmerwahl, Restaurants, Aktivitäten) die Anzahl und das Alter der Personen.\n"
+        "21. UNTERKUNFT-DAUER: Gib bei JEDEM Check-in (HOTEL, CAMPING, PITCH) das Feld 'nights' (Anzahl der Nächte) an. Die Summe der Nächte muss die gesamte Reisedauer abdecken.\n"
+        "22. TRANSPORT-TYPEN: Nutze für die Klassifizierung (Feld 'type') folgende Tabelle für lokale Begriffe:\n"
+        "Land | ZUG (TRAIN) | METRO (METRO) | STRASSENBAHN (TRAM)\n"
+        "DE | Zug, Bahn | U-Bahn | Straßenbahn, Tram\n"
+        "FR/BE | Train | Métro | Tramway\n"
+        "IT | Treno | Metropolitana | Tram\n"
+        "ES/PT | Tren/Comboio | Metro | Tranvía/Eléctrico\n"
+        "UK | Train | Underground/Tube | Tram\n\n"
         "19. FORMAT (AM ENDE DER ANTWORT ALS JSON):\n"
         "{\n"
         "  \"name\": \"Reise-Titel\",\n"
         "  \"assistant_reasoning\": \"...\",\n"
-        "  \"days\": [...],\n"
+        "  \"days\": [\n"
+        "    {\n"
+        "       \"location\": \"Ort\",\n"
+        "       \"events\": [\n"
+        "         {\"title\": \"Check-in: Hotel Name\", \"type\": \"HOTEL\", \"nights\": 2, \"cost\": 180, \"time\": \"14:00\", \"end_time\": \"15:00\", \"booking_url\": \"...\", \"notes\": \"...\"}\n"
+        "       ]\n"
+        "    }\n"
+        "  ],\n"
         "  \"food_preferences\": {\"cooking_ratio\": 0.5, \"dining_out_ratio\": 0.5, \"price_level\": \"med\"},\n"
         "  \"global_expenses\": [{\"title\": \"Maut\", \"type\": \"FEE\", \"cost\": 15}]\n"
         "}"
     )
-    user_text = f"Sonderwünsche/Ziel: {preferences}. Starttermin: {start_date}. Dauer: {days} Tage."
+    user_text = f"Sonderwünsche/Ziel: {preferences}. Starttermin: {start_date}. Dauer: {days} Tage. Personen: {persons_count} (Alter: {persons_ages})."
     
     return f"{system_text}\n\n{user_text}"
 
@@ -197,8 +217,39 @@ def normalize_itinerary(data):
                         event['location'] = event.get('city', event.get('place', event.get('destination', event.get('ort', day['location']))))
 
                     # Map synonyms for 'cost_estimated'
-                    if 'cost_estimated' not in event:
-                        event['cost_estimated'] = event.get('cost', event.get('price', event.get('eur', 0)))
+                    if 'cost_estimated' not in event or not event['cost_estimated']:
+                        # Try direct keys
+                        cost_val = event.get('cost', event.get('price', event.get('eur', event.get('price_per_night', event.get('rate', 0)))))
+                        
+                        # New: Robust extraction from text (description/notes) if cost is missing
+                        if not cost_val:
+                            text_to_search = str(event.get('description', '')) + " " + str(event.get('notes', ''))
+                            # Search for patterns like "85 EUR", "85€", "Preis: 85", "Cost: 85"
+                            # We use a non-greedy search for the first number followed by currency or preceded by price keyword
+                            import re
+                            # Pattern: Look for "Preis/Cost/Price: XX" or "XX EUR/€"
+                            patterns = [
+                                r'(?:Preis|Cost|Price|rate|EUR|per night)[:\s]*([\d.,]+)',
+                                r'([\d.,]+)\s*(?:EUR|€|Euro)'
+                            ]
+                            for pattern in patterns:
+                                match = re.search(pattern, text_to_search, re.IGNORECASE)
+                                if match:
+                                    try:
+                                        raw_val = match.group(1).replace(',', '.')
+                                        cost_val = float(raw_val)
+                                        break
+                                    except: continue
+                        
+                        event['cost_estimated'] = cost_val
+
+                    # Map synonyms for 'notes'
+                    if 'notes' not in event or not event['notes']:
+                        event['notes'] = event.get('description', event.get('info', event.get('details', '')))
+
+                    # Map synonyms for 'booking_url'
+                    if 'booking_url' not in event or not event['booking_url']:
+                        event['booking_url'] = event.get('url', event.get('link', event.get('booking_link', '')))
 
                     # Map synonyms for 'end_time' and 'time'
                     if 'time' not in event or not event['time']:
@@ -218,11 +269,11 @@ def normalize_itinerary(data):
                     # 4. Map Event Types for Icons
                     etype_raw = str(event.get('type' or 'OTHER')).upper()
                     type_map = {
-                        'SIGHTSEEING': 'ACTIVITY', 'MUSEUM': 'ACTIVITY', 'WALK': 'ACTIVITY', 'TOUR': 'ACTIVITY',
+                        'SIGHTSEEING': 'ACTIVITY', 'MUSEUM': 'ACTIVITY', 'CULTURE': 'ACTIVITY', 'WALK': 'ACTIVITY', 'TOUR': 'ACTIVITY',
                         'FOOD': 'RESTAURANT', 'MEAL': 'RESTAURANT', 'DINNER': 'RESTAURANT', 'LUNCH': 'RESTAURANT', 'BREAKFAST': 'RESTAURANT',
                         'STAY': 'HOTEL', 'SLEEP': 'HOTEL', 'ACCOMMODATION': 'HOTEL', 'AIRBNB': 'HOTEL', 'FERIENHAUS': 'HOTEL', 'BUNGALOW': 'HOTEL',
                         'CAMPINGPLATZ': 'CAMPING', 'STELLPLATZ': 'PITCH', 'SOSTA': 'PITCH', 'AREA SOSTA': 'PITCH', 'CAMPER STOP': 'PITCH',
-                        'CAMPING SITE': 'CAMPING', 'HOLIDAY PARK': 'CAMPING', 'DRIVE': 'CAR', 'DRIVING': 'CAR', 'TRAVEL': 'CAR', 'TRANSPORT': 'CAR', 'PKW': 'CAR'
+                        'CAMPING SITE': 'CAMPING', 'HOLIDAY PARK': 'CAMPING', 'DRIVE': 'CAR', 'DRIVING': 'CAR', 'TRAVEL': 'CAR', 'TRANSPORT': 'OTHER', 'PKW': 'CAR'
                     }
                     
                     # Apply specific mapping
@@ -230,11 +281,58 @@ def normalize_itinerary(data):
                         event['type'] = type_map[etype_raw]
                     else:
                         # Only use the raw type if it's already one of our known base types
-                        allowed = ['FLIGHT', 'HOTEL', 'CAMPING', 'PITCH', 'CAMPER', 'CAR', 'SCOOTER', 'BOAT', 'FERRY', 'TAXI', 'BUS', 'TRAIN', 'ACTIVITY', 'RESTAURANT', 'OTHER', 'FOOD', 'FEE', 'RENTAL']
+                        allowed = ['FLIGHT', 'HOTEL', 'CAMPING', 'PITCH', 'CAMPER', 'CAR', 'SCOOTER', 'BOAT', 'FERRY', 'TAXI', 'BUS', 'TRAIN', 'METRO', 'TRAM', 'ACTIVITY', 'RESTAURANT', 'OTHER', 'FOOD', 'FEE', 'RENTAL', 'RENTAL_CAR', 'BUNGALOW']
                         if etype_raw not in allowed:
                             event['type'] = 'OTHER'
                         else:
                             event['type'] = etype_raw
+
+                    # New: Smart Keywords Check for Transport differentiation (International)
+                    title_search = (str(event.get('title', '')) + " " + str(event.get('notes', '')) + " " + str(event.get('description', ''))).lower()
+                    if event['type'] in ['CAR', 'OTHER', 'TRANSPORT', 'TRAIN', 'METRO', 'TRAM']:
+                        train_keywords = [
+                            'zug', 'bahn', 'train', 'treno', 'tren', 'comboio', 'trein', 'tog', 'tåg', 'juna', 
+                            'pociąg', 'vlak', 'vonat', 'thalis', 'sncf', 'ice', 'tgv', 'eurostar', 'rail', 'stazione',
+                            'pociag'
+                        ]
+                        metro_keywords = [
+                            'u-bahn', 'u‑bahn', 'metro', 'metropolitana', 'métro', 'tunnelbana', 't-bane', 't‑bane', 
+                            'underground', 'tube', 'metró', 'subway', 'υπογειος'
+                        ]
+                        tram_keywords = [
+                            'straßenbahn', 'tram', 'tramway', 'tranvía', 'tranvia', 'eléctrico', 'electrico', 
+                            'letbane', 'spårvagn', 'trikk', 'raitiovaunu', 'luas', 'tramwaj', 'tramvaj', 
+                            'električka', 'villamos', 'bim', 'letbane', 'spårvagn', 'trikk', 'villamos'
+                        ]
+                        bus_keywords = ['bus', 'shuttle', 'flixbus', 'autobus', 'autocar']
+                        car_keywords = ['pkw', 'auto', 'anfahrt', 'anreise', 'fahrt', 'drive', 'roadtrip', 'pkw-fahrt']
+                        
+                        if any(k in title_search for k in train_keywords):
+                            event['type'] = 'TRAIN'
+                        elif any(k in title_search for k in metro_keywords):
+                            event['type'] = 'METRO'
+                        elif any(k in title_search for k in tram_keywords):
+                            event['type'] = 'TRAM'
+                        elif any(k in title_search for k in bus_keywords):
+                            event['type'] = 'BUS'
+                        elif any(k in title_search for k in car_keywords):
+                            event['type'] = 'CAR'
+                        elif event['type'] == 'OTHER' and etype_raw == 'TRANSPORT':
+                            # Falling back to CAR for generic TRANSPORT if nothing else matches
+                            event['type'] = 'CAR'
+
+                    # 5. Smart Title & Nights for Stays (NEW)
+                    stay_types = ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']
+                    if event['type'] in stay_types:
+                        curr_title = event.get('title', '')
+                        curr_title_lower = curr_title.lower()
+                        # If no check-in/out marker, assume check-in
+                        if not any(k in curr_title_lower for k in ['check-in', 'check-out', 'ankunft', 'abreise', 'übernahme', 'rückgabe', 'abholung']):
+                            event['title'] = f"Check-in: {curr_title}"
+                        
+                        # Ensure nights is at least 1 for check-ins to trigger auto-checkout
+                        if 'check-in' in event['title'].lower() and (not event.get('nights') or event['nights'] == 0):
+                            event['nights'] = 1
 
                         # Pitch / Area Sosta signals (International)
                         pitch_keywords = [
@@ -360,6 +458,7 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
                 distance_km=dist_final,
                 nights=e_data.get('nights'),
                 notes=e_data.get('notes', ''),
+                booking_url=e_data.get('booking_url', ''),
                 booking_reference=e_data.get('booking_reference', ''),
                 detail_info=e_data.get('detail_info', e_data.get('flight_number', ''))
             )

@@ -1,11 +1,19 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.views.generic import ListView
 from django.http import HttpResponse, JsonResponse
 from datetime import date, timedelta
-from .models import Trip, Day, Event, TripTemplate, GlobalSetting, GlobalExpense
-from .forms import TripForm, EventForm
-from .services import ai_service, logic_service
+from .models import (
+    Trip, Day, Event, TripTemplate, GlobalSetting, GlobalExpense, 
+    DiaryEntry, DiaryImage, ChecklistCategory, ChecklistTemplate, 
+    TripChecklistItem, TripChecklist
+)
+from .forms import TripForm, EventForm, DiaryEntryForm, DiaryImageFormSet
+from django.template.defaultfilters import date as _date
+from django.db.models import Prefetch
+from django.core.serializers.json import DjangoJSONEncoder
 import json
+from .services import ai_service, logic_service, checklist_service
 
 def _generate_days(trip):
     """Utility to generate Day objects for the trip duration."""
@@ -22,8 +30,7 @@ def _generate_days(trip):
         )
         current_date += timedelta(days=1)
 
-import json
-from django.core.serializers.json import DjangoJSONEncoder
+
 
 
 def get_dashboard_context(request, active_trip=None):
@@ -36,9 +43,13 @@ def get_dashboard_context(request, active_trip=None):
     if not active_trip:
         trip_id = request.GET.get('trip_id') or request.session.get('active_trip_id')
         if trip_id:
-            active_trip = Trip.objects.filter(id=trip_id).first()
+            active_trip = Trip.objects.filter(id=trip_id).prefetch_related(
+                'days__diary__images', 'days__events'
+            ).first()
         else:
-            active_trip = Trip.objects.first()
+            active_trip = Trip.objects.prefetch_related(
+                'days__diary__images', 'days__events'
+            ).first()
             
     if active_trip:
         request.session['active_trip_id'] = active_trip.id
@@ -48,6 +59,19 @@ def get_dashboard_context(request, active_trip=None):
         'active_trip': active_trip,
         'trips': Trip.objects.all().order_by('name'),
     }
+    
+    # Checklist Context
+    if active_trip and view_type == 'checklist':
+        checklist, _ = TripChecklist.objects.get_or_create(trip=active_trip)
+        context['checklist'] = checklist
+        context['templates'] = ChecklistTemplate.objects.all()
+        context['categories'] = ChecklistCategory.objects.all().prefetch_related(
+            Prefetch('trip_items', 
+                     queryset=TripChecklistItem.objects.filter(checklist=checklist),
+                     to_attr='trip_items_list')
+        )
+        context['today'] = date.today()
+    
     
     # Prepare AG Grid Data
     if active_trip:
@@ -64,13 +88,14 @@ def get_dashboard_context(request, active_trip=None):
             })
             
             for day in station['days']:
-                events = day.events.all().order_by('time', 'id')
-                acc_events = events.filter(type__in=['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW'])
+                # Optimization: use Python sorting on prefetched queryset to avoid DB hits per day
+                events = sorted(day.events.all(), key=lambda x: (x.time or date.min, x.id))
+                acc_events = [e for e in events if e.type in ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']]
                 
                 acc_status = 'MISSING'
                 acc_name = ''
-                if acc_events.exists():
-                    main_acc = acc_events.first()
+                if acc_events:
+                    main_acc = acc_events[0]
                     acc_name = main_acc.title or 'Unterkunft'
                     acc_status = 'FIX' if main_acc.cost_booked > 0 else 'PLANNED'
                 
@@ -79,8 +104,8 @@ def get_dashboard_context(request, active_trip=None):
                     'day_id': day.id,
                     'is_day_header': True,
                     'station_key': station_key,
-                    'date_display': day.date.strftime('%d. %b'),
-                    'day_name': day.date.strftime('%a'),
+                    'date_display': _date(day.date, "j. b"),
+                    'day_name': _date(day.date, "D"),
                     'location': day.location,
                     'acc_status': acc_status,
                     'acc_name': acc_name,
@@ -112,6 +137,7 @@ def get_dashboard_context(request, active_trip=None):
                         'is_checkout': event.is_checkout,
                         'breakfast_included': event.breakfast_included,
                         'breakfast_cost': float(event.breakfast_cost),
+                        'notes': event.notes or '',
                     })
             
         # Add Global Expenses at the very end
@@ -129,6 +155,7 @@ def get_dashboard_context(request, active_trip=None):
             grid_data.append({
                 'id': f"global-{exp.id}",
                 'is_global_expense': True,
+                'station_key': 'global',
                 'type': exp.expense_type,
                 'title': exp.title,
                 'location': 'Reiseweit',
@@ -208,7 +235,9 @@ def trip_delete(request, pk):
             html += render(request, 'travel/partials/trip_switcher.html', context).content.decode('utf-8')
             return HttpResponse(html)
         return redirect('travel:dashboard')
-    return HttpResponse(status=405)
+    
+    # Return confirmation partial for GET
+    return render(request, 'travel/partials/trip_delete_confirm.html', {'trip': trip})
 
 # Event Management Views
 from .models import Event
@@ -836,9 +865,11 @@ def export_trip_ics(request, pk):
             
     lines.append('END:VCALENDAR')
     
+    from django.utils.text import slugify
+    filename = slugify(trip.name or f"trip_{trip.id}")
     ics_content = "\r\n".join(lines)
     response = HttpResponse(ics_content, content_type='text/calendar')
-    response['Content-Disposition'] = f'attachment; filename="trip_{trip.id}.ics"'
+    response['Content-Disposition'] = f'attachment; filename="{filename}.ics"'
     return response
 
 def expense_upload_voucher(request, pk):
@@ -864,3 +895,148 @@ def add_adjustment_food(request, trip_id):
             is_auto_calculated=True
         )
     return HttpResponse(headers={'HX-Refresh': 'true'})
+
+def edit_diary(request, day_id):
+    day = get_object_or_404(Day, id=day_id)
+    diary, created = DiaryEntry.objects.get_or_create(day=day)
+    
+    if request.method == 'POST':
+        form = DiaryEntryForm(request.POST, instance=diary)
+        formset = DiaryImageFormSet(request.POST, request.FILES, instance=diary)
+        
+        if form.is_valid():
+            form.save()
+            
+            # Handle multiple file uploads
+            files = request.FILES.getlist('images')
+            for f in files:
+                # Set as primary if no images exist yet
+                is_first = not diary.images.exists()
+                DiaryImage.objects.create(diary_entry=diary, image=f, is_primary=is_first)
+            
+            # Formset can still be used for caption updates of existing images
+            formset = DiaryImageFormSet(request.POST, request.FILES, instance=diary)
+            if formset.is_valid():
+                formset.save()
+            
+            # Trigger refresh in timeline
+            return HttpResponse(status=204, headers={'HX-Trigger': 'diaryUpdated'})
+            
+    else:
+        form = DiaryEntryForm(instance=diary)
+        formset = DiaryImageFormSet(instance=diary)
+        
+    context = {
+        'day': day,
+        'diary': diary,
+        'form': form,
+        'formset': formset,
+    }
+    return render(request, 'travel/partials/diary_modal.html', context)
+
+def delete_diary_image(request, image_id):
+    image = get_object_or_404(DiaryImage, id=image_id)
+    image.delete()
+    return HttpResponse("") 
+
+def set_diary_image_primary(request, image_id):
+    image = get_object_or_404(DiaryImage, id=image_id)
+    diary = image.diary_entry
+    
+    # Unset other primary images for this diary
+    diary.images.update(is_primary=False)
+    
+    # Set this one as primary
+    image.is_primary = True
+    image.save()
+    
+    # Trigger refresh in timeline only, NOT closing the modal
+    return HttpResponse(status=204, headers={'HX-Trigger': 'diaryUpdatedTimeline'})
+
+# --- Checklist Views ---
+
+def trip_checklist(request, trip_id):
+    """Main view for a trip's checklist, grouped by category."""
+    trip = get_object_or_404(Trip, pk=trip_id)
+    view_type = request.GET.get('view', 'checklist') # Ensure view persists
+    
+    # Ensure checklist exists
+    checklist, _ = TripChecklist.objects.get_or_create(trip=trip)
+    
+    # Items grouped by category
+    categories = ChecklistCategory.objects.all().prefetch_related(
+        Prefetch('trip_items', 
+                 queryset=TripChecklistItem.objects.filter(checklist=checklist),
+                 to_attr='trip_items_list')
+    )
+    
+    templates = ChecklistTemplate.objects.all()
+    
+    context = {
+        'trip': trip,
+        'checklist': checklist,
+        'categories': categories,
+        'templates': templates,
+        'view_type': 'checklist',
+        'today': date.today()
+    }
+    return render(request, 'travel/partials/trip_checklist.html', context)
+
+def checklist_item_toggle(request, item_id):
+    """HTMX view to toggle an item's completion status."""
+    item = get_object_or_404(TripChecklistItem, pk=item_id)
+    item.is_checked = not item.is_checked
+    item.save()
+    
+    # Return nothing or a small status indicator if needed
+    # But usually we re-render the checklist partial or just return 204
+    return HttpResponse(status=204)
+
+def checklist_apply_template(request, trip_id):
+    """Action view to apply a template to a trip's checklist."""
+    trip = get_object_or_404(Trip, pk=trip_id)
+    template_id = request.POST.get('template_id')
+    if template_id:
+        template = get_object_or_404(ChecklistTemplate, pk=template_id)
+        checklist_service.apply_template_to_trip(trip, template)
+    
+    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+
+def checklist_item_add(request, trip_id):
+    """HTMX Action to add a custom item."""
+    trip = get_object_or_404(Trip, pk=trip_id)
+    text = request.POST.get('text')
+    category_id = request.POST.get('category_id')
+    save_to_template = request.POST.get('save_to_template') == 'on'
+    
+    if text and category_id:
+        checklist_service.add_custom_item(trip, text, category_id, save_to_template)
+    
+    # Refresh the dashboard view
+    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+
+def checklist_item_delete(request, item_id):
+    """HTMX action to delete an item."""
+    item = get_object_or_404(TripChecklistItem, pk=item_id)
+    trip_id = item.checklist.trip_id
+    item.delete()
+    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+
+def checklist_print(request, trip_id):
+    """Print-friendly view of the trip checklist."""
+    trip = get_object_or_404(Trip, pk=trip_id)
+    checklist = getattr(trip, 'checklist', None)
+    
+    items_by_cat = {}
+    if checklist:
+        for item in checklist.items.all().order_by('category__order', 'text'):
+            cat_name = item.category.name if item.category else "Sonstiges"
+            if cat_name not in items_by_cat:
+                items_by_cat[cat_name] = []
+            items_by_cat[cat_name].append(item)
+            
+    return render(request, 'travel/checklist_print.html', {
+        'trip': trip,
+        'items_by_cat': items_by_cat
+    })
+

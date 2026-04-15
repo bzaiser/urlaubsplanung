@@ -1,0 +1,112 @@
+{% load i18n %}{% load static %}
+<div class="modal-dialog modal-lg">
+    <div class="modal-content bg-dark border">
+        <!-- Header -->
+        <div class="modal-header border-0 pb-3">
+            <div class="flex-grow-1">
+                <h5 class="modal-title text-warning mb-0">📖 {{ day.date|date:"d. M" }}</h5>
+                <small class="text-secondary">{{ day.location }}</small>
+            </div>
+            <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
+        </div>
+
+        <form hx-post="{% url 'travel:edit_diary' day.id %}" 
+              hx-encoding="multipart/form-data" 
+              hx-target="#modal-container" 
+              hx-swap="innerHTML"
+              id="diary-form">
+            {% csrf_token %}
+            
+            <div class="modal-body">
+                <!-- Text Area -->
+                <div class="mb-3">
+                    <label class="form-label small text-uppercase text-warning fw-bold">Meine Erlebnisse</label>
+                    <textarea name="text" class="form-control" rows="10" placeholder="Was hast du heute Schönes erlebt?">{{ form.text.value|default:"" }}</textarea>
+                </div>
+
+                <!-- Gallery Section -->
+                <div class="mb-3">
+                    <label class="form-label small text-uppercase text-warning fw-bold">📸 Fotos des Tages</label>
+                    <div class="row row-cols-2 row-cols-md-3 g-3 mb-3">
+                        {{ formset.management_form }}
+                        {% for f in formset %}
+                            {% if f.instance.id %}
+                            <div class="col" id="image-{{ f.instance.id }}">
+                                <div class="card bg-dark border-secondary h-100 overflow-hidden shadow-sm">
+                                    <div class="position-relative">
+                                        <img src="{{ f.instance.image.url }}" alt="{{ f.instance.caption }}" 
+                                             class="card-img-top object-fit-cover shadow-sm" style="aspect-ratio: 4/3; cursor: pointer;"
+                                             onclick="openLightbox('{{ f.instance.image.url }}', '{{ f.instance.caption|escapejs }}')">
+                                        
+                                        <!-- Primary Star -->
+                                        <div class="position-absolute top-0 start-0 m-1">
+                                            <button type="button" 
+                                                    hx-post="{% url 'travel:set_diary_image_primary' f.instance.id %}"
+                                                    hx-target="#modal-container"
+                                                    hx-swap="innerHTML"
+                                                    class="btn btn-sm {% if f.instance.is_primary %}btn-warning{% else %}btn-dark bg-opacity-75 text-warning{% endif %} rounded-pill p-1 d-flex align-items-center justify-content-center"
+                                                    style="width: 24px; height: 24px;"
+                                                    title="Als Hauptbild setzen">
+                                                <i class="bi {% if f.instance.is_primary %}bi-star-fill{% else %}bi-star{% endif %} small"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- EXIF Info Badge -->
+                                        {% if f.instance.exif_data %}
+                                        <div class="position-absolute bottom-0 start-0 m-1">
+                                            <span class="badge bg-dark bg-opacity-75 border border-secondary text-white x-small" 
+                                                  title="Aufnahme: {{ f.instance.exif_data.date|default:'unbekannt' }}&#10;Kamera: {{ f.instance.exif_data.model|default:'unbekannt' }}&#10;Größe: {{ f.instance.exif_data.width }}x{{ f.instance.exif_data.height }}">
+                                                <i class="bi bi-info-circle me-1"></i>INFO
+                                            </span>
+                                        </div>
+                                        {% endif %}
+
+                                        <!-- Delete Button -->
+                                        <button type="button" 
+                                                hx-post="{% url 'travel:delete_diary_image' f.instance.id %}" 
+                                                hx-target="#image-{{ f.instance.id }}" 
+                                                hx-swap="outerHTML"
+                                                hx-confirm="Bild wirklich löschen?"
+                                                class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-2 p-1 d-flex align-items-center justify-content-center"
+                                                style="width: 24px; height: 24px;">
+                                            <i class="bi bi-trash small"></i>
+                                        </button>
+                                    </div>
+                                    <div class="card-footer p-2 border-top border-secondary bg-dark bg-opacity-25">
+                                        <div class="caption-input-container">
+                                            {{ f.caption }}
+                                            {{ f.id }}
+                                            {% if f.instance.is_primary %}
+                                                <div class="text-warning x-small fw-bold mt-1 text-uppercase text-center"><i class="bi bi-star-fill me-1"></i>Tagesbild</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Simplified Multiple Upload -->
+                    <div class="upload-zone border border-secondary border-dashed rounded-3 p-4 text-center mb-0" 
+                         onclick="document.getElementById('image-upload').click()" 
+                         style="cursor: pointer; background: rgba(255,255,255,0.02); transition: background 0.2s;">
+                        <input type="file" name="images" id="image-upload" multiple class="d-none" accept="image/*">
+                        <i class="bi bi-cloud-upload fs-2 text-secondary mb-2 d-block"></i>
+                        <span class="d-block small fw-bold text-uppercase opacity-75">Weitere Fotos hinzufügen</span>
+                        <span class="d-block x-small text-secondary mt-1">Du kannst mehrere Bilder gleichzeitig aus deiner Galerie wählen</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 pt-4 gap-2">
+                <button type="submit" class="btn btn-premium-gold px-4">
+                    <i class="bi bi-save me-1"></i>{% trans "Tag Speichern" %}
+                </button>
+                <button type="button" class="btn btn-outline-warning px-4" onclick="closeModal()">
+                    {% trans "Abbrechen" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

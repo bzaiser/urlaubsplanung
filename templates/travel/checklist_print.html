@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Packliste: {{ trip.name }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #000;
+            background: #fff;
+            margin: 20px;
+            font-size: 14px;
+        }
+        h1 {
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+        .meta {
+            margin-bottom: 30px;
+            color: #666;
+        }
+        .category-block {
+            break-inside: avoid;
+            margin-bottom: 25px;
+        }
+        .category-title {
+            background: #eee;
+            padding: 5px 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-left: 5px solid #000;
+            margin-bottom: 10px;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .item {
+            width: 31%;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            padding-right: 2%;
+        }
+        .box {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #000;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        .text {
+            line-height: 1.2;
+        }
+        .due {
+            font-size: 10px;
+            color: #888;
+            margin-left: 5px;
+        }
+        
+        @media print {
+            .no-print { display: none; }
+            body { margin: 0; }
+        }
+        
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #000;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <a href="#" onclick="window.print(); return false;" class="print-btn no-print">Drucken</a>
+
+    <h1>Packliste: {{ trip.name }}</h1>
+    <div class="meta">
+        {{ trip.start_date|date:"d.m.Y" }} - {{ trip.end_date|date:"d.m.Y" }} | {{ trip.name }}
+    </div>
+
+    {% for cat_name, items in items_by_cat.items %}
+    <div class="category-block">
+        <div class="category-title">{{ cat_name }}</div>
+        <div class="checklist">
+            {% for item in items %}
+            <div class="item">
+                <div class="box"></div>
+                <div class="text">
+                    {{ item.text }}
+                    {% if item.due_date %}
+                        <span class="due">({{ item.due_date|date:"d.m" }})</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <div style="margin-top: 50px; border-top: 1px dashed #ccc; padding-top: 20px; color: #999; font-size: 10px;">
+        Generiert mit Urlaubsplaner Travel Hub
+    </div>
+</body>
+</html>

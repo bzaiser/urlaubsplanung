@@ -1,0 +1,32 @@
+{% load i18n %}
+<div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-light border-0 shadow-lg" style="border-radius: 15px; overflow: hidden;">
+        <div class="modal-header border-0 pb-0 pt-4 px-4">
+            <h5 class="modal-title d-flex align-items-center gap-2 text-danger fw-bold">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                Reise unwiderruflich löschen?
+            </h5>
+            <button type="button" class="btn-close btn-close-white" onclick="closeModal()" aria-label="Close"></button>
+        </div>
+        <div class="modal-body py-4 px-4">
+            <p class="mb-3 fs-5">Bist du sicher, dass du die Reise <br><strong class="text-warning">"{{ trip.name }}"</strong><br> komplett löschen möchtest?</p>
+            <div class="p-3 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25">
+                <p class="text-danger small mb-0">
+                    <i class="bi bi-info-circle-fill me-2"></i> 
+                    Sämtliche Etappen, Hochgeladene Bilder und Buchungsdaten gehen dabei verloren. Diese Aktion kann nicht rückgängig gemacht werden.
+                </p>
+            </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+            <button type="button" class="btn btn-premium-outline px-4" onclick="closeModal()">
+                Abbrechen
+            </button>
+            <button hx-post="{% url 'travel:trip_delete' trip.id %}"
+                    hx-target="#dashboard-refresh"
+                    class="btn btn-premium-red px-4"
+                    onclick="closeModal()">
+                <i class="bi bi-trash3-fill me-1"></i> Reise jetzt löschen
+            </button>
+        </div>
+    </div>
+</div>
