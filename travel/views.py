@@ -305,6 +305,8 @@ def trip_delete(request, pk):
             # We return both the trip list and the switcher (OOB)
             context = get_dashboard_context(request)
             html = render(request, 'travel/partials/trip_list.html', context).content.decode('utf-8')
+            # Pass is_oob=True for the switcher swap
+            context['is_oob'] = True
             html += render(request, 'travel/partials/trip_switcher.html', context).content.decode('utf-8')
             return HttpResponse(html)
         return redirect('travel:dashboard')
