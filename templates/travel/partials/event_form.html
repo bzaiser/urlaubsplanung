@@ -51,16 +51,12 @@
                     </div>
                     <div class="col-4">
                         <label class="form-label small text-uppercase text-secondary">{% trans "Start" %}</label>
-                        <input type="text" name="time" value="{{ form.time.value|time:'H:i'|default:'' }}" 
-                               placeholder="HH:MM" maxlength="5"
-                               oninput="this.value = this.value.replace(/[^0-9:]/g, ''); if(this.value.length === 2 && !this.value.includes(':')) this.value += ':';"
+                        <input type="time" name="time" value="{{ form.time.value|time:'H:i'|default:'' }}" 
                                class="form-control form-control-sm font-monospace">
                     </div>
                     <div class="col-4">
                         <label class="form-label small text-uppercase text-secondary">{% trans "Ende" %}</label>
-                        <input type="text" name="end_time" value="{{ form.end_time.value|time:'H:i'|default:'' }}" 
-                               placeholder="HH:MM" maxlength="5"
-                               oninput="this.value = this.value.replace(/[^0-9:]/g, ''); if(this.value.length === 2 && !this.value.includes(':')) this.value += ':';"
+                        <input type="time" name="end_time" value="{{ form.end_time.value|time:'H:i'|default:'' }}" 
                                class="form-control form-control-sm font-monospace">
                     </div>
                 </div>
