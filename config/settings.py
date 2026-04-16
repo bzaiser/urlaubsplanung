@@ -136,3 +136,21 @@ LOGOUT_REDIRECT_URL = 'login'
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
+# Production Security Härtung (Active when DEBUG=False)
+if not DEBUG:
+    # Cookies only via HTTPS
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    
+    # Header security
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    
+    # HSTS (Optional, set to 0 if causing issues with local IP access on NAS)
+    # SECURE_HSTS_SECONDS = 31536000 
+    
+    # Ensure our primary domain is always in the trusted origins if not already there
+    MYDS_DOMAIN = 'https://urlaub.zaisers.myds.me'
+    if MYDS_DOMAIN not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(MYDS_DOMAIN)
+
