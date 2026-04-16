@@ -4,8 +4,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from pwa import views as pwa_views
 
+from django.contrib.auth import views as auth_views
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('login/', auth_views.LoginView.as_view(), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('pwa/', include('pwa.urls')),
     path('serviceworker.js', pwa_views.service_worker, name='serviceworker'),
     path('manifest.json', pwa_views.manifest, name='manifest'),

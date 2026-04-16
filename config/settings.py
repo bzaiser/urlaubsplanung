@@ -126,3 +126,12 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
+# Authentication Settings
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'travel:dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+
+# Reverse Proxy / SSL Settings
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+

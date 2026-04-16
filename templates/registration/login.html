@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "Anmeldung" %} - Travel Hub{% endblock %}
+
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="row w-100 justify-content-center">
+        <div class="col-12 col-md-6 col-lg-5 col-xl-4">
+            <!-- Glassmorphism Card -->
+            <div class="card bg-dark border-secondary border-opacity-25 shadow-lg overflow-hidden animate__animated animate__fadeInUp" 
+                 style="background: rgba(10, 25, 47, 0.7) !important; backdrop-filter: blur(20px); border-radius: 1.5rem;">
+                
+                <!-- Card Header -->
+                <div class="card-header border-0 bg-transparent text-center pt-5 pb-4">
+                    <div class="mb-4 d-inline-block p-3 rounded-circle bg-premium-gold bg-opacity-10">
+                        <i class="bi bi-shield-lock-fill text-warning fs-1"></i>
+                    </div>
+                    <h2 class="text-light fw-bold mb-1">{% trans "Willkommen zurück" %}</h2>
+                    <p class="text-secondary small">{% trans "Bitte melde dich an, um auf deine Reisepläne zuzugreifen." %}</p>
+                </div>
+
+                <!-- Card Body -->
+                <div class="card-body px-4 px-md-5 pb-5">
+                    {% if form.errors %}
+                        <div class="alert alert-danger bg-danger bg-opacity-10 border-danger border-opacity-25 text-danger small animate__animated animate__shakeX">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            {% trans "Benutzername oder Passwort ist falsch." %}
+                        </div>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'login' %}" class="premium-form">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="id_username" class="form-label text-secondary small text-uppercase fw-bold">{% trans "Benutzername" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary border-opacity-25 text-secondary">
+                                    <i class="bi bi-person"></i>
+                                </span>
+                                <input type="text" name="username" autofocus maxlength="150" required id="id_username"
+                                       class="form-control bg-dark border-secondary border-opacity-25 text-light"
+                                       placeholder="admin">
+                            </div>
+                        </div>
+
+                        <div class="mb-5">
+                            <label for="id_password" class="form-label text-secondary small text-uppercase fw-bold">{% trans "Passwort" %}</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary border-opacity-25 text-secondary">
+                                    <i class="bi bi-key"></i>
+                                </span>
+                                <input type="password" name="password" required id="id_password"
+                                       class="form-control bg-dark border-secondary border-opacity-25 text-light"
+                                       placeholder="••••••••">
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="next" value="{{ next }}">
+
+                        <button type="submit" class="btn btn-premium-gold w-100 py-3 fw-bold text-uppercase shadow-sm">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>{% trans "Anmelden" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Context Footer -->
+            <div class="text-center mt-4 animate__animated animate__fadeIn animate__delay-1s">
+                <p class="text-secondary small mb-0">
+                    &copy; {{ now|date:"Y" }} Travel Hub &bull; {% trans "Sicher & Privat" %}
+                </p>
+                <div class="mt-2">
+                    <span class="badge bg-dark border border-secondary border-opacity-25 text-secondary fw-normal">
+                        v2.0.4-premium
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-premium-gold {
+        background: linear-gradient(45deg, #d4af37, #f1c40f);
+        border: none;
+        color: #000;
+        transition: all 0.3s ease;
+    }
+    .btn-premium-gold:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(212, 175, 55, 0.2);
+        filter: brightness(1.1);
+    }
+    .form-control:focus {
+        background-color: #0f223f !important;
+        border-color: #d4af37 !important;
+        box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.15);
+        color: #fff !important;
+    }
+    .input-group-text {
+        border-right: none;
+    }
+    .form-control {
+        border-left: none;
+    }
+    /* Simple form animation */
+    .premium-form .mb-4, .premium-form .mb-5 {
+        transition: transform 0.3s ease;
+    }
+    .premium-form .mb-4:focus-within, .premium-form .mb-5:focus-within {
+        transform: translateX(5px);
+    }
+</style>
+{% endblock %}

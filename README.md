@@ -43,7 +43,8 @@ cp .env.example .env
 ### 4. Datenbank & Initialisierung
 ```bash
 python manage.py migrate
-python manage.py createsuperuser  # Erstelle deinen Admin-Zugang
+python manage.py import_checklists  # Importiert Standard-Kategorien & Vorlagen
+python manage.py createsuperuser    # Erstelle deinen Admin-Zugang
 ```
 
 ### 5. Server starten
