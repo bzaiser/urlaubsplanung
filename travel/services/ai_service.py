@@ -16,6 +16,35 @@ def get_setting(key, default=''):
     except:
         return default
 
+def safe_float(val, default=0.0):
+    """Safely converts a value to float, handling None, empty strings, and malformed text."""
+    if val is None or val == "":
+        return default
+    try:
+        if isinstance(val, str):
+            # Handle German decimal comma
+            val = val.replace(',', '.')
+            # Remove any non-numeric characters except . and -
+            val = "".join(c for c in val if c.isdigit() or c in '.-')
+            if not val or val == '.' or val == '-':
+                return default
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+def safe_int(val, default=0):
+    """Safely converts a value to int."""
+    if val is None or val == "":
+        return default
+    try:
+        if isinstance(val, str):
+            val = "".join(c for c in val if c.isdigit() or c == '-')
+            if not val or val == '-':
+                return default
+        return int(float(val)) # float middle-man handles "14.0" strings
+    except (ValueError, TypeError):
+        return default
+
 def strip_duration_from_name(name):
     """
     Removes redundant duration info in brackets from the name.
@@ -251,7 +280,7 @@ def normalize_itinerary(data):
                                 if match:
                                     try:
                                         raw_val = match.group(1).replace(',', '.')
-                                        cost_val = float(raw_val)
+                                        cost_val = safe_float(raw_val)
                                         break
                                     except: continue
                         
@@ -428,7 +457,7 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
     trip = Trip.objects.create(
         name=trip_name,
         start_date=start_date,
-        persons_count=int(persons_count or 2),
+        persons_count=safe_int(persons_count, 2),
         persons_ages=persons_ages or ""
     )
     
@@ -446,10 +475,10 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
         )
         
         # Load settings for automated cost calculation
-        v1_cons = float(get_setting('vehicle1_consumption', '12'))
-        v2_cons = float(get_setting('vehicle2_consumption', '8'))
-        diesel_p = float(get_setting('diesel_price', '1.60'))
-        petrol_p = float(get_setting('petrol_price', '1.70'))
+        v1_cons = safe_float(get_setting('vehicle1_consumption', '12'))
+        v2_cons = safe_float(get_setting('vehicle2_consumption', '8'))
+        diesel_p = safe_float(get_setting('diesel_price', '1.60'))
+        petrol_p = safe_float(get_setting('petrol_price', '1.70'))
         
         for e_data in d_data.get('events', []):
             time_v = e_data.get('time')
@@ -470,9 +499,9 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
                 title=e_data.get('title', 'Event'),
                 type=e_data.get('type', 'OTHER'),
                 location=e_data.get('location', ''),
-                cost_estimated=e_data.get('cost_estimated', 0),
+                cost_estimated=safe_float(e_data.get('cost_estimated', 0)),
                 distance_km=dist_final,
-                nights=e_data.get('nights'),
+                nights=safe_int(e_data.get('nights')),
                 notes=e_data.get('notes', ''),
                 booking_url=e_data.get('booking_url', ''),
                 booking_reference=e_data.get('booking_reference', ''),
@@ -508,9 +537,9 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
                 cons = v1_cons if e_obj.type == 'CAMPER' else v2_cons
                 price = diesel_p if (e_obj.type == 'CAMPER') else petrol_p # Simple heuristic: Camper=Diesel, Car=Petrol
                 
-                calc_cost = (float(e_obj.distance_km or 0) * (float(cons) / 100) * float(price))
+                calc_cost = (safe_float(e_obj.distance_km) * (safe_float(cons) / 100.0) * safe_float(price))
                 # Only overwrite if AI didn't provide any cost or if user wants precision
-                if float(e_obj.cost_estimated or 0) <= 0:
+                if safe_float(e_obj.cost_estimated) <= 0:
                     e_obj.cost_estimated = round(calc_cost, 2)
                     e_obj.save(update_fields=['cost_estimated'])
             
@@ -531,16 +560,16 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
             trip=trip,
             title=gx.get('title', 'Ausgabe'),
             expense_type=gx.get('type', 'FEE'),
-            unit_price=float(gx.get('cost', 0) or 0),
-            units=int(gx.get('units', 1) or 1),
+            unit_price=safe_float(gx.get('cost', 0)),
+            units=safe_int(gx.get('units', 1), 1),
             notes=gx.get('notes', 'Importiert von KI')
         )
 
     # NEW: Handle Food Preferences (Precise Backend Calculation)
     food_prefs = trip_data.get('food_preferences')
     if food_prefs and days_data:
-        cooking_ratio = float(food_prefs.get('cooking_ratio', 0))
-        dining_ratio = float(food_prefs.get('dining_out_ratio', 0))
+        cooking_ratio = safe_float(food_prefs.get('cooking_ratio', 0))
+        dining_ratio = safe_float(food_prefs.get('dining_out_ratio', 0))
         level = food_prefs.get('price_level', 'med').lower()
         
         # Calculate trip duration
@@ -551,10 +580,10 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
         # Mapping level to setting keys
         suffix = 'low' if level == 'low' else ('high' if level == 'high' else 'med')
         
-        rate_self = float(get_setting(f'food_self_{suffix}', '15'))
-        rate_out = float(get_setting(f'food_out_{suffix}', '35'))
+        rate_self = safe_float(get_setting(f'food_self_{suffix}', '15'))
+        rate_out = safe_float(get_setting(f'food_out_{suffix}', '35'))
         
-        persons = int(trip.persons_count or 2)
+        persons = safe_int(trip.persons_count, 2)
         
         if cooking_ratio > 0:
             units = round(total_days * cooking_ratio, 1)
