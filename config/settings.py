@@ -9,6 +9,7 @@ env = environ.Env(
     DEBUG=(bool, False),
     SECRET_KEY=(str, 'django-insecure-replace-me-in-production'),
     ALLOWED_HOSTS=(list, ['*']),
+    CSRF_TRUSTED_ORIGINS=(list, []),
 )
 
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
@@ -16,6 +17,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 
 # Application definition
 INSTALLED_APPS = [
