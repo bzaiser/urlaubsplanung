@@ -16,8 +16,17 @@
                 <i class="bi bi-arrow-left me-1"></i>{% trans "Zurück zum Planer" %}
             </button>
             <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-printer me-1"></i>{% trans "Drucken (Edding-Modus)" %}
+                <i class="bi bi-printer me-1"></i>{% trans "Drucken" %}
             </a>
+
+            {% if checklist.items.exists %}
+                <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
+                        hx-confirm="{% trans 'Möchtest du die gesamte Checkliste wirklich zurücksetzen? Alle Einträge werden gelöscht.' %}"
+                        hx-target="#dashboard-refresh"
+                        class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-trash me-1"></i>{% trans "Zurücksetzen" %}
+                </button>
+            {% endif %}
             
             {% if not checklist.items.exists %}
                 <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" hx-target="#dashboard-refresh" class="d-flex gap-2">

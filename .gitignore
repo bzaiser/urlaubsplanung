@@ -14,3 +14,10 @@ venv/
 *.docx
 *.xls
 *.xlsx
+Planung Excel - *.xlsx
+
+# Meta & Junk
+project_rules.md
+prompt.txt
+.DS_Store
+~$*

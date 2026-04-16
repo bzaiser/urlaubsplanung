@@ -36,7 +36,7 @@ def _generate_days(trip):
 def get_dashboard_context(request, active_trip=None):
     """Helper to prepare the full context for trip_list.html, 
     ensuring AG Grid and view types are always synchronized."""
-    view_type = request.GET.get('view', request.session.get('view_type', 'table'))
+    view_type = request.GET.get('view', request.session.get('view_type', 'timeline'))
     request.session['view_type'] = view_type
     
     # Trip Selection logic (if not provided)
@@ -46,13 +46,18 @@ def get_dashboard_context(request, active_trip=None):
             active_trip = Trip.objects.filter(id=trip_id).prefetch_related(
                 'days__diary__images', 'days__events'
             ).first()
-        else:
+            
+        # Fallback to the latest trip if the specific ID wasn't found or no ID was provided
+        if not active_trip:
             active_trip = Trip.objects.prefetch_related(
                 'days__diary__images', 'days__events'
-            ).first()
+            ).order_by('-id').first()
             
     if active_trip:
         request.session['active_trip_id'] = active_trip.id
+        # Safety: set the view to timeline if not already specified to avoid arriving at an empty table
+        if 'view_type' not in request.session:
+            request.session['view_type'] = 'timeline'
 
     context = {
         'view_type': view_type,
@@ -146,6 +151,9 @@ def get_dashboard_context(request, active_trip=None):
                         'breakfast_included': event.breakfast_included,
                         'breakfast_cost': float(event.breakfast_cost),
                         'notes': event.notes or '',
+                        'lat': float(day.latitude) if day.latitude else None,
+                        'lon': float(day.longitude) if day.longitude else None,
+                        'station_index': i
                     })
             
         # Add Global Expenses at the very end
@@ -179,7 +187,7 @@ def get_dashboard_context(request, active_trip=None):
         context['ui_settings_json'] = json.dumps(active_trip.ui_settings or {})
         
         # Prepare Map Data
-        if view_type == 'map' or (view_type == 'timeline' and active_trip.grouped_stations):
+        if view_type in ['map', 'timeline', 'table'] and active_trip.grouped_stations:
             # Auto-geocode missing coordinates (max 2 per request to avoid timeout)
             geocoding_pending = geo_service.update_trip_coordinates(active_trip, limit=2)
             context['geocoding_pending'] = geocoding_pending
@@ -250,10 +258,28 @@ def trip_create(request):
 def trip_edit(request, pk):
     trip = get_object_or_404(Trip, pk=pk)
     if request.method == 'POST':
+        original_start_date = trip.start_date
         form = TripForm(request.POST, instance=trip)
         if form.is_valid():
-            trip = form.save()
-            _generate_days(trip) # Refresh days if dates changed
+            do_shift = request.POST.get('shift_dates') == 'on'
+            
+            if do_shift:
+                new_start_date = form.cleaned_data['start_date']
+                offset = (new_start_date - original_start_date).days
+                if offset != 0:
+                    from .services import logic_service
+                    logic_service.shift_entire_trip(trip, offset)
+                    # Shift logic already saved the trip and shifted everything
+                    # Re-bind form to shifted trip to save other possible changes (name, persons_count, etc)
+                    form = TripForm(request.POST, instance=trip)
+                    if form.is_valid():
+                        form.save()
+                else:
+                    form.save()
+            else:
+                trip = form.save()
+                _generate_days(trip) # Refresh days if dates changed but no shift requested
+            
             if request.htmx:
                 response = HttpResponse("")
                 response['HX-Refresh'] = 'true'
@@ -1117,6 +1143,16 @@ def checklist_apply_template(request, trip_id):
         template = get_object_or_404(ChecklistTemplate, pk=template_id)
         checklist_service.apply_template_to_trip(trip, template)
     
+    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+
+def checklist_reset(request, trip_id):
+    """Deletes all items from a trip's checklist."""
+    trip = get_object_or_404(Trip, pk=trip_id)
+    if hasattr(trip, 'checklist'):
+        trip.checklist.items.all().delete()
+    
+    if request.htmx:
+        return redirect(f"{reverse('travel:dashboard')}?view=checklist")
     return redirect(f"{reverse('travel:dashboard')}?view=checklist")
 
 def checklist_item_add(request, trip_id):

@@ -16,6 +16,20 @@ def get_setting(key, default=''):
     except:
         return default
 
+def strip_duration_from_name(name):
+    """
+    Removes redundant duration info in brackets from the name.
+    Example: 'Thailand (14 Nächte)' -> 'Thailand'
+    Matches patterns like (14 Nächte), [5 Tage], (10 nights), etc.
+    """
+    if not name:
+        return name
+    # Regex for stripping brackets containing days/nights/tage/nächte etc.
+    # It looks for anything in () or [] that contains one of the keywords.
+    pattern = r'\s*[\(\[].*?(?:Nächte|Nächten|Tage|Tagen|Nights|Days|Night|Day).*?[\)\]]'
+    cleaned = re.sub(pattern, '', name, flags=re.IGNORECASE).strip()
+    return cleaned
+
 def repair_json(json_str):
     """
     Highly robust JSON repair using the "json-repair" library.
@@ -409,8 +423,10 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
     elif isinstance(start_date, str):
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
 
+    trip_name = strip_duration_from_name(trip_data.get('name', 'Neue KI Reise'))
+
     trip = Trip.objects.create(
-        name=trip_data.get('name', 'Neue KI Reise'),
+        name=trip_name,
         start_date=start_date,
         persons_count=int(persons_count or 2),
         persons_ages=persons_ages or ""

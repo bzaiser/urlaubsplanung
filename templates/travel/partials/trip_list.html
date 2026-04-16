@@ -1,66 +1,14 @@
 {% load i18n %}{% load static %}
 <section id="trip-overview">
     {% if active_trip %}
-    <div class="d-flex justify-content-between align-items-start mb-3 p-2 bg-dark bg-opacity-50 border border-secondary rounded-3">
-        <div class="flex-shrink-0 pt-1">
-            <span class="text-secondary small fw-semibold text-nowrap">
-                📅 Zeitraum: {{ active_trip.start_date|date:"d. M" }} - {{ active_trip.end_date|date:"d. M Y" }}
+    <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-secondary small fw-medium">
+                <i class="bi bi-calendar3 me-1"></i>{{ active_trip.start_date|date:"d. M" }} - {{ active_trip.end_date|date:"d. M Y" }}
             </span>
-        </div>
-
-        <div class="d-flex flex-wrap gap-2 justify-content-start flex-grow-1 ms-3">
-            <!-- View Switcher (Compact Segmented Control) -->
-            <div class="segmented-control me-2">
-                <button hx-get="{% url 'travel:dashboard' %}?view=timeline" 
-                        hx-target="#dashboard-refresh"
-                        class="segmented-item {% if view_type == 'timeline' %}active{% endif %}"
-                        title="{% trans 'Tagebuch' %}">
-                    <i class="bi bi-journal-bookmark"></i>
-                    <span>{% trans "Tagebuch" %}</span>
-                </button>
-                <button hx-get="{% url 'travel:dashboard' %}?view=table" 
-                        hx-target="#dashboard-refresh"
-                        class="segmented-item {% if view_type == 'table' %}active{% endif %}"
-                        title="{% trans 'Planer' %}">
-                    <i class="bi bi-grid-3x3-gap"></i>
-                    <span>{% trans "Planer" %}</span>
-                </button>
-                <button hx-get="{% url 'travel:dashboard' %}?view=checklist" 
-                        hx-target="#dashboard-refresh"
-                        class="segmented-item {% if view_type == 'checklist' %}active{% endif %}"
-                        title="{% trans 'Checkliste' %}">
-                    <i class="bi bi-list-check"></i>
-                    <span>{% trans "Checkliste" %}</span>
-                </button>
-            </div>
-
-            <button class="premium-pill-btn success me-1" 
-                    hx-get="{% url 'travel:trip_logic_check' active_trip.id %}"
-                    hx-target="#modal-container">
-                <i class="bi bi-check2-circle me-1"></i><span>Reise-Check</span>
-            </button>
-            <a href="{% url 'travel:export_trip_ics' active_trip.id %}" 
-               class="premium-pill-btn me-2">
-                <i class="bi bi-calendar-plus me-1"></i><span>ICS</span>
-            </a>
-
-            <!-- Trip Management -->
-            <button class="premium-pill-btn warning me-1" 
-                    hx-get="{% url 'travel:trip_shift_dates' active_trip.id %}"
-                    hx-target="#modal-container"
-                    title="Komplette Reise zeitlich verschieben">
-                <i class="bi bi-calendar-range me-1"></i><span>Verschieben</span>
-            </button>
-            <button class="premium-pill-btn warning me-1" 
-                    hx-get="{% url 'travel:trip_edit' active_trip.id %}"
-                    hx-target="#modal-container">
-                <i class="bi bi-pencil me-1"></i><span>Edit</span>
-            </button>
-            <button class="premium-pill-btn danger" 
-                    hx-get="{% url 'travel:trip_delete' active_trip.id %}"
-                    hx-target="#modal-container">
-                <i class="bi bi-trash me-1"></i><span>Löschen</span>
-            </button>
+            <span class="badge bg-dark border border-secondary border-opacity-25 rounded-pill text-secondary x-small">
+                {{ active_trip.days.count }} Tage
+            </span>
         </div>
     </div>
 
@@ -93,13 +41,13 @@
     <div class="card bg-dark border-secondary text-center p-5 mt-4">
         <div class="card-body">
             <h2 class="text-warning mb-3">
-                {% trans "Willkommen im Travel Hub" %}
+                {% trans "Willkommen im Travel Hub!" %}
             </h2>
-            <p class="text-secondary">
+            <p class="text-secondary fs-5">
                 {% if trips %}
-                    Wähle eine deiner vorhandenen Reisen oben aus oder erstelle eine neue Planung.
+                    Wähle bitte oben im Menü eine deiner **vorhandenen Reisen** aus oder erstelle eine **neue Planung**, um zu starten.
                 {% else %}
-                    Beginne damit, deine erste Reise anzulegen.
+                    Du hast noch keine Reisen geplant. Klicke oben auf **"+ NEU"**, um deinen ersten Trip zu erstellen!
                 {% endif %}
             </p>
             <div class="row g-4 mt-4 justify-content-center">

@@ -100,35 +100,54 @@
             };
             L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
-            // 5. Markers
+            // 5. Routing (Draw this FIRST so it's in the background)
+            if (routeGeometry && routeGeometry.length > 0) {
+                const roadLine = L.polyline(routeGeometry, {
+                    color: '#ffc107', weight: 5, opacity: 0.8, lineJoin: 'round'
+                }).addTo(map);
+                if (!window.mapWasInteracted) {
+                    map.fitBounds(roadLine.getBounds(), { padding: [50, 50] });
+                }
+            }
+
+            // 6. Markers (Draw these SECOND so they are on top)
             const markers = [];
+            const currentView = '{{ view_type }}';
+
             stations.forEach((s) => {
                 if (s.lat && s.lon) {
                     const pos = [s.lat, s.lon];
                     const marker = L.circleMarker(pos, {
-                        radius: 12,
+                        radius: 8,
                         fillColor: "#ffc107",
                         color: "#fff",
-                        weight: 3,
+                        weight: 2,
                         opacity: 1,
                         fillOpacity: 0.9,
                         className: 'map-clickable-marker'
                     }).addTo(map);
 
-                    marker.bindPopup(`
-                        <div class="p-1">
-                            <strong class="text-dark">${s.location}</strong><br>
-                            <small class="text-muted">${s.days_count} Tage • ${s.nights_count} Nächte</small><br>
-                            <hr class="my-1 opacity-25">
-                            <a href="javascript:void(0)" 
-                               onclick="htmx.ajax('GET', '/day/${s.day_id}/diary/', {target:'#modal-container', swap:'innerHTML'})"
-                               class="text-primary small fw-bold d-block text-decoration-none py-1">
-                               <i class="bi bi-book me-1"></i>Tagebuch öffnen
-                            </a>
-                        </div>
-                    `);
+                    // Bind popup ONLY if in timeline view, otherwise it feels "useless" in the planner
+                    if (currentView === 'timeline') {
+                        marker.bindPopup(`
+                            <div class="p-1">
+                                <strong class="text-dark">${s.location}</strong><br>
+                                <small class="text-muted">${s.days_count} Tage • ${s.nights_count} Nächte</small><br>
+                                <hr class="my-1 opacity-25">
+                                <a href="javascript:void(0)" 
+                                onclick="htmx.ajax('GET', '/day/${s.day_id}/diary/', {target:'#modal-container', swap:'innerHTML'})"
+                                class="text-primary small fw-bold d-block text-decoration-none py-1">
+                                <i class="bi bi-book me-1"></i>Tagebuch öffnen
+                                </a>
+                            </div>
+                        `);
+                    }
 
                     marker.on('click', function() {
+                        // 0. Visual Pulse on Marker to show it was clicked
+                        this.setRadius(20);
+                        setTimeout(() => this.setRadius(currentView === 'timeline' ? 8 : 10), 300);
+
                         // 1. Sync with Timeline (Diary View)
                         const targetId = `station-${s.index}`;
                         const targetEl = document.getElementById(targetId);
@@ -141,33 +160,90 @@
                         // 2. Sync with AG-Grid (Planner View)
                         if (window.agGridApi) {
                             try {
-                                const rowId = `day-header-${s.day_id}`;
-                                const rowNode = window.agGridApi.getRowNode(rowId);
+                                const dayIdStr = s.day_id.toString();
+                                const rowId = `day-header-${dayIdStr}`;
+                                let rowNode = window.agGridApi.getRowNode(rowId);
+                                
+                                // Show starting search toast
+                                if (currentView === 'table') {
+                                    showToast(`Suche ${s.location}...`);
+                                }
+
+                                // Fallback: Comprehensive search if direct getRowNode fails
+                                if (!rowNode) {
+                                    window.agGridApi.forEachNode((node) => {
+                                        if (node.data) {
+                                            // Try ID, day_id (number), or fuzzy location match
+                                            if (node.data.id === rowId || 
+                                                node.data.day_id == s.day_id ||
+                                                (node.data.location && node.data.location.includes(s.location))) {
+                                                rowNode = node;
+                                            }
+                                        }
+                                    });
+                                }
+
                                 if (rowNode) {
-                                    window.agGridApi.ensureIndexVisible(rowNode.rowIndex, 'middle');
-                                    rowNode.setSelected(true, true); // Select and clear others
+                                    const stationKey = rowNode.data.station_key;
+                                    
+                                    // Auto-expand if station is collapsed
+                                    if (window.collapsedStations && window.collapsedStations.has(stationKey)) {
+                                        window.collapsedStations.delete(stationKey);
+                                        window.agGridApi.onFilterChanged();
+                                    }
+                                    
+                                    // AG Grid autoHeight means we must scroll the browser, not the grid internally
+                                    // We search for the row element in the DOM using its row-id
+                                    setTimeout(() => {
+                                        const rowEl = document.querySelector(`[row-id="${rowNode.id}"]`);
+                                        if (rowEl) {
+                                            rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            
+                                            // Highlight effect on the DOM element for better visibility
+                                            rowEl.style.transition = 'background-color 0.5s';
+                                            const originalBg = rowEl.style.backgroundColor;
+                                            rowEl.style.backgroundColor = 'rgba(255, 193, 7, 0.3)';
+                                            setTimeout(() => {
+                                                rowEl.style.backgroundColor = originalBg;
+                                            }, 1000);
+                                        } else {
+                                            // Fallback to internal if DOM not yet ready or height changed
+                                            window.agGridApi.ensureNodeVisible(rowNode);
+                                        }
+                                        
+                                        // Still use flashCells for the internal feedback if available
+                                        try {
+                                            window.agGridApi.flashCells({ rowNodes: [rowNode], flashDuration: 1000, fadeDuration: 500 });
+                                        } catch(e){}
+                                    }, 100);
+
+                                    if (currentView === 'table') {
+                                        showToast(`✓ ${s.location} gefunden`);
+                                    }
+                                } else {
+                                    if (currentView === 'table') {
+                                        showToast(`⚠️ Tag ${s.location} nicht gefunden`, true);
+                                    }
                                 }
                             } catch (e) {
                                 console.warn("AG-Grid Sync Error:", e);
                             }
                         }
+
+                        // 3. Conditional Auto-Open Diary (Only in timeline view)
+                        if (currentView === 'timeline' && typeof htmx !== 'undefined' && s.day_id) {
+                            htmx.ajax('GET', `/day/${s.day_id}/diary/`, {target:'#modal-container', swap:'innerHTML'});
+                        }
                     });
                     
-                    marker.on('mouseover', function() { this.setRadius(16); this.setStyle({fillColor: '#fff', color: '#ffc107'}); });
-                    marker.on('mouseout', function() { this.setRadius(12); this.setStyle({fillColor: '#ffc107', color: '#fff'}); });
+                    marker.on('mouseover', function() { this.setRadius(12); this.setStyle({fillColor: '#fff', color: '#ffc107'}); });
+                    marker.on('mouseout', function() { this.setRadius(8); this.setStyle({fillColor: '#ffc107', color: '#fff'}); });
                     markers.push(marker);
                 }
             });
 
-            // 6. Routing (Only fitBounds if user hasn't interacted yet)
-            if (routeGeometry && routeGeometry.length > 0) {
-                const roadLine = L.polyline(routeGeometry, {
-                    color: '#ffc107', weight: 5, opacity: 0.8, lineJoin: 'round'
-                }).addTo(map);
-                if (!window.mapWasInteracted) {
-                    map.fitBounds(roadLine.getBounds(), { padding: [50, 50] });
-                }
-            } else if (stations.length > 0 && !window.mapWasInteracted) {
+            // Fallback fitBounds if no route
+            if (!routeGeometry && stations.length > 0 && !window.mapWasInteracted) {
                 const group = new L.featureGroup(markers);
                 map.fitBounds(group.getBounds(), { padding: [50, 50] });
             }

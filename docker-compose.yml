@@ -1,12 +1,14 @@
 services:
   web:
+    container_name: ${CONTAINER_NAME:-urlaubsplanung_web}
+    image: ${IMAGE_NAME:-urlaubsplanung_image}
     build:
       context: .
       dockerfile: docker/Dockerfile
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "${WEB_PORT:-8000}:8000"
     command: python manage.py runserver 0.0.0.0:8000
     env_file:
       - .env

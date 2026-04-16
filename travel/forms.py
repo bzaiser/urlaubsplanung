@@ -1,5 +1,6 @@
 from django import forms
 from .models import Trip, Event, Day, DiaryEntry, DiaryImage
+from .services.ai_service import strip_duration_from_name
 from django.forms import inlineformset_factory
 
 class TripForm(forms.ModelForm):
@@ -12,6 +13,10 @@ class TripForm(forms.ModelForm):
             'start_date': forms.DateInput(attrs={'type': 'date'}),
             'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        return strip_duration_from_name(name)
 
 class EventForm(forms.ModelForm):
     class Meta:

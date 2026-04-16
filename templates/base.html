@@ -52,20 +52,10 @@
     {% progressive_web_app_meta %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <nav class="navbar navbar-dark bg-dark sticky-top border-bottom border-secondary">
-        <div class="container-fluid d-flex justify-content-between align-items-center">
-            <div id="trip-switcher-container-wrapper" class="d-flex align-items-center gap-2 overflow-hidden">
+    <nav class="navbar navbar-dark bg-dark sticky-top border-bottom border-secondary py-1 py-md-2">
+        <div class="container-fluid">
+            <div id="trip-switcher-container-wrapper" class="w-100">
                 {% include 'travel/partials/trip_switcher.html' %}
-            </div>
-            <div id="nav-actions" class="d-flex gap-2 align-items-center">
-                <button class="btn btn-sm btn-outline-secondary rounded-pill"
-                        hx-get="{% url 'travel:settings_modal' %}" 
-                        hx-target="#modal-container">
-                    <i class="bi bi-gear me-1"></i>{% trans "Einstellungen" %}
-                </button>
-                <a href="/admin/" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill">
-                    <i class="bi bi-tools me-1"></i>Admin
-                </a>
             </div>
         </div>
     </nav>
@@ -183,7 +173,26 @@
             `;
             modal.classList.add('show');
         }
+
+        // --- Scroll Turbo Logic ---
+        function scrollToDest(dest) {
+            if (dest === 'top') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        }
     </script>
+
+    <!-- Floating Scroll Navigator -->
+    <div class="scroll-navigator d-flex flex-column gap-2 shadow-lg rounded-pill p-1">
+        <button onclick="scrollToDest('top')" class="btn-scroll-nav" title="Ganz nach oben">
+            <i class="bi bi-chevron-double-up"></i>
+        </button>
+        <button onclick="scrollToDest('bottom')" class="btn-scroll-nav" title="Ganz nach unten">
+            <i class="bi bi-chevron-double-down"></i>
+        </button>
+    </div>
     {% endblock %}
 </body>
 </html>

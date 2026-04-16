@@ -1,46 +1,126 @@
 {% load i18n %}
-<div id="trip-switcher-container" hx-swap-oob="true" class="d-flex align-items-center gap-2">
-    {% if trips %}
-    <div class="d-flex align-items-center gap-2">
-        <select onchange="window.location.href='?trip_id=' + this.value" 
-                class="form-select form-select-sm bg-dark text-warning border-secondary rounded-pill">
+<div id="trip-switcher-container" hx-swap-oob="true" class="container-fluid d-flex align-items-center justify-content-between gap-3 px-0">
+    
+    <!-- LEFT: Trip Selection & New -->
+    <div class="d-flex align-items-center gap-2 flex-shrink-1 overflow-hidden" style="min-width: 0;">
+        <!-- NEW TRIP DROPDOWN -->
+        <div class="dropdown me-1">
+            <button class="btn btn-sm btn-outline-warning rounded-pill px-2 d-flex align-items-center justify-content-center shadow-sm" 
+                    type="button" data-bs-toggle="dropdown" aria-expanded="false" 
+                    style="width: 32px; height: 32px;"
+                    title="{% trans 'Neue Reise' %}">
+                <i class="bi bi-plus-lg"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark meatball-menu shadow-lg">
+                <li>
+                    <a class="dropdown-item py-2" href="javascript:void(0)" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container">
+                        <i class="bi bi-stars text-warning"></i>
+                        <strong>{% trans "Neue Reise mit KI Designer anlegen" %}</strong>
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item py-2" href="javascript:void(0)" hx-get="{% url 'travel:trip_create' %}" hx-target="#modal-container">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>{% trans "Neue leere Reise manuell anlegen" %}</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <select onchange="window.location.href='?trip_id=' + this.value + '{% if view_type %}&view={{ view_type }}{% endif %}'" 
+                class="form-select form-select-sm bg-dark text-warning border-secondary rounded-pill px-3 shadow-sm"
+                style="max-width: 300px; cursor: pointer;">
             {% if not active_trip %}
-            <option value="" disabled selected>--- Eine vorhandene Reise auswählen ---</option>
+                <option value="" disabled selected>{% trans "Reise wählen..." %}</option>
             {% endif %}
             {% for trip in trips %}
-            <option value="{{ trip.id }}" {% if active_trip and trip.id == active_trip.id %}selected{% endif %}>{{ trip.name }}</option>
+                <option value="{{ trip.id }}" {% if active_trip and trip.id == active_trip.id %}selected{% endif %}>
+                    {{ trip.name }}
+                </option>
             {% endfor %}
         </select>
     </div>
-    {% else %}
-    <span class="fw-bold text-warning pe-2">
-        {% trans "TRAVEL_HUB_NAME" %}
-    </span>
-    {% endif %}
-    
-    <button hx-get="{% url 'travel:ai_wizard' %}?step=select" 
-            hx-target="#modal-container"
-            class="btn btn-sm btn-premium-gold px-2 px-md-3 shadow-sm"
-            title="KI-Reise-Designer öffnen">
-        <i class="bi bi-stars"></i>
-        <span class="d-none d-md-inline">KI-Designer</span>
-    </button>
 
-    {% if active_trip %}
-    <button class="btn btn-sm btn-outline-warning rounded-pill px-2 px-md-3 shadow-sm" 
-            type="button"
-            data-bs-toggle="offcanvas" 
-            data-bs-target="#offcanvasRouteMap" 
-            aria-controls="offcanvasRouteMap">
-        <i class="bi bi-map-fill me-1"></i>{% trans "Route" %}
-    </button>
-    {% endif %}
+    <!-- CENTER: Navigation Switcher (Main Views) -->
+    <div class="d-flex justify-content-center flex-grow-1">
+        {% if active_trip %}
+        <div class="segmented-control">
+            <button hx-get="{% url 'travel:dashboard' %}?view=timeline" 
+                    hx-target="#dashboard-refresh"
+                    class="segmented-item {% if view_type == 'timeline' %}active{% endif %}"
+                    title="{% trans 'Tagebuch' %}">
+                <i class="bi bi-journal-bookmark"></i>
+                <span>{% trans "Tagebuch" %}</span>
+            </button>
+            <button hx-get="{% url 'travel:dashboard' %}?view=table" 
+                    hx-target="#dashboard-refresh"
+                    class="segmented-item {% if view_type == 'table' %}active{% endif %}"
+                    title="{% trans 'Planer' %}">
+                <i class="bi bi-grid-3x3-gap"></i>
+                <span>{% trans "Planer" %}</span>
+            </button>
+            <button hx-get="{% url 'travel:dashboard' %}?view=checklist" 
+                    hx-target="#dashboard-refresh"
+                    class="segmented-item {% if view_type == 'checklist' %}active{% endif %}"
+                    title="{% trans 'Checkliste' %}">
+                <i class="bi bi-list-check"></i>
+                <span>{% trans "Checkliste" %}</span>
+            </button>
+        </div>
+        {% endif %}
+    </div>
 
-    <button hx-get="{% url 'travel:trip_create' %}" 
-            hx-target="#modal-container"
-            class="btn btn-sm btn-outline-warning px-2 px-md-3 shadow-sm rounded-pill"
-            title="Neue Reise anlegen">
-        <i class="bi bi-plus-lg"></i>
-        <span class="d-none d-md-inline">Neue Reise</span>
-    </button>
+    <!-- RIGHT: Actions & Settings -->
+    <div class="d-flex align-items-center gap-1 gap-md-2 flex-shrink-0">
+        {% if active_trip %}
+            <!-- Map Toggle -->
+            <button class="nav-icon-btn" 
+                    type="button"
+                    data-bs-toggle="offcanvas" 
+                    data-bs-target="#offcanvasRouteMap" 
+                    aria-controls="offcanvasRouteMap"
+                    title="{% trans 'Karte einblenden' %}">
+                <i class="bi bi-map-fill"></i>
+            </button>
+
+            <!-- Meatball Menu -->
+            <div class="dropdown meatball-dropdown mt-1">
+                <button class="nav-icon-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end meatball-menu shadow-lg">
+                    <li class="px-3 py-2 text-warning small fw-bold text-uppercase opacity-75">{% trans "Reise-Verwaltung" %}</li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" hx-get="{% url 'travel:trip_logic_check' active_trip.id %}" hx-target="#modal-container">
+                        <i class="bi bi-check2-circle"></i>{% trans "Reise-Check" %}
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'travel:export_trip_ics' active_trip.id %}">
+                        <i class="bi bi-calendar-plus"></i>{% trans "ICS Export" %}
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" hx-get="{% url 'travel:trip_edit' active_trip.id %}" hx-target="#modal-container">
+                        <i class="bi bi-pencil-square"></i>{% trans "Reise bearbeiten" %}
+                    </a></li>
+                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" hx-get="{% url 'travel:trip_delete' active_trip.id %}" hx-target="#modal-container">
+                        <i class="bi bi-trash"></i>{% trans "Reise löschen" %}
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="px-3 py-2 text-secondary small fw-bold text-uppercase opacity-75">{% trans "Global" %}</li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" hx-get="{% url 'travel:settings_modal' %}" hx-target="#modal-container">
+                        <i class="bi bi-gear"></i>{% trans "Einstellungen" %}
+                    </a></li>
+                    <li><a class="dropdown-item" href="/admin/" target="_blank">
+                        <i class="bi bi-shield-lock"></i>Admin
+                    </a></li>
+                </ul>
+            </div>
+        {% else %}
+             <!-- Only AI Assistant when no trip is active -->
+             <button hx-get="{% url 'travel:ai_wizard' %}?step=select" 
+                    hx-target="#modal-container"
+                    class="btn btn-sm btn-premium-gold px-3"
+                    title="{% trans 'KI-Reise-Designer' %}">
+                <i class="bi bi-stars me-1"></i>{% trans "KI-Designer" %}
+            </button>
+        {% endif %}
+    </div>
 </div>

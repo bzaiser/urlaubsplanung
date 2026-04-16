@@ -3,7 +3,7 @@
     <div class="modal-content bg-dark border">
         <div class="modal-header border-secondary">
             <h5 class="modal-title text-warning">
-                {% if form.instance.id %}<i class="bi bi-pencil me-1"></i>{% trans "EDIT_TRIP" %}{% else %}<i class="bi bi-plus-circle me-1"></i>{% trans "NEW_TRIP" %}{% endif %}
+                {% if form.instance.id %}<i class="bi bi-pencil me-1"></i>{% trans "Reise bearbeiten" %}{% else %}<i class="bi bi-plus-circle me-1"></i>{% trans "Neue Reise anlegen" %}{% endif %}
             </h5>
             <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
         </div>
@@ -19,16 +19,65 @@
                     <input type="text" name="name" value="{{ form.name.value|default:'' }}" required class="form-control">
                 </div>
 
-                <div class="row g-3 mb-3">
-                    <div class="col-6">
-                        <label class="form-label small text-uppercase text-secondary">{% trans "Startdatum" %}</label>
-                        <input type="date" name="start_date" id="id_start_date" value="{{ form.start_date.value|date:'Y-m-d'|default:'' }}" required class="form-control">
+                <div class="row g-3 mb-4">
+                    <!-- START DATE / SHIFT BLOCK -->
+                    <div class="col-md-6 border-end border-secondary border-opacity-25 pb-3">
+                        <label class="form-label small text-uppercase text-secondary">
+                            {% trans "Startdatum (Ganze Reise schieben)" %}
+                        </label>
+                        <div class="input-group">
+                            <button class="btn btn-outline-warning" type="button" onclick="adjustTripStart(-1)"><i class="bi bi-dash-lg"></i></button>
+                            <input type="date" name="start_date" id="id_start_date" 
+                                   value="{{ form.start_date.value|date:'Y-m-d'|default:'' }}" 
+                                   data-original="{{ form.start_date.value|date:'Y-m-d'|default:'' }}"
+                                   required class="form-control text-center bg-dark text-light border-secondary fw-bold" 
+                                   onchange="manualDateChange('start')">
+                            <button class="btn btn-outline-warning" type="button" onclick="adjustTripStart(1)"><i class="bi bi-plus-lg"></i></button>
+                        </div>
+                        <div class="small text-secondary mt-1 opacity-75">
+                            <i class="bi bi-info-circle me-1"></i>Verschiebt Start und Ende gemeinsam.
+                        </div>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label small text-uppercase text-secondary">{% trans "Enddatum" %}</label>
-                        <input type="date" name="end_date" id="id_end_date" value="{{ form.end_date.value|date:'Y-m-d'|default:'' }}" required class="form-control">
+
+                    <!-- END DATE / ADJUST DURATION -->
+                    <div class="col-md-6 pb-3">
+                        <label class="form-label small text-uppercase text-secondary d-flex justify-content-between">
+                            {% trans "Enddatum (Dauer anpassen)" %}
+                            <span id="duration-badge" class="badge bg-secondary">-- {% trans "Nächte" %}</span>
+                        </label>
+                        <div class="input-group">
+                            <button class="btn btn-outline-warning" type="button" onclick="adjustTripEnd(-1)"><i class="bi bi-dash-lg"></i></button>
+                            <input type="date" name="end_date" id="id_end_date" 
+                                   value="{{ form.end_date.value|date:'Y-m-d'|default:'' }}" 
+                                   required class="form-control text-center bg-dark text-light border-secondary fw-bold" 
+                                   onchange="manualDateChange('end')">
+                            <button class="btn btn-outline-warning" type="button" onclick="adjustTripEnd(1)"><i class="bi bi-plus-lg"></i></button>
+                        </div>
+                        <div class="small text-secondary mt-1 opacity-75">
+                            <i class="bi bi-info-circle me-1"></i>Ändert nur die Dauer der Reise.
+                        </div>
                     </div>
                 </div>
+
+                {% if form.instance.id %}
+                <!-- Shift Dates Option (Only when editing) -->
+                <div id="shift-container" class="mb-4 p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded transition-all">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="shift_dates" id="shiftDatesCheck">
+                            <label class="form-check-label fw-bold text-warning" for="shiftDatesCheck">
+                                {% trans "Ganze Reise (Tage & Termine) mit verschieben?" %}
+                            </label>
+                        </div>
+                        <div id="shift-badge" class="badge rounded-pill bg-warning text-dark d-none">
+                            <span id="shift-days-count">0</span> Tage
+                        </div>
+                    </div>
+                    <div class="small text-secondary mt-1">
+                        {% trans "Verschiebt automatisch alle geplanten Tagesinhalte und Termine relativ zum neuen Startdatum." %}
+                    </div>
+                </div>
+                {% endif %}
 
                 <div class="row g-3 mb-3">
                     <div class="col-6">
@@ -44,11 +93,110 @@
                 <input type="hidden" name="local_currency" value="{{ form.local_currency.value|default:'THB' }}">
             </div>
 
-            <div class="modal-footer border-secondary">
+            <div class="modal-footer border-secondary mt-2">
                 <button type="submit" class="btn btn-warning w-100">
-                    <i class="bi bi-save me-1"></i>{% trans "BTN_SAVE" %}
+                    <i class="bi bi-save me-1"></i>{% trans "Speichern" %}
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    // Initialize
+    setTimeout(calculateDuration, 50);
+
+    function adjustTripStart(days) {
+        const startInput = document.getElementById('id_start_date');
+        const endInput = document.getElementById('id_end_date');
+        if (!startInput.value || !endInput.value) return;
+        
+        const startDate = new Date(startInput.value);
+        const endDate = new Date(endInput.value);
+        
+        startDate.setDate(startDate.getDate() + days);
+        endDate.setDate(endDate.getDate() + days);
+        
+        startInput.value = startDate.toISOString().split('T')[0];
+        endInput.value = endDate.toISOString().split('T')[0];
+        
+        updateShiftUI();
+        calculateDuration();
+    }
+
+    function adjustTripEnd(days) {
+        const startInput = document.getElementById('id_start_date');
+        const endInput = document.getElementById('id_end_date');
+        if (!startInput.value || !endInput.value) return;
+        
+        const startDate = new Date(startInput.value);
+        const endDate = new Date(endInput.value);
+        
+        endDate.setDate(endDate.getDate() + days);
+        
+        // Prevent end before start
+        if (endDate < startDate) return;
+        
+        endInput.value = endDate.toISOString().split('T')[0];
+        calculateDuration();
+    }
+
+    function manualDateChange(field) {
+        if (field === 'start') updateShiftUI();
+        calculateDuration();
+    }
+
+    function calculateDuration() {
+        const startInput = document.getElementById('id_start_date');
+        const endInput = document.getElementById('id_end_date');
+        const durationBadge = document.getElementById('duration-badge');
+        
+        if (!startInput || !endInput || !startInput.value || !endInput.value) return;
+        
+        const start = new Date(startInput.value);
+        const end = new Date(endInput.value);
+        const diffTime = end - start;
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (durationBadge) {
+            durationBadge.innerText = (diffDays >= 0 ? diffDays : 0) + " Nächte";
+            durationBadge.classList.toggle('bg-danger', diffDays < 0);
+            durationBadge.classList.toggle('bg-secondary', diffDays >= 0);
+        }
+    }
+
+    function updateShiftUI() {
+        const input = document.getElementById('id_start_date');
+        const container = document.getElementById('shift-container');
+        const badge = document.getElementById('shift-badge');
+        const countSpan = document.getElementById('shift-days-count');
+        const check = document.getElementById('shiftDatesCheck');
+        
+        if (!input || !container) return;
+
+        const originalStr = input.getAttribute('data-original');
+        if (!originalStr) return;
+
+        const original = new Date(originalStr);
+        const selected = new Date(input.value);
+
+        const diffDays = Math.round((selected - original) / (1000 * 60 * 60 * 24));
+
+        if (diffDays !== 0) {
+            if (badge) badge.classList.remove('d-none');
+            if (countSpan) countSpan.innerText = (diffDays > 0 ? '+' : '') + diffDays;
+            container.style.boxShadow = '0 0 15px rgba(197, 160, 89, 0.4)';
+            container.classList.add('border-warning');
+            if (check) check.checked = true;
+        } else {
+            if (badge) badge.classList.add('d-none');
+            container.style.boxShadow = 'none';
+            if (check) check.checked = false;
+        }
+    }
+</script>
+
+<style>
+    .transition-all { transition: all 0.3s ease; }
+    #id_start_date, #id_end_date { font-family: monospace; letter-spacing: 1px; }
+</style>

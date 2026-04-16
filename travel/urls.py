@@ -14,7 +14,7 @@ from .views import (
     global_expense_delete, trip_checklist, checklist_item_toggle,
     checklist_item_delete, checklist_apply_template, checklist_item_add,
     checklist_print, day_insert, day_delete_and_shift, trip_shift_dates,
-    save_ui_settings
+    save_ui_settings, checklist_reset
 )
 
 app_name = 'travel'
@@ -67,6 +67,7 @@ urlpatterns = [
     path('checklist/item/<int:item_id>/delete/', checklist_item_delete, name='checklist_item_delete'),
     path('trip/<int:trip_id>/checklist/apply-template/', checklist_apply_template, name='checklist_apply_template'),
     path('trip/<int:trip_id>/checklist/add-item/', checklist_item_add, name='checklist_item_add'),
+    path('trip/<int:trip_id>/checklist/reset/', checklist_reset, name='checklist_reset'),
     path('trip/<int:trip_id>/checklist/print/', checklist_print, name='checklist_print'),
     path('trip/<int:trip_id>/save-ui-settings/', save_ui_settings, name='save_ui_settings'),
 ]

@@ -192,7 +192,8 @@
             // CRITICAL: Ensure we only initialize once per element and clean up old instances
             const gridDiv = document.querySelector('#ag-trip-grid');
             if (gridDiv && gridDiv.querySelector('.ag-root')) {
-                // Already initialized or being initialized
+                // Already initialized - but still ensure our global API is linked!
+                // To be safe, we let the existing grid handle its own instance.
                 return;
             }
             window.collapsedStations = new Set();
