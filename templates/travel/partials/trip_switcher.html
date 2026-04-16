@@ -82,13 +82,23 @@
                     title="{% trans 'Karte einblenden' %}">
                 <i class="bi bi-map-fill"></i>
             </button>
+        {% else %}
+             <!-- AI Assistant when no trip is active -->
+             <button hx-get="{% url 'travel:ai_wizard' %}?step=select" 
+                    hx-target="#modal-container"
+                    class="btn btn-sm btn-premium-gold px-3"
+                    title="{% trans 'KI-Reise-Designer' %}">
+                <i class="bi bi-stars me-1"></i>{% trans "KI-Designer" %}
+            </button>
+        {% endif %}
 
-            <!-- Meatball Menu -->
-            <div class="dropdown meatball-dropdown mt-1">
-                <button class="nav-icon-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-three-dots-vertical"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end meatball-menu shadow-lg">
+        <!-- Meatball Menu (Always visible) -->
+        <div class="dropdown meatball-dropdown mt-1">
+            <button class="nav-icon-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end meatball-menu shadow-lg">
+                {% if active_trip %}
                     <li class="px-3 py-2 text-warning small fw-bold text-uppercase opacity-75">{% trans "Reise-Verwaltung" %}</li>
                     <li><a class="dropdown-item" href="javascript:void(0)" hx-get="{% url 'travel:trip_logic_check' active_trip.id %}" hx-target="#modal-container">
                         <i class="bi bi-check2-circle"></i>{% trans "Reise-Check" %}
@@ -104,23 +114,25 @@
                         <i class="bi bi-trash"></i>{% trans "Reise löschen" %}
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li class="px-3 py-2 text-secondary small fw-bold text-uppercase opacity-75">{% trans "Global" %}</li>
-                    <li><a class="dropdown-item" href="javascript:void(0)" hx-get="{% url 'travel:settings_modal' %}" hx-target="#modal-container">
-                        <i class="bi bi-gear"></i>{% trans "Einstellungen" %}
-                    </a></li>
-                    <li><a class="dropdown-item" href="/admin/" target="_blank">
-                        <i class="bi bi-shield-lock"></i>Admin
-                    </a></li>
-                </ul>
-            </div>
-        {% else %}
-             <!-- Only AI Assistant when no trip is active -->
-             <button hx-get="{% url 'travel:ai_wizard' %}?step=select" 
-                    hx-target="#modal-container"
-                    class="btn btn-sm btn-premium-gold px-3"
-                    title="{% trans 'KI-Reise-Designer' %}">
-                <i class="bi bi-stars me-1"></i>{% trans "KI-Designer" %}
-            </button>
-        {% endif %}
+                {% endif %}
+                
+                <li class="px-3 py-2 text-secondary small fw-bold text-uppercase opacity-75">{% trans "Global" %}</li>
+                <li><a class="dropdown-item" href="javascript:void(0)" hx-get="{% url 'travel:settings_modal' %}" hx-target="#modal-container">
+                    <i class="bi bi-gear"></i>{% trans "Einstellungen" %}
+                </a></li>
+                <li><a class="dropdown-item" href="/admin/" target="_blank">
+                    <i class="bi bi-shield-lock"></i>Admin
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form action="{% url 'logout' %}" method="post" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item text-danger w-100 border-0 bg-transparent">
+                            <i class="bi bi-box-arrow-right"></i>{% trans "Abmelden" %}
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>
