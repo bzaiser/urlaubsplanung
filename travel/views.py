@@ -14,6 +14,8 @@ from django.db.models import Prefetch
 from django.core.serializers.json import DjangoJSONEncoder
 import json
 from .services import ai_service, logic_service, checklist_service, geo_service
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 def _generate_days(trip):
     """Utility to generate Day objects for the trip duration."""
@@ -218,7 +220,7 @@ def get_dashboard_context(request, active_trip=None):
         
     return context
 
-class TripDashboardView(ListView):
+class TripDashboardView(LoginRequiredMixin, ListView):
     model = Trip
     template_name = 'travel/trip_dashboard.html'
     context_object_name = 'trips'
@@ -238,6 +240,7 @@ class TripDashboardView(ListView):
         context.update(dashboard_context)
         return context
 
+@login_required
 def trip_create(request):
     if request.method == 'POST':
         form = TripForm(request.POST)
@@ -255,6 +258,7 @@ def trip_create(request):
     
     return render(request, 'travel/partials/trip_form.html', {'form': form})
 
+@login_required
 def trip_edit(request, pk):
     trip = get_object_or_404(Trip, pk=pk)
     if request.method == 'POST':
@@ -290,6 +294,7 @@ def trip_edit(request, pk):
     
     return render(request, 'travel/partials/trip_form.html', {'form': form})
 
+@login_required
 def trip_delete(request, pk):
     trip = get_object_or_404(Trip, pk=pk)
     if request.method == 'DELETE' or request.method == 'POST':
@@ -310,11 +315,13 @@ def trip_delete(request, pk):
 # Event Management Views
 from .models import Event
 
+@login_required
 def event_type_picker(request, day_id):
     """Shows a grid of event types to choose from before opening the form."""
     day = get_object_or_404(Day, pk=day_id)
     return render(request, 'travel/partials/event_type_picker.html', {'day': day})
 
+@login_required
 def event_create(request, day_id):
     day = get_object_or_404(Day, pk=day_id)
     if request.method == 'POST':
@@ -373,6 +380,7 @@ def event_create(request, day_id):
         'conflict_warning': conflict_warning if 'conflict_warning' in locals() else None
     })
 
+@login_required
 def event_edit(request, pk):
     event = get_object_or_404(Event, pk=pk)
     if request.method == 'POST':
@@ -400,6 +408,7 @@ def event_edit(request, pk):
         'day': event.day
     })
 
+@login_required
 def event_delete(request, pk):
     event = get_object_or_404(Event, pk=pk)
     trip = event.day.trip
@@ -417,6 +426,7 @@ def event_delete(request, pk):
         return render(request, 'travel/partials/trip_list.html', get_dashboard_context(request, trip))
     return HttpResponse(status=405)
 
+@login_required
 def event_inline_create(request, day_id):
     """Creates a new event inline and returns the new full row to refresh IDs."""
     day = get_object_or_404(Day, pk=day_id)
@@ -446,6 +456,7 @@ def event_inline_create(request, day_id):
     # Return the full row
     return render(request, 'travel/partials/day_row.html', {'day': day})
 
+@login_required
 def event_inline_update(request, pk=None, day_id=None):
     """Updates or creates an event field. Returns 204 or OOB duration update."""
     field = request.POST.get('field')
@@ -506,6 +517,7 @@ def event_inline_update(request, pk=None, day_id=None):
 
 
 
+@login_required
 def event_quick_add(request, day_id):
     """Quickly adds an activity/event just by title."""
     day = get_object_or_404(Day, pk=day_id)
@@ -523,6 +535,7 @@ def event_quick_add(request, day_id):
         
     return render(request, 'travel/partials/trip_list.html', get_dashboard_context(request, day.trip))
 
+@login_required
 def day_bulk_edit(request):
     """Updates multiple days (location, hotel) at once. Triggers full refresh."""
     if request.method == 'POST':
@@ -536,6 +549,7 @@ def day_bulk_edit(request):
                 return response
     return redirect('travel:dashboard')
 
+@login_required
 def day_insert(request):
     """Inserts an empty day at a specific position and shifts everything else."""
     if request.method == 'POST':
@@ -562,6 +576,7 @@ def day_insert(request):
                 return response
     return redirect('travel:dashboard')
 
+@login_required
 def day_delete_and_shift(request):
     """Deletes selected days and shifts subsequent days forward to close the gap."""
     if request.method == 'POST':
@@ -586,6 +601,7 @@ def day_delete_and_shift(request):
                     return response
     return redirect('travel:dashboard')
 
+@login_required
 def trip_shift_dates(request, pk):
     """Shifts the entire trip by a given offset."""
     trip = get_object_or_404(Trip, pk=pk)
@@ -601,6 +617,7 @@ def trip_shift_dates(request, pk):
             return response
     return render(request, 'travel/partials/trip_shift_modal.html', {'trip': trip})
 
+@login_required
 def day_inline_update(request, pk):
     """Updates the location of a day via HTMX."""
     day = get_object_or_404(Day, pk=pk)
@@ -614,6 +631,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 
 @csrf_exempt
+@login_required
 def event_upload_voucher(request, pk):
     """Directly uploads a file to an existing event via AJAX/HTMX."""
     if request.method == 'POST' and request.FILES.get('voucher'):
@@ -623,6 +641,7 @@ def event_upload_voucher(request, pk):
         return JsonResponse({'status': 'success', 'voucher_url': event.voucher.url})
     return JsonResponse({'status': 'error'}, status=400)
 
+@login_required
 def event_bulk_delete(request):
     """Deletes multiple events selected in the grid."""
     if request.method == 'POST':
@@ -638,6 +657,7 @@ def event_bulk_delete(request):
             return render(request, 'travel/partials/trip_list.html', {'active_trip': trip})
     return HttpResponse(status=405)
 
+@login_required
 def event_bulk_move(request):
     """Moves selected events to a new target date."""
     if request.method == 'POST':
@@ -674,6 +694,7 @@ def get_setting(key, default=''):
     except GlobalSetting.DoesNotExist:
         return default
 
+@login_required
 def settings_modal(request):
     """View to manage API Keys, Provider and Trip Templates."""
     templates = TripTemplate.objects.all().order_by('-created_at')
@@ -748,6 +769,7 @@ def settings_modal(request):
         'food_out_low': food_out_l, 'food_out_med': food_out_m, 'food_out_high': food_out_h,
     })
 
+@login_required
 def template_create(request):
     """Simple view to create a new trip template."""
     if request.method == 'POST':
@@ -758,6 +780,7 @@ def template_create(request):
             return settings_modal(request) # Return refreshed settings list
     return render(request, 'travel/partials/template_form.html')
 
+@login_required
 def template_edit(request, pk):
     """View to edit an existing trip template."""
     template = get_object_or_404(TripTemplate, pk=pk)
@@ -768,6 +791,7 @@ def template_edit(request, pk):
         return settings_modal(request)
     return render(request, 'travel/partials/template_form.html', {'template': template})
 
+@login_required
 def template_delete(request, pk):
     """View to delete a trip template."""
     template = get_object_or_404(TripTemplate, pk=pk)
@@ -778,6 +802,7 @@ def template_delete(request, pk):
 
 from django.views.decorators.csrf import csrf_exempt
 
+@login_required
 def ai_wizard(request):
     """
     Step-by-step wizard for AI trip generation.
@@ -902,6 +927,7 @@ def ai_wizard(request):
 
 # --- LOGIC & GLOBAL EXPENSE VIEWS ---
 
+@login_required
 def trip_logic_check(request, pk):
     """Runs consistency checks and returns the results modal."""
     trip = get_object_or_404(Trip, pk=pk)
@@ -911,6 +937,7 @@ def trip_logic_check(request, pk):
         'findings': findings
     })
 
+@login_required
 def global_expense_create(request, trip_id):
     trip = get_object_or_404(Trip, pk=trip_id)
     if request.method == 'POST':
@@ -930,6 +957,7 @@ def global_expense_create(request, trip_id):
         return HttpResponse(headers={'HX-Refresh': 'true'})
     return render(request, 'travel/partials/global_expense_form.html', {'trip': trip})
 
+@login_required
 def global_expense_edit(request, pk):
     expense = get_object_or_404(GlobalExpense, pk=pk)
     if request.method == 'POST':
@@ -944,12 +972,14 @@ def global_expense_edit(request, pk):
         return HttpResponse(headers={'HX-Refresh': 'true'})
     return render(request, 'travel/partials/global_expense_form.html', {'expense': expense, 'trip': expense.trip})
 
+@login_required
 def global_expense_delete(request, pk):
     expense = get_object_or_404(GlobalExpense, pk=pk)
     expense.delete()
     return HttpResponse(headers={'HX-Refresh': 'true'})
 
 
+@login_required
 def export_trip_ics(request, pk):
     """Generates an .ics file for the complete trip."""
     trip = get_object_or_404(Trip, pk=pk)
@@ -1006,6 +1036,7 @@ def export_trip_ics(request, pk):
     response['Content-Disposition'] = f'attachment; filename="{filename}.ics"'
     return response
 
+@login_required
 def expense_upload_voucher(request, pk):
     """Directly uploads a file to an existing global expense via AJAX/HTMX."""
     if request.method == 'POST' and request.FILES.get('voucher'):
@@ -1015,6 +1046,7 @@ def expense_upload_voucher(request, pk):
         return JsonResponse({'status': 'success', 'voucher_url': expense.voucher.url})
     return JsonResponse({'status': 'error'}, status=400)
 
+@login_required
 def add_adjustment_food(request, trip_id):
     """Smart fix to add missing food budget."""
     trip = get_object_or_404(Trip, pk=trip_id)
@@ -1030,6 +1062,7 @@ def add_adjustment_food(request, trip_id):
         )
     return HttpResponse(headers={'HX-Refresh': 'true'})
 
+@login_required
 def edit_diary(request, day_id):
     day = get_object_or_404(Day, id=day_id)
     diary, created = DiaryEntry.objects.get_or_create(day=day)
@@ -1068,11 +1101,13 @@ def edit_diary(request, day_id):
     }
     return render(request, 'travel/partials/diary_modal.html', context)
 
+@login_required
 def delete_diary_image(request, image_id):
     image = get_object_or_404(DiaryImage, id=image_id)
     image.delete()
     return HttpResponse("") 
 
+@login_required
 def set_diary_image_primary(request, image_id):
     image = get_object_or_404(DiaryImage, id=image_id)
     diary = image.diary_entry
@@ -1098,6 +1133,7 @@ def set_diary_image_primary(request, image_id):
 
 # --- Checklist Views ---
 
+@login_required
 def trip_checklist(request, trip_id):
     """Main view for a trip's checklist, grouped by category."""
     trip = get_object_or_404(Trip, pk=trip_id)
@@ -1125,6 +1161,7 @@ def trip_checklist(request, trip_id):
     }
     return render(request, 'travel/partials/trip_checklist.html', context)
 
+@login_required
 def checklist_item_toggle(request, item_id):
     """HTMX view to toggle an item's completion status."""
     item = get_object_or_404(TripChecklistItem, pk=item_id)
@@ -1135,6 +1172,7 @@ def checklist_item_toggle(request, item_id):
     # But usually we re-render the checklist partial or just return 204
     return HttpResponse(status=204)
 
+@login_required
 def checklist_apply_template(request, trip_id):
     """Action view to apply a template to a trip's checklist."""
     trip = get_object_or_404(Trip, pk=trip_id)
@@ -1145,6 +1183,7 @@ def checklist_apply_template(request, trip_id):
     
     return redirect(f"{reverse('travel:dashboard')}?view=checklist")
 
+@login_required
 def checklist_reset(request, trip_id):
     """Deletes all items from a trip's checklist."""
     trip = get_object_or_404(Trip, pk=trip_id)
@@ -1155,6 +1194,7 @@ def checklist_reset(request, trip_id):
         return redirect(f"{reverse('travel:dashboard')}?view=checklist")
     return redirect(f"{reverse('travel:dashboard')}?view=checklist")
 
+@login_required
 def checklist_item_add(request, trip_id):
     """HTMX Action to add a custom item."""
     trip = get_object_or_404(Trip, pk=trip_id)
@@ -1168,6 +1208,7 @@ def checklist_item_add(request, trip_id):
     # Refresh the dashboard view
     return redirect(f"{reverse('travel:dashboard')}?view=checklist")
 
+@login_required
 def checklist_item_delete(request, item_id):
     """HTMX action to delete an item."""
     item = get_object_or_404(TripChecklistItem, pk=item_id)
@@ -1175,6 +1216,7 @@ def checklist_item_delete(request, item_id):
     item.delete()
     return redirect(f"{reverse('travel:dashboard')}?view=checklist")
 
+@login_required
 def checklist_print(request, trip_id):
     """Print-friendly view of the trip checklist."""
     trip = get_object_or_404(Trip, pk=trip_id)
@@ -1196,6 +1238,7 @@ def checklist_print(request, trip_id):
 from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
+@login_required
 def save_ui_settings(request, trip_id):
     if request.method == 'POST':
         trip = get_object_or_404(Trip, id=trip_id)
