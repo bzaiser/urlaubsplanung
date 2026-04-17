@@ -24,8 +24,9 @@ function initDB() {
         request.onsuccess = (event) => {
             db = event.target.result;
             console.log('📦 PWA: Offline DB initialized successfully');
-            if (window.showToast) showToast("📦 Lokaler Speicher bereit (v25)");
+            if (window.showToast) showToast("📦 Lokaler Speicher bereit (v26)");
             updateSyncIndicator();
+            initHamster(); // Start the background pre-fetcher
             resolve(db);
         };
 
@@ -36,6 +37,50 @@ function initDB() {
             reject(msg);
         };
     });
+}
+
+// --- HAMSTER: Content Pre-fetcher (v26) ---
+async function initHamster() {
+    // Only run if online and we have grid data
+    if (!navigator.onLine) return;
+    
+    // Check if we already did this today or this session
+    if (sessionStorage.getItem('hamster_finished_v26')) return;
+
+    const dataEl = document.getElementById('grid-data');
+    if (!dataEl) return;
+
+    try {
+        const gridData = JSON.parse(dataEl.textContent);
+        const dayIds = [...new Set(gridData.filter(r => r.day_id).map(r => r.day_id))];
+        
+        if (dayIds.length > 0) {
+            prefetchTripDays(dayIds);
+        }
+    } catch (e) {
+        console.error("🐹 Hamster stalled:", e);
+    }
+}
+
+async function prefetchTripDays(dayIds) {
+    if (window.showToast) showToast("🐹 Hamster: Sichere Reise für Offline-Einsatz...", false);
+    
+    console.log(`🐹 Hamster: Prefetching ${dayIds.length} days...`);
+    
+    for (const id of dayIds) {
+        try {
+            // Pre-fetch the diary modal content
+            await fetch(`/day/${id}/diary/`, { headers: { 'HX-Request': 'true' } });
+            // Small delay to be gentle on server
+            await new Promise(r => setTimeout(r, 400));
+        } catch (e) {
+            console.warn(`🐹 Hamster skipped day ${id}:`, e);
+        }
+    }
+    
+    sessionStorage.setItem('hamster_finished_v26', 'true');
+    console.log("🐹 Hamster: Bunker is full!");
+    if (window.showToast) showToast("✅ Bunker voll! Deine Reise ist jetzt offline verfügbar.", false);
 }
 
 // Save an entry to the queue

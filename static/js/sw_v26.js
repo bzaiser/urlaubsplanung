@@ -1,9 +1,9 @@
-const CACHE_NAME = 'travel-hub-v25';
-const STATIC_CACHE = 'travel-hub-static-v25';
+const CACHE_NAME = 'travel-hub-v26';
+const STATIC_CACHE = 'travel-hub-static-v26';
 const MEDIA_CACHE = 'travel-hub-media-v3';
 const DYNAMIC_CACHE = 'travel-hub-dynamic-v3';
 
-const log = (msg, data = '') => console.log(`[SW v25] ${msg}`, data);
+const log = (msg, data = '') => console.log(`[SW v26] ${msg}`, data);
 
 const EMERGENCY_STYLES = `
     body { background: #0a192f; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
@@ -24,7 +24,7 @@ const EMERGENCY_SHELL_HTML = `
 </head>
 <body>
     <div class="container">
-        <div class="indicator">MODUS: OFFLINE-SCHUTZ (v25)</div>
+        <div class="indicator">MODUS: OFFLINE-SCHUTZ (v26)</div>
         <h1>Inhalt nicht im Bunker</h1>
         <p>Du bist offline und dieser Teil wurde leider noch nicht gespeichert. Bitte verbinde dich kurz, um diesen Tag zu laden.</p>
         <a href="/" class="btn">Zurück zur Timeline</a>
@@ -44,7 +44,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-    log('Installing HTML-Guard v25...');
+    log('Installing Hamster Guard v26...');
     self.skipWaiting();
     event.waitUntil(caches.open(STATIC_CACHE).then((cache) => {
         return Promise.allSettled(ASSETS.map(url => cache.add(url)));
@@ -52,7 +52,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-    log('v25 Active. Claiming clients...');
+    log('v26 Active. Claiming clients...');
     event.waitUntil(Promise.all([
         self.clients.claim(),
         caches.keys().then((keys) => {
@@ -67,7 +67,6 @@ self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
     const url = new URL(event.request.url);
 
-    // 1. Navigation Shell - Always return HTML
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request).then(response => {
@@ -84,7 +83,6 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 2. Resource Strategy
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             const fetchPromise = fetch(event.request).then((networkResponse) => {
