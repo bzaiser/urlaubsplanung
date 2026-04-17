@@ -213,7 +213,7 @@ async function performSync() {
                     });
                 }
 
-                const response = await fetch(`/day/${entry.dayId}/diary//`, {
+                const response = await fetch(`/day/${entry.dayId}/diary/`, {
                     method: 'POST',
                     body: formData,
                     headers: {
