@@ -1195,7 +1195,7 @@ def trip_checklist(request, trip_id):
         switcher_html = render_to_string('travel/partials/trip_switcher.html', {
             'active_trip': trip,
             'view_type': 'checklist',
-            'trips': Trip.objects.filter(owner=request.user),
+            'trips': Trip.objects.all(),
             'is_oob': True
         }, request=request)
         return HttpResponse(response_html + "\n" + switcher_html)
