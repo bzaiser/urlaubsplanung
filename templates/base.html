@@ -234,9 +234,8 @@
             });
         }
 
-        // --- HTMX Diagnostics ---
         document.body.addEventListener('htmx:sendError', (e) => {
-            showToast("🌐 Netzwerk-Fehler: Bist du offline? App-Cache wird versucht...", true);
+            showToast("🌐 Die Verbindung wurde unterbrochen. Deine Erlebnisse werden sicher lokal zwischengespeichert.", true);
         });
 
         document.body.addEventListener('htmx:responseError', (e) => {

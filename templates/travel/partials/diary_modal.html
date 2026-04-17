@@ -135,7 +135,7 @@
                         e.preventDefault();
                         e.stopImmediatePropagation();
                         
-                        showToast("📡 Keine Verbindung! Lokal gesichert...", true);
+                        showToast("📡 Verbindung unterbrochen – keine Sorge, dein Tagebuch-Eintrag ist lokal gesichert.", false);
                         
                         const form = e.target;
                         const formData = new FormData(form);

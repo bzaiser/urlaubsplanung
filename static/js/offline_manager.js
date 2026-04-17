@@ -244,7 +244,7 @@ async function performSync() {
         }
         
         if (hasError) {
-            if (window.showToast) window.showToast(`⚠️ Synchronisierung unvollständig (${lastErrorStatus})`, true);
+            if (window.showToast) window.showToast(`📴 Synchronisierung pausiert. Wir warten auf eine stabilere Verbindung.`, true);
             if (indicator) {
                 indicator.classList.remove('text-info');
                 indicator.classList.add('text-danger');
