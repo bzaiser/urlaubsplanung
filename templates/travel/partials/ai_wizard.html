@@ -156,6 +156,11 @@
                 <div class="border-top border-secondary pt-4">
                     <h6 class="text-warning text-uppercase small mb-2">2. Ergebnis von Gemini hier einfügen</h6>
                     
+                    <div class="alert alert-info py-2 small mb-2">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Bitte nutze in Gemini ausschließlich das <strong>Kopieren-Icon</strong> am Ende der JSON-Antwort, um das Ergebnis fehlerfrei zu übernehmen.
+                    </div>
+
                     <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#modal-container">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="manual_import">
