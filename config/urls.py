@@ -11,7 +11,7 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('pwa/', include('pwa.urls')),
-    path('serviceworker_v26.js', pwa_views.service_worker, name='serviceworker'),
+    path('serviceworker_v27.js', pwa_views.service_worker, name='serviceworker'),
     path('manifest.json', pwa_views.manifest, name='manifest'),
     path('', include('travel.urls')),
 ]

@@ -1,9 +1,9 @@
-const CACHE_NAME = 'travel-hub-v26';
-const STATIC_CACHE = 'travel-hub-static-v26';
-const MEDIA_CACHE = 'travel-hub-media-v3';
-const DYNAMIC_CACHE = 'travel-hub-dynamic-v3';
+const CACHE_NAME = 'travel-hub-v27';
+const STATIC_CACHE = 'travel-hub-static-v27';
+const MEDIA_CACHE = 'travel-hub-media-v4';
+const DYNAMIC_CACHE = 'travel-hub-dynamic-v4';
 
-const log = (msg, data = '') => console.log(`[SW v26] ${msg}`, data);
+const log = (msg, data = '') => console.log(`[SW v27] ${msg}`, data);
 
 const EMERGENCY_STYLES = `
     body { background: #0a192f; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
@@ -19,15 +19,15 @@ const EMERGENCY_SHELL_HTML = `
 <html lang="de">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Hub - Offline Guard</title>
+    <title>Travel Hub - Offline Fallback</title>
     <style>${EMERGENCY_STYLES}</style>
 </head>
 <body>
     <div class="container">
-        <div class="indicator">MODUS: OFFLINE-SCHUTZ (v26)</div>
-        <h1>Inhalt nicht im Bunker</h1>
-        <p>Du bist offline und dieser Teil wurde leider noch nicht gespeichert. Bitte verbinde dich kurz, um diesen Tag zu laden.</p>
-        <a href="/" class="btn">Zurück zur Timeline</a>
+        <div class="indicator">OFFLINE-MODUS (v27)</div>
+        <h1>Inhalt nicht im Cache</h1>
+        <p>Dieses Element ist aktuell nicht offline verfügbar. Bitte stellen Sie eine Verbindung her, um die Synchronisierung zu vervollständigen.</p>
+        <a href="/" class="btn">Zurück zur Übersicht</a>
     </div>
 </body>
 </html>
@@ -44,7 +44,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-    log('Installing Hamster Guard v26...');
+    log('Installing Software v27...');
     self.skipWaiting();
     event.waitUntil(caches.open(STATIC_CACHE).then((cache) => {
         return Promise.allSettled(ASSETS.map(url => cache.add(url)));
@@ -52,7 +52,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-    log('v26 Active. Claiming clients...');
+    log('v27 Activated.');
     event.waitUntil(Promise.all([
         self.clients.claim(),
         caches.keys().then((keys) => {

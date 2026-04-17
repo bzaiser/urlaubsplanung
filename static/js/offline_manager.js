@@ -24,14 +24,14 @@ function initDB() {
         request.onsuccess = (event) => {
             db = event.target.result;
             console.log('📦 PWA: Offline DB initialized successfully');
-            if (window.showToast) showToast("📦 Lokaler Speicher bereit (v26)");
+            if (window.showToast) showToast("📦 Lokaler Datenspeicher aktiv (v27)");
             updateSyncIndicator();
-            initHamster(); // Start the background pre-fetcher
+            initBackgroundSync(); // Start background content synchronization
             resolve(db);
         };
 
         request.onerror = (event) => {
-            const msg = `❌ PWA: DB Error ${event.target.errorCode || event.target.error}`;
+            const msg = `❌ Status-Fehler: Datenbankzugriff fehlgeschlagen (${event.target.errorCode || event.target.error})`;
             console.error(msg);
             if (window.showToast) showToast(msg, true);
             reject(msg);
@@ -39,13 +39,10 @@ function initDB() {
     });
 }
 
-// --- HAMSTER: Content Pre-fetcher (v26) ---
-async function initHamster() {
-    // Only run if online and we have grid data
+// --- Background Content Synchronization (v27) ---
+async function initBackgroundSync() {
     if (!navigator.onLine) return;
-    
-    // Check if we already did this today or this session
-    if (sessionStorage.getItem('hamster_finished_v26')) return;
+    if (sessionStorage.getItem('pwa_sync_finished_v27')) return;
 
     const dataEl = document.getElementById('grid-data');
     if (!dataEl) return;
@@ -55,32 +52,29 @@ async function initHamster() {
         const dayIds = [...new Set(gridData.filter(r => r.day_id).map(r => r.day_id))];
         
         if (dayIds.length > 0) {
-            prefetchTripDays(dayIds);
+            synchronizeTripData(dayIds);
         }
     } catch (e) {
-        console.error("🐹 Hamster stalled:", e);
+        console.error("Synchronization background process failed:", e);
     }
 }
 
-async function prefetchTripDays(dayIds) {
-    if (window.showToast) showToast("🐹 Hamster: Sichere Reise für Offline-Einsatz...", false);
+async function synchronizeTripData(dayIds) {
+    if (window.showToast) showToast("🔃 Synchronisierung der Reisedaten für Offline-Nutzung...", false);
     
-    console.log(`🐹 Hamster: Prefetching ${dayIds.length} days...`);
+    console.log(`PWA: Synchronizing ${dayIds.length} days...`);
     
     for (const id of dayIds) {
         try {
-            // Pre-fetch the diary modal content
             await fetch(`/day/${id}/diary/`, { headers: { 'HX-Request': 'true' } });
-            // Small delay to be gentle on server
             await new Promise(r => setTimeout(r, 400));
         } catch (e) {
-            console.warn(`🐹 Hamster skipped day ${id}:`, e);
+            console.warn(`Synchronization failed for day ${id}:`, e);
         }
     }
     
-    sessionStorage.setItem('hamster_finished_v26', 'true');
-    console.log("🐹 Hamster: Bunker is full!");
-    if (window.showToast) showToast("✅ Bunker voll! Deine Reise ist jetzt offline verfügbar.", false);
+    sessionStorage.setItem('pwa_sync_finished_v27', 'true');
+    if (window.showToast) showToast("✅ Offline-Synchronisierung abgeschlossen.", false);
 }
 
 // Save an entry to the queue
