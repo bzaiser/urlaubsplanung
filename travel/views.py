@@ -1215,6 +1215,49 @@ def checklist_item_toggle(request, item_id):
     return HttpResponse(status=204)
 
 @login_required
+def checklist_item_date_edit(request, item_id):
+    """Returns an inline date input for editing a checklist item's due date."""
+    item = get_object_or_404(TripChecklistItem, pk=item_id)
+    # Render a simple date input that saves on change/blur
+    html = f"""
+    <input type="date" name="due_date" value="{item.due_date.isoformat() if item.due_date else ''}"
+           class="form-control form-control-sm bg-dark text-warning border-warning"
+           style="width: 130px; font-size: 0.75rem;"
+           hx-post="{reverse('travel:checklist_item_date_save', args=[item.id])}"
+           hx-trigger="change, blur"
+           hx-swap="outerHTML"
+           autoFocus>
+    """
+    return HttpResponse(html)
+
+@login_required
+def checklist_item_date_save(request, item_id):
+    """Saves the updated date and returns the formatted badge."""
+    item = get_object_or_404(TripChecklistItem, pk=item_id)
+    new_date = request.POST.get('due_date')
+    
+    if new_date:
+        item.due_date = new_date
+        item.save()
+    
+    # Return the updated badge (same HTML as in trip_checklist.html)
+    from datetime import date
+    today = date.today()
+    badge_class = "bg-danger" if item.due_date and item.due_date < today else "bg-secondary text-opacity-75"
+    date_str = item.due_date.strftime("%j. %M") if item.due_date else "---" # Small fix for German format if needed
+    # Actually use standard django date filter style if possible, but here we just return HTML
+    
+    html = f"""
+    <span class="badge rounded-pill {badge_class} small pointer" 
+          style="font-size: 0.7rem; cursor: pointer;"
+          hx-get="{reverse('travel:checklist_item_date_edit', args=[item.id])}"
+          hx-swap="outerHTML">
+        <i class="bi bi-clock me-1"></i>{item.due_date.strftime("%d. %m.") if item.due_date else '---'}
+    </span>
+    """
+    return HttpResponse(html)
+
+@login_required
 def checklist_apply_template(request, trip_id):
     """Action view to apply a template to a trip's checklist."""
     trip = get_object_or_404(Trip, pk=trip_id)
@@ -1246,6 +1289,41 @@ def checklist_item_add(request, trip_id):
         checklist_service.add_custom_item(trip, text, category_id, save_to_template)
     
     return trip_checklist(request, trip_id)
+
+@login_required
+def checklist_template_modal(request, trip_id):
+    """Returns a modal to edit the template items (due days)."""
+    trip = get_object_or_404(Trip, pk=trip_id)
+    checklist = getattr(trip, 'checklist', None)
+    
+    if not checklist or not checklist.template:
+        return HttpResponse("Keine Vorlage ausgewählt.")
+        
+    template = checklist.template
+    # Group items by category for the editor
+    items = template.items.all().order_by('category__order', 'text')
+    
+    context = {
+        'template': template,
+        'items': items,
+        'active_trip': trip
+    }
+    return render(request, 'travel/partials/checklist_template_modal.html', context)
+
+@login_required
+def checklist_template_item_update(request, item_template_id):
+    """Saves changes to a template item (global settings)."""
+    item_template = get_object_or_404(ChecklistItemTemplate, pk=item_template_id)
+    days = request.POST.get('due_days_before')
+    text = request.POST.get('text')
+    
+    if days is not None:
+        item_template.due_days_before = int(days)
+    if text:
+        item_template.text = text
+        
+    item_template.save()
+    return HttpResponse(status=204)
 
 @login_required
 def checklist_item_delete(request, item_id):

@@ -1,0 +1,53 @@
+{% load i18n %}
+<div class="modal-content bg-dark text-light border-secondary shadow-lg">
+    <div class="modal-header border-secondary border-opacity-25">
+        <h5 class="modal-title text-warning">
+            <i class="bi bi-gear-fill me-2"></i>{% trans "Checklisten-Vorlage bearbeiten" %}
+        </h4>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        <p class="text-secondary small mb-4">
+            {% trans "Hier legst du fest, wie viele Tage vor Abreise die To-Dos standardmäßig fällig werden. Änderungen wirken sich auf zukünftige Anwendungen dieser Vorlage aus." %}
+        </p>
+        
+        <div class="list-group list-group-flush bg-transparent">
+            {% for item in items %}
+                <div class="list-group-item bg-transparent border-secondary border-opacity-10 py-3">
+                    <div class="row align-items-center">
+                        <div class="col-8">
+                            <input type="text" name="text" value="{{ item.text }}" 
+                                   class="form-control form-control-sm bg-transparent border-0 text-light p-0"
+                                   hx-post="{% url 'travel:checklist_template_item_update' item.id %}"
+                                   hx-trigger="change delay:500ms"
+                                   hx-swap="none">
+                            <div class="small text-secondary">{{ item.category.name }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="due_days_before" value="{{ item.due_days_before }}" 
+                                       class="form-control bg-dark border-secondary text-light text-center"
+                                       style="max-width: 60px;"
+                                       hx-post="{% url 'travel:checklist_template_item_update' item.id %}"
+                                       hx-trigger="change, blur"
+                                       hx-swap="none">
+                                <span class="input-group-text bg-transparent border-secondary text-secondary">
+                                    {% trans "Tage" %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="text-center py-4 text-secondary">
+                    {% trans "Keine Einträge in dieser Vorlage." %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="modal-footer border-secondary border-opacity-25">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+            {% trans "Schließen" %}
+        </button>
+    </div>
+</div>

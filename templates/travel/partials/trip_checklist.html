@@ -19,8 +19,13 @@
         </div>
         
         <div class="col-12 col-md">
-            <div class="d-flex justify-content-md-end w-100">
+            <div class="d-flex gap-2">
                 {% if checklist.items.exists %}
+                    <button hx-get="{% url 'travel:checklist_template_modal' active_trip.id %}"
+                            hx-target="#modal-container"
+                            class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-gear-fill me-1"></i>{% trans "Vorlage bearbeiten" %}
+                    </button>
                     <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
                             hx-confirm="{% trans 'Möchtest du die gesamte Checkliste wirklich zurücksetzen? Alle Einträge werden gelöscht.' %}"
                             hx-target="#checklist-container"
@@ -28,7 +33,7 @@
                         <i class="bi bi-trash me-1"></i>{% trans "Zurücksetzen" %}
                     </button>
                 {% endif %}
-                
+            </div>
                 {% if not checklist.items.exists %}
                     <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" hx-target="#checklist-container" 
                           class="d-flex gap-2 w-100" style="max-width: 400px;">
@@ -106,8 +111,11 @@
                                                 </label>
                                             </div>
                                             {% if item.due_date and not item.is_checked %}
-                                                <span class="badge rounded-pill {% if item.due_date < today %}bg-danger{% else %}bg-secondary text-opacity-75{% endif %} small" style="font-size: 0.7rem;">
-                                                    <i class="bi bi-clock me-1"></i>{{ item.due_date|date:"j. M" }}
+                                                <span class="badge rounded-pill {% if item.due_date < today %}bg-danger{% else %}bg-secondary text-opacity-75{% endif %} small pointer" 
+                                                      style="font-size: 0.7rem; cursor: pointer;"
+                                                      hx-get="{% url 'travel:checklist_item_date_edit' item.id %}"
+                                                      hx-swap="outerHTML">
+                                                    <i class="bi bi-clock me-1"></i>{{ item.due_date|date:"d.m." }}
                                                 </span>
                                             {% endif %}
                                         </div>

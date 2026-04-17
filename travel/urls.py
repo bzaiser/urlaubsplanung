@@ -14,7 +14,9 @@ from .views import (
     global_expense_delete, trip_checklist, checklist_item_toggle,
     checklist_item_delete, checklist_apply_template, checklist_item_add,
     checklist_print, day_insert, day_delete_and_shift, trip_shift_dates,
-    save_ui_settings, checklist_reset, offline_diary_fallback
+    save_ui_settings, checklist_reset, offline_diary_fallback,
+    checklist_item_date_edit, checklist_item_date_save,
+    checklist_template_modal, checklist_template_item_update
 )
 
 app_name = 'travel'
@@ -70,5 +72,9 @@ urlpatterns = [
     path('trip/<int:trip_id>/checklist/reset/', checklist_reset, name='checklist_reset'),
     path('trip/<int:trip_id>/checklist/print/', checklist_print, name='checklist_print'),
     path('trip/<int:trip_id>/save-ui-settings/', save_ui_settings, name='save_ui_settings'),
+    path('checklist/item/<int:item_id>/date-edit/', checklist_item_date_edit, name='checklist_item_date_edit'),
+    path('checklist/item/<int:item_id>/date-save/', checklist_item_date_save, name='checklist_item_date_save'),
+    path('trip/<int:trip_id>/checklist/template-modal/', checklist_template_modal, name='checklist_template_modal'),
+    path('checklist/template-item/<int:item_template_id>/update/', checklist_template_item_update, name='checklist_template_item_update'),
     path('offline-diary-fallback/', offline_diary_fallback, name='diary_offline_fallback'),
 ]
