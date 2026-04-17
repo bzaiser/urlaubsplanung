@@ -233,6 +233,27 @@ class TripDashboardView(LoginRequiredMixin, ListView):
             return ['travel/partials/trip_list.html']
         return [self.template_name]
 
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.htmx:
+            # Render the primary partial (trip_list or trip_map)
+            template_name = self.get_template_names()[0]
+            primary_html = render_to_string(template_name, context, request=self.request)
+            
+            # Prepare OOB switcher
+            view_type = self.request.GET.get('view', 'timeline')
+            active_trip = context.get('active_trip')
+            
+            switcher_html = render_to_string('travel/partials/trip_switcher.html', {
+                'active_trip': active_trip,
+                'view_type': view_type,
+                'trips': context.get('trips'),
+                'is_oob': True
+            }, request=self.request)
+            
+            return HttpResponse(primary_html + switcher_html)
+            
+        return super().render_to_response(context, **response_kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Use centralized helper
@@ -1165,7 +1186,20 @@ def trip_checklist(request, trip_id):
         'view_type': 'checklist',
         'today': date.today()
     }
-    return render(request, 'travel/partials/trip_checklist.html', context)
+    
+    response_html = render_to_string('travel/partials/trip_checklist.html', context, request=request)
+    
+    if request.headers.get('HX-Request'):
+        # Add switcher as OOB swap to keep navigation in sync
+        switcher_html = render_to_string('travel/partials/trip_switcher.html', {
+            'active_trip': trip,
+            'view_type': 'checklist',
+            'trips': Trip.objects.filter(owner=request.user),
+            'is_oob': True
+        }, request=request)
+        return HttpResponse(response_html + switcher_html)
+        
+    return HttpResponse(response_html)
 
 @login_required
 def checklist_item_toggle(request, item_id):
@@ -1187,7 +1221,7 @@ def checklist_apply_template(request, trip_id):
         template = get_object_or_404(ChecklistTemplate, pk=template_id)
         checklist_service.apply_template_to_trip(trip, template)
     
-    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+    return trip_checklist(request, trip_id)
 
 @login_required
 def checklist_reset(request, trip_id):
@@ -1196,9 +1230,7 @@ def checklist_reset(request, trip_id):
     if hasattr(trip, 'checklist'):
         trip.checklist.items.all().delete()
     
-    if request.htmx:
-        return redirect(f"{reverse('travel:dashboard')}?view=checklist")
-    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+    return trip_checklist(request, trip_id)
 
 @login_required
 def checklist_item_add(request, trip_id):
@@ -1211,8 +1243,7 @@ def checklist_item_add(request, trip_id):
     if text and category_id:
         checklist_service.add_custom_item(trip, text, category_id, save_to_template)
     
-    # Refresh the dashboard view
-    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+    return trip_checklist(request, trip_id)
 
 @login_required
 def checklist_item_delete(request, item_id):
@@ -1220,7 +1251,7 @@ def checklist_item_delete(request, item_id):
     item = get_object_or_404(TripChecklistItem, pk=item_id)
     trip_id = item.checklist.trip_id
     item.delete()
-    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+    return trip_checklist(request, trip_id)
 
 @login_required
 def checklist_print(request, trip_id):
