@@ -1,11 +1,12 @@
-const CACHE_NAME = 'travel-hub-v9';
-const STATIC_CACHE = 'travel-hub-static-v9';
-const MEDIA_CACHE = 'travel-hub-media-v2';
-const DYNAMIC_CACHE = 'travel-hub-dynamic-v2';
+const CACHE_NAME = 'travel-hub-v10';
+const STATIC_CACHE = 'travel-hub-static-v10';
+const MEDIA_CACHE = 'travel-hub-media-v3';
+const DYNAMIC_CACHE = 'travel-hub-dynamic-v3';
 
 const ASSETS = [
     '/',
     '/login/',
+    '/offline-diary-fallback/',
     '/static/css/base.css',
     '/static/img/placeholder_day.png',
     '/static/js/offline_manager.js',
@@ -25,7 +26,6 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-    // Take control of all pages immediately
     event.waitUntil(
         Promise.all([
             self.clients.claim(),
@@ -42,10 +42,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Skip non-GET requests
     if (event.request.method !== 'GET') return;
 
-    // 1. Navigation requests (Opening the site) - Network first with fast fallback
+    // 1. Navigation requests - Fast fallback
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request)
@@ -56,7 +55,28 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 2. Media Caching (Images) - Cache First
+    // 2. Diary Content - With Offline Fallback
+    if (url.pathname.includes('/diary/') || url.pathname.includes('/day/')) {
+        event.respondWith(
+            caches.open(DYNAMIC_CACHE).then((cache) => {
+                return cache.match(event.request).then((cachedResponse) => {
+                    // Start network update but return cache if available
+                    const fetchPromise = fetch(event.request).then((networkResponse) => {
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    }).catch(() => {
+                        // OFFLINE FALLBACK: If diary fragment is missing offline, return the fallback template
+                        return caches.match('/offline-diary-fallback/');
+                    });
+
+                    return cachedResponse || fetchPromise;
+                });
+            })
+        );
+        return;
+    }
+
+    // 3. Media
     if (url.pathname.includes('/media/')) {
         event.respondWith(
             caches.open(MEDIA_CACHE).then((cache) => {
@@ -71,23 +91,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 3. Dynamic Content (Diary Modals etc) - Stale While Revalidate
-    if (url.pathname.includes('/day/') || url.pathname.includes('/diary/')) {
-        event.respondWith(
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-                return cache.match(event.request).then((cachedResponse) => {
-                    const fetchPromise = fetch(event.request).then((networkResponse) => {
-                        cache.put(event.request, networkResponse.clone());
-                        return networkResponse;
-                    });
-                    return cachedResponse || fetchPromise;
-                });
-            })
-        );
-        return;
-    }
-
-    // 4. Everything else (Static Assets)
+    // 4. Default Cache Strategy
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             return cachedResponse || fetch(event.request);

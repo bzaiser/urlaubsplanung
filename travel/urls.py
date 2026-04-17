@@ -70,4 +70,5 @@ urlpatterns = [
     path('trip/<int:trip_id>/checklist/reset/', checklist_reset, name='checklist_reset'),
     path('trip/<int:trip_id>/checklist/print/', checklist_print, name='checklist_print'),
     path('trip/<int:trip_id>/save-ui-settings/', save_ui_settings, name='save_ui_settings'),
+    path('offline-diary-fallback/', views.offline_diary_fallback, name='diary_offline_fallback'),
 ]

@@ -1259,3 +1259,8 @@ def save_ui_settings(request, trip_id):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Only POST allowed'}, status=405)
+
+@login_required
+def offline_diary_fallback(request):
+    """Simple view to serve the offline fallback template for PWA caching."""
+    return render(request, 'travel/partials/diary_offline_fallback.html')

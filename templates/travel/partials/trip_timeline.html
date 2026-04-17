@@ -126,17 +126,22 @@
      * Starts after a small delay to not block the main UI.
      */
     (function() {
-        const prefetchContent = () => {
-            console.log("🐹 Hamster starting to collect offline supplies...");
+        const prefetchContent = async () => {
+            console.log("🐹 Hamster is working hard for your offline diary...");
             
-            // 1. Prefetch Diary HTMX Fragments
+            // 1. Prefetch ALL Diary HTMX Fragments (High Priority for the Hamster)
             const diaryLinks = document.querySelectorAll('[hx-get*="/diary/"]');
-            diaryLinks.forEach(link => {
+            let count = 0;
+            for (const link of diaryLinks) {
                 const url = link.getAttribute('hx-get');
                 if (url) {
-                    fetch(url, { priority: 'low' }).catch(e => {});
+                    try {
+                        await fetch(url, { priority: 'low' });
+                        count++;
+                    } catch(e) {}
                 }
-            });
+            }
+            console.log(`🐹 Hamster stashed ${count} diary masks!`);
 
             // 2. Prefetch Images (thumbnails)
             const images = document.querySelectorAll('.main-day-card img');
@@ -148,7 +153,8 @@
         };
 
         if (navigator.onLine) {
-            setTimeout(prefetchContent, 2000); 
+            // Wait slightly longer to ensure the main UI is snappy
+            setTimeout(prefetchContent, 3000); 
         }
     })();
 </script>

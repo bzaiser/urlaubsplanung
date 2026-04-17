@@ -1,0 +1,65 @@
+{% load i18n %}
+<div class="modal-header border-secondary">
+    <h5 class="modal-title text-warning">
+        <i class="bi bi-wifi-off me-2"></i> {% trans "Offline-Tagebuch" %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
+</div>
+<div class="modal-body bg-dark text-light">
+    <div class="alert alert-info py-2 small">
+        <i class="bi bi-info-circle me-2"></i>
+        Hier kannst du deine Erlebnisse offline festhalten. Sobald du wieder Netz hast, kannst du sie synchronisieren.
+    </div>
+    
+    <form id="diary-form-offline" class="offline-interceptor">
+        <div class="mb-3">
+            <textarea name="text" class="form-control bg-dark text-light border-secondary" rows="10" placeholder="Was hast du heute erlebt?"></textarea>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label text-secondary small text-uppercase fw-bold">Bilder hinzufügen</label>
+            <input type="file" name="images" class="form-control bg-dark text-light border-secondary" multiple accept="image/*">
+        </div>
+
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-warning fw-bold">
+                <i class="bi bi-save me-2"></i> {% trans "Lokal speichern" %}
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="closeModal()">
+                {% trans "Abbrechen" %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Specific logic for the offline fallback modal
+    document.getElementById('diary-form-offline').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const text = formData.get('text');
+        
+        // Extract dayId from URL if possible, or use a generic one
+        const pathParts = window.location.pathname.split('/');
+        const dayId = pathParts.find(p => !isNaN(p) && p !== '') || 'unknown';
+
+        if (window.queueEntry) {
+            const images = [];
+            const files = formData.getAll('images');
+            for (const file of files) {
+                if (file.size > 0) {
+                    images.push({
+                        name: file.name,
+                        type: file.type,
+                        blob: file
+                    });
+                }
+            }
+            
+            await window.queueEntry(dayId, formData, images);
+            showToast("✓ Lokal gespeichert (Offline-Modus)");
+            closeModal();
+            if (window.updateSyncIndicator) window.updateSyncIndicator();
+        }
+    });
+</script>
