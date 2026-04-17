@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from .models import (
     Trip, Day, Event, TripTemplate, GlobalSetting, GlobalExpense, 
     DiaryEntry, DiaryImage, ChecklistCategory, ChecklistTemplate, 
-    TripChecklistItem, TripChecklist
+    ChecklistItemTemplate, TripChecklistItem, TripChecklist
 )
 from .forms import TripForm, EventForm, DiaryEntryForm, DiaryImageFormSet
 from django.template.defaultfilters import date as _date
