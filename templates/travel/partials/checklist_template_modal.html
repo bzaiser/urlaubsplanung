@@ -1,9 +1,10 @@
 {% load i18n %}
-<div class="modal-content-premium bg-dark text-light border-secondary">
-    <div class="modal-header border-secondary border-opacity-25">
-        <h5 class="modal-title text-warning">
-            <i class="bi bi-clock-history me-2"></i>{% trans "Termin-Vorgaben für Datum" %}
-        </h5>
+<div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark border-secondary shadow-lg">
+        <div class="modal-header border-secondary border-opacity-25">
+            <h5 class="modal-title text-warning">
+                <i class="bi bi-clock-history me-2"></i>{% trans "Termin-Vorgaben für Datum" %}
+            </h5>
         <button type="button" class="btn-close btn-close-white" onclick="closeModal()" aria-label="Close"></button>
     </div>
     <div class="modal-body">
@@ -50,4 +51,5 @@
             {% trans "Schließen" %}
         </button>
     </div>
+</div>
 </div>
