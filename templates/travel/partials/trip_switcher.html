@@ -4,7 +4,7 @@
     <!-- LEFT: Trip Selection & New -->
     <div class="d-flex align-items-center gap-1 gap-md-2 flex-grow-1 order-1">
         <!-- 1. Selection first -->
-        <select onchange="window.location.href='?trip_id=' + this.value + '{% if view_type %}&view={{ view_type }}{% endif %}'" 
+        <select onchange="window.location.href='?trip_id=' + this.value + '{% if view_type %}&view={{ view_type }}{% endif %}';" 
                 class="form-select form-select-sm bg-dark text-warning border-secondary rounded-3 ps-2 ps-md-3 pe-4 shadow-sm trip-select-mobile"
                 style="min-width: 140px; width: 100%; max-width: 450px; cursor: pointer; background-position: right 0.5rem center;">
             {% if not active_trip %}
@@ -27,13 +27,13 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-dark meatball-menu shadow-lg">
                 <li>
-                    <a class="dropdown-item py-2" href="javascript:void(0)" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container">
+                    <a class="dropdown-item py-2" href="#" hx-get="{% url 'travel:ai_wizard' %}?step=select" hx-target="#modal-container">
                         <i class="bi bi-stars text-warning"></i>
                         <strong>{% trans "KI Designer nutzen" %}</strong>
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item py-2" href="javascript:void(0)" hx-get="{% url 'travel:trip_create' %}" hx-target="#modal-container">
+                    <a class="dropdown-item py-2" href="#" hx-get="{% url 'travel:trip_create' %}" hx-target="#modal-container">
                         <i class="bi bi-plus-circle"></i>
                         <span>{% trans "Manuell anlegen" %}</span>
                     </a>
@@ -103,7 +103,7 @@
             <!-- Sync Indicator Cloud (Moved here & Smaller) -->
             <div id="sync-indicator" class="d-none position-absolute translate-middle-y cursor-pointer" 
                  style="top: 50%; left: -35px;"
-                 onclick="performSync()" title="Synchronisation starten">
+                 onclick="performSync();" title="Synchronisation starten">
                 <i class="bi bi-clouds-fill fs-5 text-warning"></i>
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.45rem;">0</span>
             </div>
@@ -111,24 +111,24 @@
             <ul class="dropdown-menu dropdown-menu-end meatball-menu shadow-lg">
                 {% if active_trip %}
                     <li class="px-3 py-2 text-warning small fw-bold text-uppercase opacity-75">{% trans "Reise-Verwaltung" %}</li>
-                    <li><a class="dropdown-item" href="javascript:void(0)" hx-get="{% url 'travel:trip_logic_check' active_trip.id %}" hx-target="#modal-container">
+                    <li><a class="dropdown-item" href="#" hx-get="{% url 'travel:trip_logic_check' active_trip.id %}" hx-target="#modal-container">
                         <i class="bi bi-check2-circle"></i>{% trans "Reise-Check" %}
                     </a></li>
                     <li><a class="dropdown-item" href="{% url 'travel:export_trip_ics' active_trip.id %}">
                         <i class="bi bi-calendar-plus"></i>{% trans "ICS Export" %}
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="javascript:void(0)" hx-get="{% url 'travel:trip_edit' active_trip.id %}" hx-target="#modal-container">
+                    <li><a class="dropdown-item" href="#" hx-get="{% url 'travel:trip_edit' active_trip.id %}" hx-target="#modal-container">
                         <i class="bi bi-pencil-square"></i>{% trans "Reise bearbeiten" %}
                     </a></li>
-                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" hx-get="{% url 'travel:trip_delete' active_trip.id %}" hx-target="#modal-container">
+                    <li><a class="dropdown-item text-danger" href="#" hx-get="{% url 'travel:trip_delete' active_trip.id %}" hx-target="#modal-container">
                         <i class="bi bi-trash"></i>{% trans "Reise löschen" %}
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
                 {% endif %}
                 
                 <li class="px-3 py-2 text-secondary small fw-bold text-uppercase opacity-75">{% trans "Global" %}</li>
-                <li><a class="dropdown-item" href="javascript:void(0)" hx-get="{% url 'travel:settings_modal' %}" hx-target="#modal-container">
+                <li><a class="dropdown-item" href="#" hx-get="{% url 'travel:settings_modal' %}" hx-target="#modal-container">
                     <i class="bi bi-gear"></i>{% trans "Einstellungen" %}
                 </a></li>
                 <li><a class="dropdown-item" href="/admin/" target="_blank">

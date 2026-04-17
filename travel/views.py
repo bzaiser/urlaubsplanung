@@ -251,7 +251,7 @@ class TripDashboardView(LoginRequiredMixin, ListView):
                 'is_oob': True
             }, request=self.request)
             
-            return HttpResponse(primary_html + switcher_html)
+            return HttpResponse(primary_html + "\n" + switcher_html)
             
         return super().render_to_response(context, **response_kwargs)
 
@@ -1198,7 +1198,7 @@ def trip_checklist(request, trip_id):
             'trips': Trip.objects.filter(owner=request.user),
             'is_oob': True
         }, request=request)
-        return HttpResponse(response_html + switcher_html)
+        return HttpResponse(response_html + "\n" + switcher_html)
         
     return HttpResponse(response_html)
 
