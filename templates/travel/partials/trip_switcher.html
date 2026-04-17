@@ -5,8 +5,8 @@
     <div class="d-flex align-items-center gap-2 flex-shrink-0">
         <!-- 1. Selection first -->
         <select onchange="window.location.href='?trip_id=' + this.value + '{% if view_type %}&view={{ view_type }}{% endif %}'" 
-                class="form-select form-select-sm bg-dark text-warning border-secondary rounded-3 px-3 shadow-sm trip-select-mobile"
-                style="min-width: 200px; max-width: 400px; cursor: pointer;">
+                class="form-select form-select-sm bg-dark text-warning border-secondary rounded-3 ps-3 pe-5 shadow-sm trip-select-mobile"
+                style="min-width: 200px; max-width: 400px; cursor: pointer; background-position: right 0.75rem center;">
             {% if not active_trip %}
                 <option value="" disabled selected>{% trans "Reise wählen..." %}</option>
             {% endif %}
