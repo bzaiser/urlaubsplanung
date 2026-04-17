@@ -41,7 +41,7 @@
                                 </span>
                                 <input type="text" name="username" autofocus maxlength="150" required id="id_username"
                                        class="form-control bg-dark border-secondary border-opacity-25 text-light"
-                                       placeholder="admin">
+                                       placeholder="{% trans 'Benutzername' %}">
                             </div>
                         </div>
 
@@ -111,6 +111,11 @@
     }
     .premium-form .mb-4:focus-within, .premium-form .mb-5:focus-within {
         transform: translateX(5px);
+    }
+    /* Make placeholders pale and subtle */
+    ::placeholder {
+        color: rgba(255, 255, 255, 0.2) !important;
+        opacity: 1; /* Firefox */
     }
 </style>
 {% endblock %}
