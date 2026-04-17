@@ -99,6 +99,15 @@
             <button class="nav-icon-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-three-dots-vertical"></i>
             </button>
+            
+            <!-- Sync Indicator Cloud (Moved here & Smaller) -->
+            <div id="sync-indicator" class="d-none position-absolute translate-middle-y cursor-pointer" 
+                 style="top: 50%; left: -35px;"
+                 onclick="performSync()" title="Synchronisation starten">
+                <i class="bi bi-clouds-fill fs-5 text-warning"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.45rem;">0</span>
+            </div>
+
             <ul class="dropdown-menu dropdown-menu-end meatball-menu shadow-lg">
                 {% if active_trip %}
                     <li class="px-3 py-2 text-warning small fw-bold text-uppercase opacity-75">{% trans "Reise-Verwaltung" %}</li>
