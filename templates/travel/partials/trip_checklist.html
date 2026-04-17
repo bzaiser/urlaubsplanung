@@ -1,45 +1,46 @@
 {% load i18n %}
 <div class="checklist-container p-3 p-md-4" id="checklist-container">
     <!-- Header with Template Selection -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <div>
-        <div class="d-flex align-items-center gap-3 mb-1">
-            <h4 class="text-warning mb-0">
-                <i class="bi bi-list-check me-2"></i>{% trans "Reise-Checkliste" %}
-            </h4>
-            <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" 
-               class="btn btn-link text-danger p-0" title="{% trans 'PDF Drucken' %}">
-                <i class="bi bi-file-earmark-pdf fs-4"></i>
-            </a>
-        </div>
-        <p class="text-secondary small mb-0">{% trans "Bereite deinen Trip vor und hake alles Nötige ab." %}</p>
+    <div class="row align-items-center g-3 mb-4">
+        <div class="col-12 col-md-auto">
+            <div class="d-flex align-items-center gap-3">
+                <h4 class="text-warning mb-0">
+                    <i class="bi bi-list-check me-2"></i>{% trans "Reise-Checkliste" %}
+                </h4>
+                <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" 
+                   class="btn btn-link text-danger p-0" title="{% trans 'PDF Drucken' %}">
+                    <i class="bi bi-file-earmark-pdf fs-4"></i>
+                </a>
+            </div>
         </div>
         
-        <div class="d-flex gap-2 w-100-mobile">
-
-            {% if checklist.items.exists %}
-                <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
-                        hx-confirm="{% trans 'Möchtest du die gesamte Checkliste wirklich zurücksetzen? Alle Einträge werden gelöscht.' %}"
-                        hx-target="#checklist-container"
-                        class="btn btn-outline-danger btn-sm">
-                    <i class="bi bi-trash me-1"></i>{% trans "Zurücksetzen" %}
-                </button>
-            {% endif %}
-            
-            {% if not checklist.items.exists %}
-                <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" hx-target="#dashboard-refresh" class="d-flex gap-2">
-                    {% csrf_token %}
-                    <select name="template_id" class="form-select form-select-sm bg-dark text-light border-secondary flex-grow-1" style="min-width: 160px;">
-                        <option value="">-- {% trans "Vorlage wählen" %} --</option>
-                        {% for t in templates %}
-                            <option value="{{ t.id }}">{{ t.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="btn btn-sm btn-outline-warning">
-                        {% trans "OK" %}
+        <div class="col-12 col-md">
+            <div class="d-flex justify-content-md-end w-100">
+                {% if checklist.items.exists %}
+                    <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
+                            hx-confirm="{% trans 'Möchtest du die gesamte Checkliste wirklich zurücksetzen? Alle Einträge werden gelöscht.' %}"
+                            hx-target="#checklist-container"
+                            class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-trash me-1"></i>{% trans "Zurücksetzen" %}
                     </button>
-                </form>
-            {% endif %}
+                {% endif %}
+                
+                {% if not checklist.items.exists %}
+                    <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" hx-target="#checklist-container" 
+                          class="d-flex gap-2 w-100" style="max-width: 400px;">
+                        {% csrf_token %}
+                        <select name="template_id" class="form-select form-select-sm bg-dark text-light border-secondary flex-grow-1">
+                            <option value="">-- {% trans "Vorlage wählen" %} --</option>
+                            {% for t in templates %}
+                                <option value="{{ t.id }}">{{ t.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-outline-warning">
+                            {% trans "OK" %}
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
         </div>
     </div>
 
