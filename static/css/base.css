@@ -501,8 +501,19 @@ h1, h2 {
     }
 
     #trip-switcher-container-wrapper {
-        max-width: 60%;
+        max-width: 100%;
     }
+    
+    .trip-select-mobile {
+        min-width: 140px !important;
+        max-width: 180px !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+/* Ensure icons don't shrink and switcher stays centered */
+#trip-switcher-container {
+    min-height: 60px;
 }
 
 /* Custom Lean Scrollbars */

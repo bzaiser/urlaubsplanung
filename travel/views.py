@@ -250,6 +250,10 @@ def trip_create(request):
             # Set as active trip
             request.session['active_trip_id'] = trip.id
             # Full redirect to refresh navbar and switcher
+            if request.htmx:
+                response = HttpResponse("")
+                response['HX-Redirect'] = f"/?trip_id={trip.id}"
+                return response
             return redirect('travel:dashboard')
         else:
             print(f"DEBUG: Trip form errors: {form.errors.as_text()}")

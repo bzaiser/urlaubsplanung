@@ -5,8 +5,8 @@
     <div class="d-flex align-items-center gap-2 flex-shrink-0">
         <!-- 1. Selection first -->
         <select onchange="window.location.href='?trip_id=' + this.value + '{% if view_type %}&view={{ view_type }}{% endif %}'" 
-                class="form-select form-select-sm bg-dark text-warning border-secondary rounded-pill px-3 shadow-sm"
-                style="min-width: 250px; max-width: 400px; cursor: pointer;">
+                class="form-select form-select-sm bg-dark text-warning border-secondary rounded-3 px-3 shadow-sm trip-select-mobile"
+                style="min-width: 200px; max-width: 400px; cursor: pointer;">
             {% if not active_trip %}
                 <option value="" disabled selected>{% trans "Reise wählen..." %}</option>
             {% endif %}
@@ -51,28 +51,28 @@
                         class="segmented-item {% if view_type == 'timeline' %}active{% endif %}"
                         title="{% trans 'Tagebuch' %}">
                     <i class="bi bi-journal-bookmark"></i>
-                    <span>{% trans "Tagebuch" %}</span>
+                    <span class="d-none d-sm-inline">{% trans "Tagebuch" %}</span>
                 </button>
                 <button hx-get="{% url 'travel:dashboard' %}?view=table" 
                         hx-target="#dashboard-refresh"
                         class="segmented-item {% if view_type == 'table' %}active{% endif %}"
                         title="{% trans 'Planer' %}">
                     <i class="bi bi-grid-3x3-gap"></i>
-                    <span>{% trans "Planer" %}</span>
+                    <span class="d-none d-sm-inline">{% trans "Planer" %}</span>
                 </button>
                 <button hx-get="{% url 'travel:dashboard' %}?view=checklist" 
                         hx-target="#dashboard-refresh"
                         class="segmented-item {% if view_type == 'checklist' %}active{% endif %}"
                         title="{% trans 'Checkliste' %}">
                     <i class="bi bi-list-check"></i>
-                    <span>{% trans "Checkliste" %}</span>
+                    <span class="d-none d-sm-inline">{% trans "Checkliste" %}</span>
                 </button>
             </div>
         {% endif %}
     </div>
 
     <!-- RIGHT: Actions & Settings -->
-    <div class="d-flex align-items-center gap-1 gap-md-2 flex-shrink-0">
+    <div class="d-flex align-items-center gap-1 gap-md-2 flex-shrink-0 ms-auto">
         {% if active_trip %}
             <!-- Map Toggle -->
             <button class="nav-icon-btn" 
