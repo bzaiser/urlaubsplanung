@@ -1187,7 +1187,7 @@ def checklist_apply_template(request, trip_id):
         template = get_object_or_404(ChecklistTemplate, pk=template_id)
         checklist_service.apply_template_to_trip(trip, template)
     
-    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+    return trip_checklist(request, trip_id)
 
 @login_required
 def checklist_reset(request, trip_id):
@@ -1196,9 +1196,7 @@ def checklist_reset(request, trip_id):
     if hasattr(trip, 'checklist'):
         trip.checklist.items.all().delete()
     
-    if request.htmx:
-        return redirect(f"{reverse('travel:dashboard')}?view=checklist")
-    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+    return trip_checklist(request, trip_id)
 
 @login_required
 def checklist_item_add(request, trip_id):
@@ -1212,7 +1210,7 @@ def checklist_item_add(request, trip_id):
         checklist_service.add_custom_item(trip, text, category_id, save_to_template)
     
     # Refresh the dashboard view
-    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+    return trip_checklist(request, trip_id)
 
 @login_required
 def checklist_item_delete(request, item_id):
@@ -1220,7 +1218,7 @@ def checklist_item_delete(request, item_id):
     item = get_object_or_404(TripChecklistItem, pk=item_id)
     trip_id = item.checklist.trip_id
     item.delete()
-    return redirect(f"{reverse('travel:dashboard')}?view=checklist")
+    return trip_checklist(request, trip_id)
 
 @login_required
 def checklist_print(request, trip_id):

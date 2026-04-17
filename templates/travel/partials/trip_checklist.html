@@ -1,152 +1,156 @@
 {% load i18n %}
-<div class="checklist-container p-3 p-md-4">
+<div class="checklist-container p-2 p-md-4">
     <!-- Header with Template Selection -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <h4 class="text-warning mb-1">
-                <i class="bi bi-list-check me-2"></i>{% trans "Reise-Checkliste" %}
+            <h4 class="text-warning mb-1 d-flex align-items-center">
+                <i class="bi bi-list-check me-2"></i>{% trans "Packliste & Checkliste" %}
             </h4>
-            <p class="text-secondary small mb-0">{% trans "Bereite deinen Trip vor und hake alles Nötige ab." %}</p>
+            <p class="text-secondary small mb-0">{% trans "Hake alles Nötige ab, damit nichts vergessen wird." %}</p>
         </div>
         
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
             <button hx-get="{% url 'travel:dashboard' %}?view=table" 
                     hx-target="#dashboard-refresh" 
-                    class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left me-1"></i>{% trans "Zurück zum Planer" %}
+                    class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                <i class="bi bi-arrow-left me-1"></i>{% trans "Zurück" %}
             </button>
-            <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" class="btn btn-outline-light btn-sm">
+            <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" class="btn btn-dark btn-sm rounded-pill px-3 border-secondary">
                 <i class="bi bi-printer me-1"></i>{% trans "Drucken" %}
             </a>
 
             {% if checklist.items.exists %}
                 <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
-                        hx-confirm="{% trans 'Möchtest du die gesamte Checkliste wirklich zurücksetzen? Alle Einträge werden gelöscht.' %}"
+                        hx-confirm="{% trans 'Wirklich alles zurücksetzen und Einträge löschen?' %}"
                         hx-target="#dashboard-refresh"
-                        class="btn btn-outline-danger btn-sm">
-                    <i class="bi bi-trash me-1"></i>{% trans "Zurücksetzen" %}
+                        class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                    <i class="bi bi-trash"></i>
                 </button>
             {% endif %}
-            
-            {% if not checklist.items.exists %}
-                <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" hx-target="#dashboard-refresh" class="d-flex gap-2">
-                    {% csrf_token %}
-                    <select name="template_id" class="form-select form-select-sm bg-dark text-light border-secondary">
-                        <option value="">-- {% trans "Vorlage wählen" %} --</option>
-                        {% for t in templates %}
-                            <option value="{{ t.id }}">{{ t.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="btn btn-premium-gold btn-sm">
-                        {% trans "Anwenden" %}
-                    </button>
-                </form>
-            {% endif %}
         </div>
     </div>
 
-    <!-- Quick Add Form -->
-    <div class="card bg-dark border-secondary border-opacity-25 mb-4 mb-md-5">
-        <div class="card-body p-3">
-            <h6 class="text-secondary small text-uppercase mb-3 fw-bold">{% trans "Hinzufügen" %}</h6>
-            <form hx-post="{% url 'travel:checklist_item_add' active_trip.id %}" hx-target="#dashboard-refresh" class="row g-2 align-items-end">
-                {% csrf_token %}
-                <div class="col-12 col-md-5">
-                    <input type="text" name="text" class="form-control bg-dark border-secondary text-light" placeholder="{% trans 'Was fehlt noch?' %}" required>
-                </div>
-                <div class="col-12 col-md-3">
-                    <select name="category_id" class="form-select bg-dark border-secondary text-light">
-                        {% for cat in categories %}
-                            <option value="{{ cat.id }}">{{ cat.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-12 col-md-3 d-flex align-items-center">
-                    <div class="form-check form-switch me-3">
-                        <input class="form-check-input" type="checkbox" name="save_to_template" id="saveTemplateCheck">
-                        <label class="form-check-label text-secondary small" for="saveTemplateCheck">{% trans "In Vorlage" %}</label>
+    <!-- PWA Optimized Quick Add (Compact Pill) -->
+    <div class="sticky-top py-2 bg-dark" style="z-index: 1020; margin: 0 -0.5rem; padding: 0 0.5rem;">
+        <div class="card bg-dark border-warning border-opacity-25 shadow-sm rounded-4">
+            <div class="card-body p-2 p-md-3">
+                <form hx-post="{% url 'travel:checklist_item_add' active_trip.id %}" hx-target="#dashboard-refresh" class="row g-2 align-items-center">
+                    {% csrf_token %}
+                    <div class="col-7 col-md-6">
+                        <input type="text" name="text" class="form-control form-control-sm bg-transparent border-0 text-light px-2" 
+                               placeholder="{% trans 'Schnell hinzufügen...' %}" required autocomplete="off">
                     </div>
-                    <button type="submit" class="btn btn-premium-gold w-100">
-                        <i class="bi bi-plus-lg"></i>
-                    </button>
-                </div>
+                    <div class="col-5 col-md-4">
+                        <select name="category_id" class="form-select form-select-sm bg-dark border-0 text-warning small pe-4">
+                            {% for cat in categories %}
+                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2 mt-md-0">
+                        <button type="submit" class="btn btn-warning btn-sm w-100 rounded-3 py-1">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if not checklist.items.exists %}
+        <!-- Template Picker when empty -->
+        <div class="card bg-dark border-secondary border-opacity-10 mt-4 text-center p-5 rounded-4">
+            <div class="fs-1 text-warning opacity-25 mb-3"><i class="bi bi-magic"></i></div>
+            <h6 class="text-light mb-3">{% trans "Deine Checkliste ist noch leer" %}</h6>
+            <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" hx-target="#dashboard-refresh" class="d-flex flex-column align-items-center gap-3">
+                {% csrf_token %}
+                <select name="template_id" class="form-select bg-dark text-light border-secondary w-auto mx-auto" style="min-width: 200px;">
+                    <option value="">-- {% trans "Vorlage wählen" %} --</option>
+                    {% for t in templates %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-premium-gold px-4">
+                    {% trans "Vorlage anwenden" %}
+                </button>
             </form>
         </div>
-    </div>
-
-    <!-- Main Checklist Grid -->
-    <div class="row g-4">
-        {% for cat in categories %}
-            {% if cat.trip_items_list %}
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card bg-dark border-secondary border-opacity-10 h-100">
-                        <div class="card-header bg-transparent py-3 border-secondary border-opacity-25 d-flex align-items-center">
-                            <span class="fs-5 me-2"><i class="bi {{ cat.icon }} text-warning"></i></span>
-                            <h6 class="mb-0 text-light">{{ cat.name }}</h6>
-                        </div>
-                        <div class="card-body p-0">
-                            <ul class="list-group list-group-flush bg-transparent">
-                                {% for item in cat.trip_items_list %}
-                                    <li class="list-group-item bg-transparent border-secondary border-opacity-10 py-3 d-flex align-items-center justify-content-between group-hover-actions">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="form-check custom-checkbox-premium">
-                                                <input class="form-check-input" type="checkbox" 
-                                                       {% if item.is_checked %}checked{% endif %}
-                                                       hx-post="{% url 'travel:checklist_item_toggle' item.id %}"
-                                                       hx-swap="none"
-                                                       id="item_{{ item.id }}">
-                                                <label class="form-check-label text-light {% if item.is_checked %}text-decoration-line-through text-opacity-50{% endif %}" 
-                                                       for="item_{{ item.id }}">
-                                                    {{ item.text }}
-                                                </label>
+    {% else %}
+        <!-- Category Grid -->
+        <div class="row g-3 mt-2">
+            {% for cat in categories %}
+                {% if cat.trip_items_list %}
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card bg-dark border-secondary border-opacity-10 shadow-sm h-100 rounded-4 overflow-hidden">
+                            <div class="card-header bg-dark bg-opacity-50 py-2 px-3 border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <span class="fs-6 me-2"><i class="bi {{ cat.icon }} text-warning"></i></span>
+                                    <h6 class="mb-0 text-light small fw-bold text-uppercase tracking-wider">{{ cat.name }}</h6>
+                                </div>
+                                <span class="badge rounded-pill bg-secondary bg-opacity-10 text-secondary x-small">
+                                    {{ cat.trip_items_list|length }}
+                                </span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush bg-transparent">
+                                    {% for item in cat.trip_items_list %}
+                                        <div class="list-group-item bg-transparent border-secondary border-opacity-10 py-2 px-3 d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center flex-grow-1">
+                                                <div class="form-check custom-checkbox-premium mb-0">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           {% if item.is_checked %}checked{% endif %}
+                                                           hx-post="{% url 'travel:checklist_item_toggle' item.id %}"
+                                                           hx-swap="none"
+                                                           id="item_{{ item.id }}">
+                                                    <label class="form-check-label text-light ms-2 {% if item.is_checked %}text-decoration-line-through text-opacity-25{% endif %}" 
+                                                           for="item_{{ item.id }}" style="font-size: 0.95rem; cursor: pointer;">
+                                                        {{ item.text }}
+                                                    </label>
+                                                </div>
                                             </div>
-                                            {% if item.due_date and not item.is_checked %}
-                                                <span class="badge rounded-pill {% if item.due_date < today %}bg-danger{% else %}bg-secondary text-opacity-75{% endif %} small" style="font-size: 0.7rem;">
-                                                    <i class="bi bi-clock me-1"></i>{{ item.due_date|date:"j. M" }}
-                                                </span>
-                                            {% endif %}
+                                            
+                                            <div class="d-flex align-items-center gap-2">
+                                                {% if item.due_date and not item.is_checked %}
+                                                    <span class="text-danger x-small fw-bold">
+                                                        {{ item.due_date|date:"d.m." }}
+                                                    </span>
+                                                {% endif %}
+                                                <button hx-delete="{% url 'travel:checklist_item_delete' item.id %}"
+                                                        hx-confirm="{% trans 'Löschen?' %}"
+                                                        hx-target="#dashboard-refresh"
+                                                        class="btn btn-link btn-sm text-danger p-1 border-0">
+                                                    <i class="bi bi-x-circle opacity-50"></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                        
-                                        <button hx-delete="{% url 'travel:checklist_item_delete' item.id %}"
-                                                hx-confirm="{% trans 'Wirklich löschen?' %}"
-                                                hx-target="#dashboard-refresh"
-                                                class="btn btn-link btn-sm text-danger p-0 opacity-0 transition-opacity">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </li>
-                                {% endfor %}
-                            </ul>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            {% endif %}
-        {% endfor %}
-        
-        {% if not checklist.items.exists %}
-            <div class="col-12 text-center py-5">
-                <div class="fs-1 text-secondary opacity-25 mb-3"><i class="bi bi-inbox"></i></div>
-                <p class="text-secondary">{% trans "Noch keine Einträge. Wähle eine Vorlage oder füge oben etwas hinzu." %}</p>
-            </div>
-        {% endif %}
-    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
 </div>
 
 <style>
-    .custom-checkbox-premium .form-check-input:checked {
-        background-color: var(--accent-gold);
-        border-color: var(--accent-gold);
-    }
     .custom-checkbox-premium .form-check-input {
-        width: 1.25rem;
-        height: 1.25rem;
+        width: 1.4rem;
+        height: 1.4rem;
+        margin-top: 0.1rem;
         cursor: pointer;
         background-color: transparent;
         border: 2px solid var(--accent-gold);
+        border-radius: 6px;
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    .group-hover-actions:hover .transition-opacity {
-        opacity: 1 !important;
+    .custom-checkbox-premium .form-check-input:checked {
+        background-color: var(--accent-gold);
+        border-color: var(--accent-gold);
+        transform: scale(0.9);
     }
-    .transition-opacity {
-        transition: opacity 0.2s ease-in-out;
+    .tracking-wider {
+        letter-spacing: 0.05em;
     }
 </style>
