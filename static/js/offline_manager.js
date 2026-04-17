@@ -168,7 +168,11 @@ async function performSync() {
     }
     
     if (hasError) {
-        showToast(`⚠️ Sync fehlgeschlagen (Status: ${lastErrorStatus})`, true);
+        let errorMsg = `⚠️ Sync fehlgeschlagen (Status: ${lastErrorStatus})`;
+        if (lastErrorStatus === 403) {
+            errorMsg = "🔒 Sicherheits-Fehler (403): Bitte Seite neu laden oder neu einloggen.";
+        }
+        showToast(errorMsg, true);
         if (indicator) {
             indicator.classList.remove('text-info');
             indicator.classList.add('text-danger');
@@ -181,8 +185,27 @@ async function performSync() {
 }
 
 function getCSRFToken() {
-    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-           document.body.getAttribute('hx-headers')?.match(/"X-CSRFToken":\s*"([^"]+)"/)?.[1];
+    // 1. Try to get from Cookie (Most reliable for Django)
+    const name = 'csrftoken';
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    if (cookieValue) return cookieValue;
+
+    // 2. Fallback to hidden input
+    const inputToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    if (inputToken) return inputToken;
+
+    // 3. Fallback to body hx-headers
+    return document.body.getAttribute('hx-headers')?.match(/"X-CSRFToken":\s*"([^"]+)"/)?.[1];
 }
 
 // Auto-sync attempt on online event
