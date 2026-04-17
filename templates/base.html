@@ -187,10 +187,28 @@
         };
 
         window.addEventListener('unhandledrejection', function(event) {
-            const msg = `🚨 Async Error: ${event.reason}`;
-            console.error(msg);
+            let reason = event.reason;
+            if (reason && typeof reason === 'object') {
+                reason = reason.message || JSON.stringify(reason);
+            }
+            const msg = `🚨 Async Error: ${reason}`;
+            console.error(msg, event.reason);
             showToast(msg, true);
         });
+
+        // --- PWA Lifecycle Monitoring ---
+        function monitorSW(registration) {
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                showToast("🛠️ PWA: Update gefunden, installiere...");
+                newWorker.addEventListener('statechange', () => {
+                    showToast(`📦 PWA Status: ${newWorker.state}`);
+                    if (newWorker.state === 'activated') {
+                        showToast("✅ PWA: Update fertig! Bitte jetzt neu laden.", false);
+                    }
+                });
+            });
+        }
 
         // --- HTMX Diagnostics ---
         document.body.addEventListener('htmx:sendError', (e) => {
@@ -205,13 +223,12 @@
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                navigator.serviceWorker.getRegistration().then(function(reg) {
-                    if (reg) {
-                        console.log("✅ PWA: Service Worker is registered");
-                        reg.update();
-                    } else {
-                        console.warn("⚠️ PWA: No Service Worker registered yet");
-                    }
+                navigator.serviceWorker.register('/serviceworker.js?v=18').then(function(reg) {
+                    console.log("✅ PWA: Service Worker registered", reg);
+                    monitorSW(reg);
+                    reg.update();
+                }).catch(function(err) {
+                    showToast(`❌ PWA Register Error: ${err}`, true);
                 });
             });
         }
@@ -244,7 +261,7 @@
 
     <!-- Floating Scroll Navigator -->
     <div class="scroll-navigator d-flex flex-column gap-2 shadow-lg rounded-pill p-1 position-relative">
-        <span class="position-absolute start-50 translate-middle-x mb-1 text-secondary fw-bold" style="font-size: 0.5rem; bottom: -15px; opacity: 0.5;">v17</span>
+        <span class="position-absolute start-50 translate-middle-x mb-1 text-secondary fw-bold" style="font-size: 0.5rem; bottom: -15px; opacity: 0.5;">v18</span>
         <button onclick="scrollToDest('top')" class="btn-scroll-nav" title="Ganz nach oben">
             <i class="bi bi-chevron-double-up"></i>
         </button>

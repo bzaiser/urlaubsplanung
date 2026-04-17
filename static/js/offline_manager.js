@@ -24,13 +24,16 @@ function initDB() {
         request.onsuccess = (event) => {
             db = event.target.result;
             console.log('📦 PWA: Offline DB initialized successfully');
+            if (window.showToast) showToast("📦 Lokaler Speicher bereit (v18)");
             updateSyncIndicator();
             resolve(db);
         };
 
         request.onerror = (event) => {
-            console.error('❌ DB Error:', event.target.error);
-            reject(event.target.error);
+            const msg = `❌ PWA: DB Error ${event.target.errorCode || event.target.error}`;
+            console.error(msg);
+            if (window.showToast) showToast(msg, true);
+            reject(msg);
         };
     });
 }
