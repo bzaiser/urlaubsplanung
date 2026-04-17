@@ -2,11 +2,11 @@
 <div id="trip-switcher-container" {% if is_oob %}hx-swap-oob="true"{% endif %} class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-1 gap-md-3 px-0">
     
     <!-- LEFT: Trip Selection & New -->
-    <div class="d-flex align-items-center gap-1 gap-md-2 flex-shrink-0 order-1">
+    <div class="d-flex align-items-center gap-1 gap-md-2 flex-grow-1 order-1">
         <!-- 1. Selection first -->
         <select onchange="window.location.href='?trip_id=' + this.value + '{% if view_type %}&view={{ view_type }}{% endif %}'" 
-                class="form-select form-select-sm bg-dark text-warning border-secondary rounded-3 ps-3 pe-4 shadow-sm trip-select-mobile"
-                style="min-width: 200px; max-width: 400px; cursor: pointer; background-position: right 0.5rem center;">
+                class="form-select form-select-sm bg-dark text-warning border-secondary rounded-3 ps-2 ps-md-3 pe-4 shadow-sm trip-select-mobile"
+                style="min-width: 140px; width: 100%; max-width: 450px; cursor: pointer; background-position: right 0.5rem center;">
             {% if not active_trip %}
                 <option value="" disabled selected>{% trans "Reise wählen..." %}</option>
             {% endif %}
@@ -42,8 +42,7 @@
         </div>
     </div>
 
-    <!-- CENTER: Navigation Switcher (Main Views) -->
-    <div class="d-flex justify-content-center flex-grow-1 order-3 order-md-2 switcher-full-width-mobile">
+    <div class="d-flex align-items-center justify-content-center gap-1 gap-md-2 flex-grow-1 order-3 order-md-2 switcher-full-width-mobile">
         {% if active_trip %}
             <div class="segmented-control">
                 <button hx-get="{% url 'travel:dashboard' %}?view=timeline" 
@@ -68,14 +67,24 @@
                     <span class="d-none d-md-inline d-inline-mobile">{% trans "Checkliste" %}</span>
                 </button>
             </div>
+            
+            <!-- Map Toggle (Moved to Row 2 on mobile via d-flex order, but kept here for logic) -->
+            <button class="nav-icon-btn d-md-none ms-2" 
+                    type="button"
+                    data-bs-toggle="offcanvas" 
+                    data-bs-target="#offcanvasRouteMap" 
+                    aria-controls="offcanvasRouteMap"
+                    title="{% trans 'Karte einblenden' %}">
+                <i class="bi bi-map-fill"></i>
+            </button>
         {% endif %}
     </div>
 
     <!-- RIGHT: Actions & Settings -->
     <div class="d-flex align-items-center gap-1 gap-md-2 flex-shrink-0 order-2 ms-auto">
         {% if active_trip %}
-            <!-- Map Toggle -->
-            <button class="nav-icon-btn" 
+            <!-- Map Toggle (Only visible on Desktop here) -->
+            <button class="nav-icon-btn d-none d-md-flex" 
                     type="button"
                     data-bs-toggle="offcanvas" 
                     data-bs-target="#offcanvasRouteMap" 
