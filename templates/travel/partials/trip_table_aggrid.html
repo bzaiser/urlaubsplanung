@@ -706,9 +706,7 @@
                     // 2. Server Sync with Debounce
                     clearTimeout(saveTimeout);
                     saveTimeout = setTimeout(() => {
-                        const gridEl = document.getElementById('ag-trip-grid');
-                        if (!gridEl) return;
-                        const tripId = gridEl.dataset.tripId;
+                        const tripId = document.getElementById('ag-trip-grid').dataset.tripId;
                         if (!tripId) return;
 
                         fetch(`/trip/${tripId}/save-ui-settings/`, {
@@ -939,9 +937,7 @@
                 let totalBooked = 0;
                 let totalEstimated = 0;
                 let totalKm = 0;
-                const gridEl = document.getElementById('ag-trip-grid');
-                if (!gridEl) return;
-                const personCount = parseInt(gridEl.dataset.persons) || 1;
+                const personCount = parseInt(document.getElementById('ag-trip-grid').dataset.persons) || 1;
 
                 window.agGridApi.forEachNode(node => {
                     if (node.data && !node.data.is_station_header && !node.data.is_day_header && !node.rowPinned) {
