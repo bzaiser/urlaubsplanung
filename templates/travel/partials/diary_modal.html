@@ -128,13 +128,17 @@
                     }
                 }
 
-                // --- Offline Intercept Logic ---
+                // --- Offline & Data Saver Intercept Logic ---
                 document.getElementById('diary-form').addEventListener('submit', async function(e) {
-                    if (!navigator.onLine) {
+                    const autoSync = localStorage.getItem('auto_sync_mobile') === 'true';
+                    
+                    // Intercept if offline OR if auto-sync is disabled (Data Saver Mode)
+                    if (!navigator.onLine || !autoSync) {
                         e.preventDefault();
                         e.stopImmediatePropagation();
                         
-                        showToast("📡 Offline! Speichere lokal...", true);
+                        const statusMsg = !navigator.onLine ? "📡 Offline! Speichere lokal..." : "⛽ Datensparen: Speichere lokal...";
+                        showToast(statusMsg, true);
                         
                         const form = e.target;
                         const formData = new FormData(form);

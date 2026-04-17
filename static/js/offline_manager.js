@@ -108,6 +108,7 @@ async function updateSyncIndicator() {
     if (banner) {
         if (count > 0 && navigator.onLine) {
             banner.classList.remove('d-none');
+            banner.classList.add('animate__fadeInDown');
         } else {
             banner.classList.add('d-none');
         }
