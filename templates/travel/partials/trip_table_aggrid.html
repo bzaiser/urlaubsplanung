@@ -707,23 +707,23 @@
                     clearTimeout(saveTimeout);
                     saveTimeout = setTimeout(() => {
                         const gridEl = document.getElementById('ag-trip-grid');
-                        if (!gridEl) return;
-                        const tripId = gridEl.dataset.tripId;
-                        if (!tripId) return;
-
-                        fetch(`/trip/${tripId}/save-ui-settings/`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                columnState: JSON.stringify(state)
-                            })
-                        }).then(r => r.json()).then(data => {
-                            if (data.status === 'success') {
-                                console.log('UI Settings saved to server');
-                            }
-                        }).catch(err => console.error('Save failed', err));
+                        if (gridEl && gridEl.dataset.tripId) {
+                            const tripId = gridEl.dataset.tripId;
+                            fetch(`/trip/${tripId}/save-ui-settings/`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': '{{ csrf_token }}'
+                                },
+                                body: JSON.stringify({
+                                    columnState: JSON.stringify(state)
+                                })
+                            }).then(r => r.json()).then(data => {
+                                if (data.status === 'success') {
+                                    console.log('UI Settings saved to server');
+                                }
+                            }).catch(err => console.error('Save failed', err));
+                        }
                     }, 1500); // 1.5s debounce to protect DB
                 }
 
@@ -939,25 +939,35 @@
                 let totalBooked = 0;
                 let totalEstimated = 0;
                 let totalKm = 0;
+
                 const gridEl = document.getElementById('ag-trip-grid');
-                if (!gridEl) return;
-                const personCount = parseInt(gridEl.dataset.persons) || 1;
+                if (gridEl) {
+                    const personCount = parseInt(gridEl.dataset.persons) || 1;
+                    
+                    window.agGridApi.forEachNode(node => {
+                        if (node.data && !node.data.is_station_header && !node.data.is_day_header && !node.rowPinned) {
+                            totalBooked += parseFloat(node.data.cost_booked || 0);
+                            totalEstimated += parseFloat(node.data.cost_estimated || 0);
+                            totalKm += parseFloat(node.data.distance_km || 0);
+                        }
+                    });
+                    
+                    const avgPerPerson = totalBooked / personCount;
+                    
+                    const bookedEl = document.querySelector('.stat-booked');
+                    const estimatedEl = document.querySelector('.stat-estimated');
+                    const kmEl = document.querySelector('.stat-km');
+                    const avgEl = document.querySelector('.stat-person-avg');
+                    
+                    if (bookedEl) bookedEl.textContent = totalBooked.toLocaleString('de-DE', {style: 'currency', currency: 'EUR'});
+                    if (estimatedEl) estimatedEl.textContent = totalEstimated.toLocaleString('de-DE', {style: 'currency', currency: 'EUR'});
+                    if (kmEl) kmEl.textContent = totalKm.toLocaleString('de-DE') + ' km';
+                    if (avgEl) avgEl.textContent = avgPerPerson.toLocaleString('de-DE', {style: 'currency', currency: 'EUR'});
 
-                window.agGridApi.forEachNode(node => {
-                    if (node.data && !node.data.is_station_header && !node.data.is_day_header && !node.rowPinned) {
-                        totalBooked += parseFloat(node.data.cost_booked) || 0;
-                        totalEstimated += parseFloat(node.data.cost_estimated) || 0;
-                        totalKm += parseFloat(node.data.distance_km) || 0;
-                    }
-                });
-
-                const total = totalBooked + totalEstimated;
-
-                if (window.agGridApi) {
                     const pinnedData = [
                         {
                             location: 'SUMME REISE',
-                            title: `Gesamt (PP: ${formatCurrency(total / personCount)})`,
+                            title: `Gesamt (PP: ${avgPerPerson.toLocaleString('de-DE', {style: 'currency', currency: 'EUR'})})`,
                             cost_booked: totalBooked,
                             cost_estimated: totalEstimated,
                             distance_km: totalKm.toFixed(0)
