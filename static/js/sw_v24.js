@@ -1,5 +1,5 @@
-const CACHE_NAME = 'travel-hub-v23';
-const STATIC_CACHE = 'travel-hub-static-v23';
+const CACHE_NAME = 'travel-hub-v24';
+const STATIC_CACHE = 'travel-hub-static-v24';
 
 const ASSETS = [
     '/',
@@ -46,7 +46,7 @@ self.addEventListener('fetch', (event) => {
                 return networkResponse;
             }).catch(() => {
                 // Return a basic fallback if even the cache is empty
-                return new Response('Offline - Travel Hub v22', { 
+                return new Response('Offline - Travel Hub v24', { 
                     status: 200, 
                     headers: { 'Content-Type': 'text/plain' } 
                 });

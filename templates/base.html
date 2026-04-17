@@ -201,6 +201,27 @@
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
                 showToast("🛠️ PWA: Update gefunden, installiere...");
+                // TABULA RASA (v24): Hard reset if not already on v24
+                const currentV = localStorage.getItem('pwa_version');
+                if (currentV !== '24') {
+                    console.log("🧼 TABULA RASA: Cleaning old versions...");
+                    showToast("🧼 System-Großputz: Synchronisiere auf v24...", false);
+                    
+                    navigator.serviceWorker.getRegistrations().then(registrations => {
+                        for(let registration of registrations) {
+                            registration.unregister();
+                        }
+                        if ('caches' in window) {
+                            caches.keys().then(keys => {
+                                return Promise.all(keys.map(k => caches.delete(k)));
+                            });
+                        }
+                        localStorage.setItem('pwa_version', '24');
+                        // Reload once after clearing to get the fresh start
+                        setTimeout(() => window.location.reload(true), 1500);
+                    });
+                    return;
+                }
                 newWorker.addEventListener('statechange', () => {
                     showToast(`📦 PWA Status: ${newWorker.state}`);
                     if (newWorker.state === 'activated') {
@@ -223,9 +244,9 @@
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                // Register v23 - THE FILENAME HAMMER
-                navigator.serviceWorker.register('/serviceworker_v23.js').then(function(reg) {
-                    console.log("✅ PWA: Service Worker v23 registered", reg);
+                // Register v24 - THE FILENAME HAMMER
+                navigator.serviceWorker.register('/serviceworker_v24.js').then(function(reg) {
+                    console.log("✅ PWA: Service Worker v24 registered", reg);
                     monitorSW(reg);
                     reg.update();
                 }).catch(function(err) {
@@ -262,7 +283,7 @@
 
     <!-- Floating Scroll Navigator -->
     <div class="scroll-navigator d-flex flex-column gap-2 shadow-lg rounded-pill p-1 position-relative">
-        <span class="position-absolute start-50 translate-middle-x mb-1 text-secondary fw-bold" style="font-size: 0.5rem; bottom: -15px; opacity: 0.5;">v23</span>
+        <span class="position-absolute start-50 translate-middle-x mb-1 text-secondary fw-bold" style="font-size: 0.5rem; bottom: -15px; opacity: 0.5;">v24</span>
         <button onclick="scrollToDest('top')" class="btn-scroll-nav" title="Ganz nach oben">
             <i class="bi bi-chevron-double-up"></i>
         </button>
