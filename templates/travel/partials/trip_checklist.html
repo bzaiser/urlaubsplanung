@@ -8,9 +8,13 @@
                     <i class="bi bi-list-check me-2"></i>{% trans "Reise-Checkliste" %}
                 </h4>
                 <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" 
-                   class="btn btn-link text-danger p-0" title="{% trans 'PDF Drucken' %}">
-                    <i class="bi bi-file-earmark-pdf fs-4"></i>
-                </a>
+               class="btn btn-link text-warning p-0 ms-2" title="{% trans 'Blanko-Liste (PDF)' %}">
+                <i class="bi bi-file-earmark-pdf fs-4"></i>
+            </a>
+            <a href="{% url 'travel:checklist_print' active_trip.id %}?status=1" target="_blank" 
+               class="btn btn-link text-warning p-0 ms-1" title="{% trans 'Status-Liste mit Häkchen (PDF)' %}">
+                <i class="bi bi-file-earmark-check fs-4"></i>
+            </a>
             </div>
         </div>
         

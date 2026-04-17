@@ -1269,9 +1269,12 @@ def checklist_print(request, trip_id):
                 items_by_cat[cat_name] = []
             items_by_cat[cat_name].append(item)
             
+    show_status = request.GET.get('status') == '1'
+            
     return render(request, 'travel/checklist_print.html', {
         'trip': trip,
-        'items_by_cat': items_by_cat
+        'items_by_cat': items_by_cat,
+        'show_status': show_status
     })
 
 from django.views.decorators.csrf import csrf_exempt
