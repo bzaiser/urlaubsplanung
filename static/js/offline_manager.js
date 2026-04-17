@@ -142,7 +142,7 @@ async function performSync() {
                 });
             }
 
-            const response = await fetch(`/travel/diary/edit/${entry.dayId}/`, {
+            const response = await fetch(`/travel/day/${entry.dayId}/diary/`, {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -153,11 +153,13 @@ async function performSync() {
 
             if (response.ok) {
                 await removeEntry(entry.id);
+                console.log(`✅ Entry ${entry.id} synced successfully`);
             } else {
+                console.error(`❌ Server rejected sync for entry ${entry.id}: Status ${response.status}`);
                 hasError = true;
             }
         } catch (error) {
-            console.error(`❌ Sync failed for entry ${entry.id}:`, error);
+            console.error(`❌ Network error during sync for entry ${entry.id}:`, error);
             hasError = true;
         }
     }
