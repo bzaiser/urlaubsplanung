@@ -1,8 +1,8 @@
 {% load i18n %}
-<div id="trip-switcher-container" {% if is_oob %}hx-swap-oob="true"{% endif %} class="container-fluid d-flex align-items-center justify-content-between gap-3 px-0">
+<div id="trip-switcher-container" {% if is_oob %}hx-swap-oob="true"{% endif %} class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-1 gap-md-3 px-0">
     
     <!-- LEFT: Trip Selection & New -->
-    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+    <div class="d-flex align-items-center gap-1 gap-md-2 flex-shrink-0 order-1">
         <!-- 1. Selection first -->
         <select onchange="window.location.href='?trip_id=' + this.value + '{% if view_type %}&view={{ view_type }}{% endif %}'" 
                 class="form-select form-select-sm bg-dark text-warning border-secondary rounded-3 ps-3 pe-4 shadow-sm trip-select-mobile"
@@ -43,7 +43,7 @@
     </div>
 
     <!-- CENTER: Navigation Switcher (Main Views) -->
-    <div class="d-flex justify-content-center flex-grow-1">
+    <div class="d-flex justify-content-center flex-grow-1 order-3 order-md-2 switcher-full-width-mobile">
         {% if active_trip %}
             <div class="segmented-control">
                 <button hx-get="{% url 'travel:dashboard' %}?view=timeline" 
@@ -51,28 +51,28 @@
                         class="segmented-item {% if view_type == 'timeline' %}active{% endif %}"
                         title="{% trans 'Tagebuch' %}">
                     <i class="bi bi-journal-bookmark"></i>
-                    <span class="d-none d-sm-inline">{% trans "Tagebuch" %}</span>
+                    <span class="d-none d-md-inline d-inline-mobile">{% trans "Tagebuch" %}</span>
                 </button>
                 <button hx-get="{% url 'travel:dashboard' %}?view=table" 
                         hx-target="#dashboard-refresh"
                         class="segmented-item {% if view_type == 'table' %}active{% endif %}"
                         title="{% trans 'Planer' %}">
                     <i class="bi bi-grid-3x3-gap"></i>
-                    <span class="d-none d-sm-inline">{% trans "Planer" %}</span>
+                    <span class="d-none d-md-inline d-inline-mobile">{% trans "Planer" %}</span>
                 </button>
                 <button hx-get="{% url 'travel:dashboard' %}?view=checklist" 
                         hx-target="#dashboard-refresh"
                         class="segmented-item {% if view_type == 'checklist' %}active{% endif %}"
                         title="{% trans 'Checkliste' %}">
                     <i class="bi bi-list-check"></i>
-                    <span class="d-none d-sm-inline">{% trans "Checkliste" %}</span>
+                    <span class="d-none d-md-inline d-inline-mobile">{% trans "Checkliste" %}</span>
                 </button>
             </div>
         {% endif %}
     </div>
 
     <!-- RIGHT: Actions & Settings -->
-    <div class="d-flex align-items-center gap-1 gap-md-2 flex-shrink-0 ms-auto">
+    <div class="d-flex align-items-center gap-1 gap-md-2 flex-shrink-0 order-2 ms-auto">
         {% if active_trip %}
             <!-- Map Toggle -->
             <button class="nav-icon-btn" 

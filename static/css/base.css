@@ -586,7 +586,30 @@ body {
         padding: 8px 10px;
     }
     .segmented-item span {
-        display: none; /* Hide text on mobile, keep icons */
+        display: none; /* Hide standard bootstrap spans */
+    }
+    .segmented-item span.d-inline-mobile {
+        display: inline !important; /* Force my specific mobile labels */
+        font-size: 0.7rem;
+    }
+}
+
+/* Two-row mobile layout support */
+@media (max-width: 600px) {
+    .switcher-full-width-mobile {
+        width: 100% !important;
+        margin-top: 0.5rem;
+    }
+    
+    #trip-switcher-container {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .nav-icon-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 0.95rem;
     }
 }
 /* --- Small Variants for High-Density UI --- */
