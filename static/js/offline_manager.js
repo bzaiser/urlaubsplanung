@@ -224,3 +224,40 @@ window.addEventListener('online', () => {
 
 // Initial Init
 document.addEventListener('DOMContentLoaded', initDB);
+
+// PWA Rescue Logic: Force clean reload by purging workers and caches
+async function resetPWA() {
+    if (confirm("🚨 App-Speicher wirklich zurücksetzen? Die App wird danach neu geladen und alle System-Daten werden frisch vom Server geholt.")) {
+        try {
+            console.log("🚑 PWA Rescue started...");
+            
+            // 1. Unregister all service workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.unregister();
+                    console.log("🗑️ Service Worker unregistered");
+                }
+            }
+
+            // 2. Clear all named caches
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                for (let key of keys) {
+                    await caches.delete(key);
+                    console.log(`🗑️ Cache ${key} deleted`);
+                }
+            }
+
+            // Note: We intentionally DO NOT clear IndexedDB here 
+            // to preserve unsynced diary entries.
+
+            // 3. Force reload from server
+            console.log("🔄 Reloading app...");
+            window.location.reload(true);
+        } catch (error) {
+            console.error("❌ Reset failed:", error);
+            alert("Fehler beim Zurücksetzen: " + error);
+        }
+    }
+}
