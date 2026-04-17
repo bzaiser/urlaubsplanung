@@ -1,17 +1,17 @@
-const CACHE_NAME = 'travel-hub-v19';
-const STATIC_CACHE = 'travel-hub-static-v19';
+const CACHE_NAME = 'travel-hub-v20';
+const STATIC_CACHE = 'travel-hub-static-v20';
 const MEDIA_CACHE = 'travel-hub-media-v3';
 const DYNAMIC_CACHE = 'travel-hub-dynamic-v3';
 
-const log = (msg, data = '') => console.log(`[SW v19] ${msg}`, data);
+const log = (msg, data = '') => console.log(`[SW v20] ${msg}`, data);
 
 const EMERGENCY_STYLES = `
     body { background: #0a192f; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-    .container { padding: 30px; border: 2px solid #64ffda; border-radius: 12px; background: #112240; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 80%; }
+    .container { padding: 30px; border: 2px solid #ff4d4d; border-radius: 12px; background: #112240; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 80%; }
     .indicator { background: #ff4d4d; color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold; margin-bottom: 20px; display: inline-block; }
-    h1 { color: #64ffda; margin-top: 0; }
+    h1 { color: #fff; margin-top: 0; }
     p { color: #8892b0; line-height: 1.6; }
-    .btn { display: inline-block; margin-top: 20px; padding: 12px 24px; background: #64ffda; color: #0a192f; text-decoration: none; border-radius: 4px; font-weight: bold; }
+    .btn { display: inline-block; margin-top: 20px; padding: 12px 24px; background: #ff4d4d; color: #fff; text-decoration: none; border-radius: 4px; font-weight: bold; }
 `;
 
 const EMERGENCY_SHELL_HTML = `
@@ -19,15 +19,15 @@ const EMERGENCY_SHELL_HTML = `
 <html lang="de">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Hub - OFFLINE v19</title>
+    <title>RESCUE v20</title>
     <style>${EMERGENCY_STYLES}</style>
 </head>
 <body>
     <div class="container">
-        <div class="indicator">OFFLINE-MODUS AKTIV (v19)</div>
-        <h1>Verbindung unterbrochen</h1>
-        <p>Du bist gerade offline. Deine Timeline wird aus dem lokalen Bunker (v19) geladen.</p>
-        <a href="/" class="btn">Hauptseite neu laden</a>
+        <div class="indicator">RESCUE MODE v20</div>
+        <h1>Verbindung blockiert</h1>
+        <p>Die App konnte nicht geladen werden. Bitte nutze den Reset-Button in den Einstellungen oder lade die Seite online neu.</p>
+        <a href="/" class="btn">Erneut versuchen</a>
     </div>
 </body>
 </html>
@@ -44,7 +44,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-    log('Installing v19 (Iron Grip)...');
+    log('Rescue Install v20...');
     self.skipWaiting();
     event.waitUntil(caches.open(STATIC_CACHE).then((cache) => {
         return Promise.allSettled(ASSETS.map(url => cache.add(url)));
@@ -52,39 +52,53 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-    log('Activating v19 - Taking control!');
+    log('Rescue Active v20!');
     event.waitUntil(Promise.all([
         self.clients.claim(),
-        caches.keys().then((keys) => Promise.all(
-            keys.filter(k => ![STATIC_CACHE, MEDIA_CACHE, DYNAMIC_CACHE, CACHE_NAME].includes(k)).map(k => caches.delete(k))
-        ))
+        caches.keys().then((keys) => {
+            return Promise.all(
+                keys.filter(k => ![STATIC_CACHE, MEDIA_CACHE, DYNAMIC_CACHE, CACHE_NAME].includes(k)).map(k => caches.delete(k))
+            );
+        })
     ]));
 });
 
-self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
-    if (event.request.method !== 'GET') return;
+// Helper for Network Timeout - Pure Promise, no async keywords here
+const timeoutResponse = (ms, fallbackHtml) => new Promise((resolve) => {
+    setTimeout(() => {
+        resolve(new Response(fallbackHtml, {
+            status: 200,
+            headers: { 'Content-Type': 'text/html' }
+        }));
+    }, ms);
+});
 
-    // 1. Navigation Race
+self.addEventListener('fetch', (event) => {
+    if (event.request.method !== 'GET') return;
+    const url = new URL(event.request.url);
+
+    // 1. Navigation Rescue - With 2s Network Race
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request).then(response => {
-                if (response.ok) {
+            Promise.race([
+                fetch(event.request),
+                timeoutResponse(2000, EMERGENCY_SHELL_HTML)
+            ]).then((response) => {
+                if (response && response.status === 200) {
                     const copy = response.clone();
                     caches.open(STATIC_CACHE).then(cache => cache.put(event.request, copy));
                 }
                 return response;
-            }).catch(async () => {
-                const fallback = await caches.match('/') || await caches.match('/login/');
-                // If we serve a fallback from cache, append a tiny identification script
-                if (fallback) return fallback;
-                return new Response(EMERGENCY_SHELL_HTML, { headers: { 'Content-Type': 'text/html' } });
+            }).catch(() => {
+                return caches.match('/').then(res => res || caches.match('/login/')).then(res => {
+                    return res || new Response(EMERGENCY_SHELL_HTML, { headers: { 'Content-Type': 'text/html' }});
+                });
             })
         );
         return;
     }
 
-    // 2. Bunker Strategy
+    // 2. Asset Bunker Strategy
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             const fetchPromise = fetch(event.request).then((networkResponse) => {
@@ -98,8 +112,9 @@ self.addEventListener('fetch', (event) => {
                 return networkResponse;
             }).catch(() => {
                 if (url.pathname.includes('/diary/') || url.pathname.includes('/day/')) {
-                    // Try to match the last successful diary fragment
-                    return caches.match(event.request).then(res => res || new Response('<div class="p-3 bg-danger text-white">Offline: Tag nicht im Cache (v19)</div>', { headers: {'Content-Type': 'text/html'}}));
+                    return caches.match(event.request).then(res => {
+                        return res || new Response('<div class="p-3 bg-danger text-white">Offline: v20 Fallback</div>', { headers: {'Content-Type': 'text/html'}});
+                    });
                 }
                 return new Response('', { status: 408 });
             });

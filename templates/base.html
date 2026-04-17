@@ -223,9 +223,9 @@
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                // Force v19 for Iron Grip takeover
-                navigator.serviceWorker.register('/serviceworker.js?v=19').then(function(reg) {
-                    console.log("✅ PWA: Service Worker v19 registered", reg);
+                // Force v20 for Rescue takeover
+                navigator.serviceWorker.register('/serviceworker.js?v=20').then(function(reg) {
+                    console.log("✅ PWA: Service Worker v20 registered", reg);
                     monitorSW(reg);
                     reg.update();
                 }).catch(function(err) {
@@ -262,7 +262,7 @@
 
     <!-- Floating Scroll Navigator -->
     <div class="scroll-navigator d-flex flex-column gap-2 shadow-lg rounded-pill p-1 position-relative">
-        <span class="position-absolute start-50 translate-middle-x mb-1 text-secondary fw-bold" style="font-size: 0.5rem; bottom: -15px; opacity: 0.5;">v19</span>
+        <span class="position-absolute start-50 translate-middle-x mb-1 text-secondary fw-bold" style="font-size: 0.5rem; bottom: -15px; opacity: 0.5;">v20</span>
         <button onclick="scrollToDest('top')" class="btn-scroll-nav" title="Ganz nach oben">
             <i class="bi bi-chevron-double-up"></i>
         </button>
