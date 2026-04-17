@@ -1234,25 +1234,29 @@ def checklist_item_date_edit(request, item_id):
 def checklist_item_date_save(request, item_id):
     """Saves the updated date and returns the formatted badge."""
     item = get_object_or_404(TripChecklistItem, pk=item_id)
-    new_date = request.POST.get('due_date')
+    new_date_str = request.POST.get('due_date')
     
-    if new_date:
-        item.due_date = new_date
-        item.save()
+    if new_date_str:
+        try:
+            from datetime import datetime
+            item.due_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+            item.save()
+        except (ValueError, TypeError):
+            pass
     
-    # Return the updated badge (same HTML as in trip_checklist.html)
+    # Return the updated badge
     from datetime import date
     today = date.today()
     badge_class = "bg-danger" if item.due_date and item.due_date < today else "bg-secondary text-opacity-75"
-    date_str = item.due_date.strftime("%j. %M") if item.due_date else "---" # Small fix for German format if needed
-    # Actually use standard django date filter style if possible, but here we just return HTML
+    
+    display_date = item.due_date.strftime("%d. %m.") if item.due_date else '---'
     
     html = f"""
     <span class="badge rounded-pill {badge_class} small pointer" 
           style="font-size: 0.7rem; cursor: pointer;"
           hx-get="{reverse('travel:checklist_item_date_edit', args=[item.id])}"
           hx-swap="outerHTML">
-        <i class="bi bi-clock me-1"></i>{item.due_date.strftime("%d. %m.") if item.due_date else '---'}
+        <i class="bi bi-clock me-1"></i>{display_date}
     </span>
     """
     return HttpResponse(html)
