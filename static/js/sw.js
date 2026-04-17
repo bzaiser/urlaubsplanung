@@ -1,5 +1,5 @@
-const CACHE_NAME = 'travel-hub-v11';
-const STATIC_CACHE = 'travel-hub-static-v11';
+const CACHE_NAME = 'travel-hub-v12';
+const STATIC_CACHE = 'travel-hub-static-v12';
 const MEDIA_CACHE = 'travel-hub-media-v3';
 const DYNAMIC_CACHE = 'travel-hub-dynamic-v3';
 
@@ -7,14 +7,14 @@ const DYNAMIC_CACHE = 'travel-hub-dynamic-v3';
 const DIARY_FALLBACK_HTML = `
 <div class="modal-header border-secondary">
     <h5 class="modal-title text-warning">
-        <i class="bi bi-wifi-off me-2"></i> Offline-Tagebuch (v11)
+        <i class="bi bi-wifi-off me-2"></i> Offline-Tagebuch (v12)
     </h5>
     <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
 </div>
 <div class="modal-body bg-dark text-light">
     <div class="alert alert-warning py-2 small">
         <i class="bi bi-exclamation-triangle me-2"></i>
-        Kein Netz? Kein Problem. Schreibe einfach los!
+        Kein Netz? Kein Problem. Deine Einträge werden sicher lokal zwischengespeichert.
     </div>
     <form id="diary-form-offline">
         <div class="mb-3">
@@ -55,7 +55,6 @@ const ASSETS = [
     '/static/css/base.css',
     '/static/img/placeholder_day.png',
     '/static/js/offline_manager.js',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600&display=swap',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
     'https://unpkg.com/htmx.org@1.9.11'
@@ -63,7 +62,14 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
-    event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(ASSETS)));
+    event.waitUntil(
+        caches.open(STATIC_CACHE).then((cache) => {
+            // Robust individual catching: don't fail the whole install if one fails
+            return Promise.allSettled(
+                ASSETS.map(url => cache.add(url).catch(err => console.error(`Failed to cache ${url}:`, err)))
+            );
+        })
+    );
 });
 
 self.addEventListener('activate', (event) => {
@@ -81,7 +87,10 @@ self.addEventListener('fetch', (event) => {
 
     // 1. Navigation Flow
     if (event.request.mode === 'navigate') {
-        event.respondWith(fetch(event.request).catch(() => caches.match('/') || caches.match('/login/')));
+        event.respondWith(
+            fetch(event.request)
+                .catch(() => caches.match('/') || caches.match('/login/'))
+        );
         return;
     }
 
@@ -94,7 +103,6 @@ self.addEventListener('fetch', (event) => {
                         cache.put(event.request, networkResponse.clone());
                         return networkResponse;
                     }).catch(() => {
-                        // THE MAGIC FALLBACK: If network fails and nothing in cache, return our hardcoded UI
                         return new Response(DIARY_FALLBACK_HTML, {
                             headers: { 'Content-Type': 'text/html' }
                         });
@@ -106,6 +114,31 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 3. Defaults
-    event.respondWith(caches.match(event.request).then((res) => res || fetch(event.request)));
+    // 3. Media
+    if (url.pathname.includes('/media/')) {
+        event.respondWith(
+            caches.open(MEDIA_CACHE).then((cache) => {
+                return cache.match(event.request).then((response) => {
+                    return response || fetch(event.request).then((networkResponse) => {
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    });
+                });
+            })
+        );
+        return;
+    }
+
+    // 4. Default Cache Strategy (Stale While Revalidate for static assets)
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            const fetchPromise = fetch(event.request).then((networkResponse) => {
+                return caches.open(STATIC_CACHE).then((cache) => {
+                    cache.put(event.request, networkResponse.clone());
+                    return networkResponse;
+                });
+            }).catch(() => null);
+            return cachedResponse || fetchPromise;
+        })
+    );
 });
