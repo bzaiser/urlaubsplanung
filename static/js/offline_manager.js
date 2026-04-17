@@ -1,6 +1,6 @@
 /**
- * Offline Manager for Travel Hub
- * Handles IndexedDB storage for diary entries and background synchronization.
+ * Offline Manager for Travel Hub (v28)
+ * Clean, safe implementation for background sync and offline storage.
  */
 
 const DB_NAME = 'TravelHubOfflineDB';
@@ -9,229 +9,248 @@ const STORE_NAME = 'pending_diary_entries';
 
 let db;
 
-// Initialize Database
-function initDB() {
+/**
+ * Initializes the IndexedDB for offline diary entries.
+ */
+async function initDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        try {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-            }
-        };
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                }
+            };
 
-        request.onsuccess = (event) => {
-            db = event.target.result;
-            console.log('📦 PWA: Offline DB initialized successfully');
-            if (window.showToast) showToast("📦 Lokaler Datenspeicher aktiv (v27)");
-            updateSyncIndicator();
-            initBackgroundSync(); // Start background content synchronization
-            resolve(db);
-        };
+            request.onsuccess = (event) => {
+                db = event.target.result;
+                console.log('📦 PWA: Database initialized.');
+                updateSyncIndicator();
+                // Start background sync safely without blocking
+                initBackgroundSync().catch(err => console.error("Background sync failed to start:", err));
+                resolve(db);
+            };
 
-        request.onerror = (event) => {
-            const msg = `❌ Status-Fehler: Datenbankzugriff fehlgeschlagen (${event.target.errorCode || event.target.error})`;
-            console.error(msg);
-            if (window.showToast) showToast(msg, true);
-            reject(msg);
-        };
+            request.onerror = (event) => {
+                console.error("Database error:", event.target.error);
+                reject(event.target.error);
+            };
+        } catch (e) {
+            console.error("IndexedDB not supported or initialization error:", e);
+            reject(e);
+        }
     });
 }
 
-// --- Background Content Synchronization (v27) ---
+/**
+ * Background synchronization of trip data (diary entries).
+ */
 async function initBackgroundSync() {
     if (!navigator.onLine) return;
-    if (sessionStorage.getItem('pwa_sync_finished_v27')) return;
+    if (sessionStorage.getItem('pwa_sync_finished_v28')) return;
 
     const dataEl = document.getElementById('grid-data');
     if (!dataEl) return;
 
     try {
-        const gridData = JSON.parse(dataEl.textContent);
-        const dayIds = [...new Set(gridData.filter(r => r.day_id).map(r => r.day_id))];
+        const gridDataText = dataEl.textContent.trim();
+        if (!gridDataText) return;
+
+        const gridData = JSON.parse(gridDataText);
+        // Ensure we have an array
+        const dataArray = Array.isArray(gridData) ? gridData : [];
+        if (dataArray.length === 0) return;
+
+        const dayIds = [...new Set(dataArray.filter(r => r && r.day_id).map(r => r.day_id))];
         
         if (dayIds.length > 0) {
             synchronizeTripData(dayIds);
         }
     } catch (e) {
-        console.error("Synchronization background process failed:", e);
+        console.warn("PWA: Background synchronization logic skipped (data parsing issue).");
     }
 }
 
 async function synchronizeTripData(dayIds) {
-    if (window.showToast) showToast("🔃 Synchronisierung der Reisedaten für Offline-Nutzung...", false);
-    
     console.log(`PWA: Synchronizing ${dayIds.length} days...`);
     
     for (const id of dayIds) {
         try {
             await fetch(`/day/${id}/diary/`, { headers: { 'HX-Request': 'true' } });
+            // Throttle to 400ms
             await new Promise(r => setTimeout(r, 400));
         } catch (e) {
-            console.warn(`Synchronization failed for day ${id}:`, e);
+            console.warn(`PWA: Failed to sync day ${id}.`);
         }
     }
     
-    sessionStorage.setItem('pwa_sync_finished_v27', 'true');
-    if (window.showToast) showToast("✅ Offline-Synchronisierung abgeschlossen.", false);
+    sessionStorage.setItem('pwa_sync_finished_v28', 'true');
+    console.log("PWA: All trip data synchronized for offline use.");
 }
 
-// Save an entry to the queue
+/**
+ * Queue an entry for offline submission.
+ */
 async function queueEntry(dayId, formDataMap, images) {
     if (!db) await initDB();
 
     const entry = {
         dayId: dayId,
         text: formDataMap.get('text'),
-        images: images, // Array of { name, type, blob }
+        images: images,
         timestamp: new Date().getTime()
     };
 
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.add(entry);
+        try {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.add(entry);
 
-        request.onsuccess = () => {
-            console.log('📝 Entry queued for offline sync');
-            updateSyncIndicator();
-            resolve(true);
-        };
+            request.onsuccess = () => {
+                updateSyncIndicator();
+                resolve(true);
+            };
 
-        request.onerror = () => reject(request.error);
+            request.onerror = () => reject(request.error);
+        } catch (e) {
+            reject(e);
+        }
     });
 }
 
-// Get all pending entries
 async function getPendingEntries() {
     if (!db) await initDB();
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+        try {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        } catch (e) {
+            reject(e);
+        }
     });
 }
 
-// Remove an entry after successful sync
 async function removeEntry(id) {
     if (!db) await initDB();
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.delete(id);
-        request.onsuccess = () => {
-            updateSyncIndicator();
-            resolve(true);
-        };
-        request.onerror = () => reject(request.error);
+        try {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.delete(id);
+            request.onsuccess = () => {
+                updateSyncIndicator();
+                resolve(true);
+            };
+            request.onerror = () => reject(request.error);
+        } catch (e) {
+            reject(e);
+        }
     });
 }
 
-// Update UI Indicator (Cloud Icon)
 async function updateSyncIndicator() {
-    const entries = await getPendingEntries();
-    const count = entries.length;
-    const indicator = document.getElementById('sync-indicator');
-    const banner = document.getElementById('offline-sync-banner');
+    try {
+        const entries = await getPendingEntries();
+        const count = entries.length;
+        const indicator = document.getElementById('sync-indicator');
+        const banner = document.getElementById('offline-sync-banner');
 
-    if (indicator) {
-        if (count > 0) {
-            console.log(`☁️ Sync-Indicator: Showing ${count} pending entries`);
-            indicator.classList.remove('d-none');
-            const badge = indicator.querySelector('.badge');
-            if (badge) badge.innerText = count;
-            indicator.classList.add('text-warning', 'animate-pulse');
-        } else {
-            indicator.classList.add('d-none');
-            indicator.classList.remove('animate-pulse');
+        if (indicator) {
+            if (count > 0) {
+                indicator.classList.remove('d-none');
+                const badge = indicator.querySelector('.badge');
+                if (badge) badge.innerText = count;
+                indicator.classList.add('text-warning', 'animate-pulse');
+            } else {
+                indicator.classList.add('d-none');
+                indicator.classList.remove('animate-pulse');
+            }
         }
-    }
 
-    if (banner) {
-        if (count > 0 && navigator.onLine) {
-            console.log("🔔 Sync-Banner: Showing banner (online)");
-            banner.classList.remove('d-none');
-            banner.classList.add('animate__fadeInDown');
-        } else {
-            banner.classList.add('d-none');
+        if (banner) {
+            if (count > 0 && navigator.onLine) {
+                banner.classList.remove('d-none');
+                banner.classList.add('animate__fadeInDown');
+            } else {
+                banner.classList.add('d-none');
+            }
         }
+    } catch (e) {
+        console.warn("Sync indicator update skipped.");
     }
 }
 
-// Core Sync Logic
 async function performSync() {
-    const entries = await getPendingEntries();
-    if (entries.length === 0) return;
+    try {
+        const entries = await getPendingEntries();
+        if (entries.length === 0) return;
 
-    console.log(`🔃 Syncing ${entries.length} entries...`);
-    let hasError = false;
-    let lastErrorStatus = 'Unknown';
+        console.log(`🔃 Syncing ${entries.length} entries...`);
+        let hasError = false;
+        let lastErrorStatus = 'Unknown';
 
-    // Update UI to "Syncing" state
-    const indicator = document.getElementById('sync-indicator');
-    if (indicator) {
-        indicator.classList.remove('text-warning', 'text-danger');
-        indicator.classList.add('text-info');
-    }
-
-    for (const entry of entries) {
-        try {
-            const formData = new FormData();
-            formData.append('text', entry.text);
-            
-            if (entry.images && entry.images.length > 0) {
-                entry.images.forEach(img => {
-                    const file = new File([img.blob], img.name, { type: img.blob.type });
-                    formData.append('images', file);
-                });
-            }
-
-            const response = await fetch(`/day/${entry.dayId}/diary/`, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': getCSRFToken(),
-                    'HX-Request': 'true'
-                }
-            });
-
-            if (response.ok) {
-                await removeEntry(entry.id);
-                console.log(`✅ Entry ${entry.id} synced successfully`);
-            } else {
-                console.error(`❌ Server rejected sync for entry ${entry.id}: Status ${response.status}`);
-                hasError = true;
-                lastErrorStatus = response.status;
-            }
-        } catch (error) {
-            console.error(`❌ Network error during sync for entry ${entry.id}:`, error);
-            hasError = true;
-            lastErrorStatus = 'Network Error';
-        }
-    }
-    
-    if (hasError) {
-        let errorMsg = `⚠️ Sync fehlgeschlagen (Status: ${lastErrorStatus})`;
-        if (lastErrorStatus === 403) {
-            errorMsg = "🔒 Sicherheits-Fehler (403): Bitte Seite neu laden oder neu einloggen.";
-        }
-        showToast(errorMsg, true);
+        const indicator = document.getElementById('sync-indicator');
         if (indicator) {
-            indicator.classList.remove('text-info');
-            indicator.classList.add('text-danger');
+            indicator.classList.remove('text-warning', 'text-danger');
+            indicator.classList.add('text-info');
         }
-    } else {
-        showToast("✅ Alle Einträge erfolgreich synchronisiert!");
-        if (window.htmx) htmx.trigger('body', 'diaryUpdated');
-        updateSyncIndicator();
+
+        for (const entry of entries) {
+            try {
+                const formData = new FormData();
+                formData.append('text', entry.text);
+                
+                if (entry.images && entry.images.length > 0) {
+                    entry.images.forEach(img => {
+                        const file = new File([img.blob], img.name, { type: img.blob.type });
+                        formData.append('images', file);
+                    });
+                }
+
+                const response = await fetch(`/day/${entry.dayId}/diary//`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken(),
+                        'HX-Request': 'true'
+                    }
+                });
+
+                if (response.ok) {
+                    await removeEntry(entry.id);
+                } else {
+                    hasError = true;
+                    lastErrorStatus = response.status;
+                }
+            } catch (error) {
+                hasError = true;
+                lastErrorStatus = 'Network Error';
+            }
+        }
+        
+        if (hasError) {
+            if (window.showToast) window.showToast(`⚠️ Synchronisierung unvollständig (${lastErrorStatus})`, true);
+            if (indicator) {
+                indicator.classList.remove('text-info');
+                indicator.classList.add('text-danger');
+            }
+        } else {
+            if (window.showToast) window.showToast("✅ Daten erfolgreich übertragen.");
+            if (window.htmx) htmx.trigger('body', 'diaryUpdated');
+            updateSyncIndicator();
+        }
+    } catch (e) {
+        console.error("Sync process failed:", e);
     }
 }
 
 function getCSRFToken() {
-    // 1. Try to get from Cookie (Most reliable for Django)
     const name = 'csrftoken';
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -245,61 +264,16 @@ function getCSRFToken() {
         }
     }
     if (cookieValue) return cookieValue;
-
-    // 2. Fallback to hidden input
-    const inputToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-    if (inputToken) return inputToken;
-
-    // 3. Fallback to body hx-headers
-    return document.body.getAttribute('hx-headers')?.match(/"X-CSRFToken":\s*"([^"]+)"/)?.[1];
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value;
 }
 
-// Auto-sync attempt on online event
+// Global listeners
 window.addEventListener('online', () => {
     const autoSync = localStorage.getItem('auto_sync_mobile') === 'true';
-    if (autoSync) {
-        performSync();
-    } else {
-        updateSyncIndicator();
-    }
+    if (autoSync) performSync();
+    else updateSyncIndicator();
 });
 
-// Initial Init
-document.addEventListener('DOMContentLoaded', initDB);
-
-// PWA Rescue Logic: Force clean reload by purging workers and caches
-async function resetPWA() {
-    if (confirm("🚨 App-Speicher wirklich zurücksetzen? Die App wird danach neu geladen und alle System-Daten werden frisch vom Server geholt.")) {
-        try {
-            console.log("🚑 PWA Rescue started...");
-            
-            // 1. Unregister all service workers
-            if ('serviceWorker' in navigator) {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (let registration of registrations) {
-                    await registration.unregister();
-                    console.log("🗑️ Service Worker unregistered");
-                }
-            }
-
-            // 2. Clear all named caches
-            if ('caches' in window) {
-                const keys = await caches.keys();
-                for (let key of keys) {
-                    await caches.delete(key);
-                    console.log(`🗑️ Cache ${key} deleted`);
-                }
-            }
-
-            // Note: We intentionally DO NOT clear IndexedDB here 
-            // to preserve unsynced diary entries.
-
-            // 3. Force reload from server
-            console.log("🔄 Reloading app...");
-            window.location.reload(true);
-        } catch (error) {
-            console.error("❌ Reset failed:", error);
-            alert("Fehler beim Zurücksetzen: " + error);
-        }
-    }
-}
+document.addEventListener('DOMContentLoaded', () => {
+    initDB().catch(err => console.error("Initial DB init failed:", err));
+});
