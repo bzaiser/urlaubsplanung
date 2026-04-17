@@ -121,13 +121,20 @@ async function performSync() {
     if (entries.length === 0) return;
 
     console.log(`🔃 Syncing ${entries.length} entries...`);
+    let hasError = false;
+
+    // Update UI to "Syncing" state
+    const indicator = document.getElementById('sync-indicator');
+    if (indicator) {
+        indicator.classList.remove('text-warning', 'text-danger');
+        indicator.classList.add('text-info');
+    }
 
     for (const entry of entries) {
         try {
             const formData = new FormData();
             formData.append('text', entry.text);
             
-            // Add images back as files
             if (entry.images && entry.images.length > 0) {
                 entry.images.forEach(img => {
                     const file = new File([img.blob], img.name, { type: img.blob.type });
@@ -146,15 +153,26 @@ async function performSync() {
 
             if (response.ok) {
                 await removeEntry(entry.id);
-                console.log(`✅ Entry ${entry.id} synced`);
+            } else {
+                hasError = true;
             }
         } catch (error) {
             console.error(`❌ Sync failed for entry ${entry.id}:`, error);
+            hasError = true;
         }
     }
     
-    // Final UI refresh
-    if (window.htmx) htmx.trigger('body', 'diaryUpdated');
+    if (hasError) {
+        showToast("⚠️ Manche Einträge konnten nicht synchronisiert werden.", true);
+        if (indicator) {
+            indicator.classList.remove('text-info');
+            indicator.classList.add('text-danger'); // Red icon for Error
+        }
+    } else {
+        showToast("✅ Alle Einträge erfolgreich synchronisiert!");
+        if (window.htmx) htmx.trigger('body', 'diaryUpdated');
+        updateSyncIndicator();
+    }
 }
 
 function getCSRFToken() {

@@ -21,7 +21,7 @@
                 <!-- Text Area -->
                 <div class="mb-3">
                     <label class="form-label small text-uppercase text-warning fw-bold">Meine Erlebnisse</label>
-                    <textarea name="text" class="form-control" rows="10" placeholder="Was hast du heute Schönes erlebt?">{{ form.text.value|default:"" }}</textarea>
+                    <textarea name="text" id="diary-textarea" class="form-control" rows="10" placeholder="Was hast du heute Schönes erlebt?" oninput="saveDraft('{{ day.id }}', this.value)">{{ form.text.value|default:"" }}</textarea>
                 </div>
 
                 <!-- Gallery Section -->
@@ -166,10 +166,28 @@
                         
                         await queueEntry(dayId, formData, processedImages);
                         
+                        // Clear draft after successful queuing
+                        localStorage.removeItem('diary_draft_' + dayId);
+                        
                         showToast("✓ Lokal gesichert. Sync erfolgt bei Verbindung.");
                         closeModal();
                     }
                 });
+
+                // --- Draft Recovery & Auto-Save ---
+                function saveDraft(dayId, text) {
+                    localStorage.setItem('diary_draft_' + dayId, text);
+                }
+
+                (function() {
+                    const dayId = "{{ day.id }}";
+                    const savedText = localStorage.getItem('diary_draft_' + dayId);
+                    const textarea = document.getElementById('diary-textarea');
+                    if (savedText && textarea && !textarea.value) {
+                        textarea.value = savedText;
+                        showToast("✨ Entwurf wiederhergestellt");
+                    }
+                })();
 
                 // Helper to resize images before offline storage
                 function resizeImage(file, maxSide) {
