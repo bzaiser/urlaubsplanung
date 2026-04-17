@@ -1,17 +1,15 @@
-const CACHE_NAME = 'travel-hub-v16';
-const STATIC_CACHE = 'travel-hub-static-v16';
+const CACHE_NAME = 'travel-hub-v17';
+const STATIC_CACHE = 'travel-hub-static-v17';
 const MEDIA_CACHE = 'travel-hub-media-v3';
 const DYNAMIC_CACHE = 'travel-hub-dynamic-v3';
 
-// Ultimate Emergency Styles (Embedded in SW to prevent 'blue links' look)
+// Ultimate Emergency Styles (Embedded to prevent 'blue links')
 const EMERGENCY_STYLES = `
     body { background: #0a192f; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
     .container { padding: 30px; border: 1px solid #112240; border-radius: 12px; background: #112240; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 80%; }
     h1 { color: #64ffda; margin-top: 0; }
     p { color: #8892b0; line-height: 1.6; }
     .btn { display: inline-block; margin-top: 20px; padding: 12px 24px; background: #64ffda; color: #0a192f; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 1rem; border: none; cursor: pointer; }
-    .text-warning { color: #ffc107; }
-    .bg-dark { background-color: #121212 !important; }
 `;
 
 const EMERGENCY_SHELL_HTML = `
@@ -25,12 +23,46 @@ const EMERGENCY_SHELL_HTML = `
 </head>
 <body>
     <div class="container">
-        <h1>Travel Hub Offline (v16)</h1>
-        <p>Wir befinden uns im Bunker-Modus. Inhalte werden geladen...</p>
+        <h1>Travel Hub Offline (v17)</h1>
+        <p>Inhalte werden geladen...</p>
         <a href="/" class="btn">Hauptseite neu laden</a>
     </div>
 </body>
 </html>
+`;
+
+const DIARY_FALLBACK_HTML = `
+<div class="modal-header border-secondary">
+    <h5 class="modal-title text-warning"><i class="bi bi-wifi-off me-2"></i> Offline-Diary (v17)</h5>
+    <button type="button" class="btn-close btn-close-white" onclick="if(window.closeModal){window.closeModal()}else{this.closest('.modal').style.display='none'}"></button>
+</div>
+<div class="modal-body bg-dark text-light">
+    <div class="alert alert-warning py-2 small">Einträge werden sicher lokal (v17) gesichert.</div>
+    <form id="diary-form-offline">
+        <div class="mb-3"><textarea name="text" class="form-control bg-dark text-light border-secondary" rows="10" placeholder="Was hast du heute erlebt?"></textarea></div>
+        <div class="mb-3"><label class="form-label text-secondary small text-uppercase fw-bold">Bilder hinzufügen</label><input type="file" name="images" class="form-control bg-dark text-light border-secondary" multiple accept="image/*"></div>
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-warning fw-bold">Lokal speichern</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="if(window.closeModal){window.closeModal()}">Abbrechen</button>
+        </div>
+    </form>
+    <script>
+        document.getElementById('diary-form-offline').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const pathParts = window.location.pathname.split('/');
+            const dayId = pathParts.find(p => !isNaN(p) && p !== '') || 'unknown';
+            if (window.queueEntry) {
+                const images = [];
+                const files = formData.getAll('images');
+                for (const file of files) { if (file.size > 0) { images.push({ name: file.name, type: file.type, blob: file }); } }
+                await window.queueEntry(dayId, formData, images);
+                if (window.showToast) window.showToast("✓ Lokal gespeichert (v17)");
+                if (window.closeModal) window.closeModal();
+            }
+        });
+    </script>
+</div>
 `;
 
 const ASSETS = [
@@ -59,40 +91,22 @@ self.addEventListener('activate', (event) => {
     ]));
 });
 
-// Helper for Network Timeout (for navigation)
-const timeoutResponse = (ms, fallbackHtml) => new Promise((resolve) => {
-    setTimeout(() => {
-        resolve(new Response(fallbackHtml, {
-            status: 200,
-            headers: { 'Content-Type': 'text/html' }
-        }));
-    }, ms);
-});
-
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     if (event.request.method !== 'GET') return;
 
-    // 1. Navigation Race
+    // 1. Navigation Flow - Robust & Fast
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            Promise.race([
-                fetch(event.request),
-                timeoutResponse(2500, EMERGENCY_SHELL_HTML)
-            ]).then((response) => {
-                if (response.ok) {
-                    const copy = response.clone();
-                    caches.open(STATIC_CACHE).then(cache => cache.put(event.request, copy));
-                }
-                return response;
-            }).catch(async () => {
-                return caches.match('/') || caches.match('/login/') || new Response(EMERGENCY_SHELL_HTML, { headers: { 'Content-Type': 'text/html' } });
+            fetch(event.request).catch(async () => {
+                const fallback = await caches.match('/') || await caches.match('/login/');
+                return fallback || new Response(EMERGENCY_SHELL_HTML, { headers: { 'Content-Type': 'text/html' } });
             })
         );
         return;
     }
 
-    // 2. Bunker Strategy: Stale-While-Revalidate + Auto-Cache for EVERYTHING
+    // 2. Universal Strategy: Cache first, then Network + Auto-Update
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             const fetchPromise = fetch(event.request).then((networkResponse) => {
@@ -101,24 +115,19 @@ self.addEventListener('fetch', (event) => {
                                      (url.pathname.includes('/diary/') || url.pathname.includes('/day/')) ? DYNAMIC_CACHE : 
                                      STATIC_CACHE;
                     const responseClone = networkResponse.clone();
-                    caches.open(cacheToUse).then((cache) => {
-                        cache.put(event.request, responseClone);
-                    });
+                    caches.open(cacheToUse).then(cache => cache.put(event.request, responseClone));
                 }
                 return networkResponse;
             }).catch(() => {
-                // Return a generic fallback response for diary fragments to avoid TypeError
+                // Guaranteed fallback for diary entries
                 if (url.pathname.includes('/diary/') || url.pathname.includes('/day/')) {
-                    // Try to match the emergency shell or return a simple fragment
-                    return new Response('<div class="p-3 text-warning">Offline-Modus: Bitte lerne diesen Tag online einmal kurz an.</div>', {
-                        headers: { 'Content-Type': 'text/html' }
-                    });
+                    return new Response(DIARY_FALLBACK_HTML, { headers: { 'Content-Type': 'text/html' } });
                 }
-                return null; // Let the cache handle it
+                // Default fallback response for other assets
+                return new Response('', { status: 408, statusText: 'Offline Fallback' });
             });
 
-            // Return cache first, or wait for fetch
-            return cachedResponse || fetchPromise || new Response('', { status: 408 });
+            return cachedResponse || fetchPromise;
         })
     );
 });
