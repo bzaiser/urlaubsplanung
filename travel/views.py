@@ -1326,7 +1326,14 @@ def checklist_template_item_update(request, item_template_id):
     text = request.POST.get('text')
     
     if days is not None:
-        item_template.due_days_before = int(days)
+        try:
+            if days.strip() == "":
+                item_template.due_days_before = 0
+            else:
+                item_template.due_days_before = int(days)
+        except (ValueError, TypeError):
+            pass
+            
     if text:
         item_template.text = text
         
