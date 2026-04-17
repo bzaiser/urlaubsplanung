@@ -128,17 +128,14 @@
                     }
                 }
 
-                // --- Offline & Data Saver Intercept Logic ---
+                // --- Automated Offline & Safety Net Intercept Logic ---
                 document.getElementById('diary-form').addEventListener('submit', async function(e) {
-                    const autoSync = localStorage.getItem('auto_sync_mobile') === 'true';
-                    
-                    // Intercept if offline OR if auto-sync is disabled (Data Saver Mode)
-                    if (!navigator.onLine || !autoSync) {
+                    // Always intercept if offline - Zero configuration, just works.
+                    if (!navigator.onLine) {
                         e.preventDefault();
                         e.stopImmediatePropagation();
                         
-                        const statusMsg = !navigator.onLine ? "📡 Offline! Speichere lokal..." : "⛽ Datensparen: Speichere lokal...";
-                        showToast(statusMsg, true);
+                        showToast("📡 Keine Verbindung! Lokal gesichert...", true);
                         
                         const form = e.target;
                         const formData = new FormData(form);
@@ -169,7 +166,7 @@
                         // Clear draft after successful queuing
                         localStorage.removeItem('diary_draft_' + dayId);
                         
-                        showToast("✓ Lokal gesichert. Sync erfolgt bei Verbindung.");
+                        showToast("✓ Sicher verwahrt. Upload erfolgt automatisch bei Netzempfang.");
                         closeModal();
                     }
                 });

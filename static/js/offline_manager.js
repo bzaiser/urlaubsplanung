@@ -158,21 +158,24 @@ async function updateSyncIndicator() {
     try {
         const entries = await getPendingEntries();
         const count = entries.length;
+        
         const indicator = document.getElementById('sync-indicator');
         const banner = document.getElementById('offline-sync-banner');
-
+        
         if (indicator) {
+            const badge = indicator.querySelector('.badge');
             if (count > 0) {
                 indicator.classList.remove('d-none');
-                const badge = indicator.querySelector('.badge');
-                if (badge) badge.innerText = count;
-                indicator.classList.add('text-warning', 'animate-pulse');
+                if (badge) {
+                    badge.textContent = count;
+                    badge.classList.remove('bg-warning');
+                    badge.classList.add('bg-danger'); // Red point as requested
+                }
             } else {
                 indicator.classList.add('d-none');
-                indicator.classList.remove('animate-pulse');
             }
         }
-
+        
         if (banner) {
             if (count > 0 && navigator.onLine) {
                 banner.classList.remove('d-none');
@@ -185,6 +188,12 @@ async function updateSyncIndicator() {
         console.warn("Sync indicator update skipped.");
     }
 }
+
+// Auto-Sync on Reconnect
+window.addEventListener('online', () => {
+    if (window.showToast) showToast("🌐 Verbindung wiederhergestellt. Auto-Sync startet...");
+    performSync();
+});
 
 async function performSync() {
     try {
