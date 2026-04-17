@@ -309,27 +309,27 @@ h1, h2 {
     overflow-y: auto;
     outline: 0;
     pointer-events: none;
-    /* Flex-Center for the content */
-    align-items: center;
+    /* Removed align-items: center to prevent top cutoff on long modals */
     justify-content: center;
-    padding: 20px;
+    padding: 40px 20px; /* Added more top padding for stability */
 }
 
 #modal-container.show {
-    display: flex; /* Changed from block to flex for centering */
+    display: flex; /* Kept flex for horizontal centering */
     pointer-events: auto;
 }
 
 /* Modal Content Box refinement */
 .modal-content-premium {
     width: 100%;
-    max-width: 500px; /* Reduced from fullscreen */
+    max-width: 500px;
     background: var(--bg-color);
     border: 1px solid var(--accent-gold);
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.8);
     position: relative;
     pointer-events: auto;
+    margin-bottom: auto; /* Ensures it's pushed from the bottom too */
 }
 
 /* Forms - scoped to AG Grid only (Bootstrap handles the rest) */
