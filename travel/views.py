@@ -1181,6 +1181,7 @@ def trip_checklist(request, trip_id):
     
     context = {
         'trip': trip,
+        'active_trip': trip,  # Added for template compatibility
         'checklist': checklist,
         'categories': categories,
         'templates': templates,
