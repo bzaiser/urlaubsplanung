@@ -1300,7 +1300,7 @@ def checklist_item_add(request, trip_id):
 
 @login_required
 def checklist_template_modal(request, trip_id):
-    """Returns a modal to edit the template items (due days)."""
+    """View to manage and bulk-save checklist template items (Vorgaben)."""
     trip = get_object_or_404(Trip, pk=trip_id)
     checklist = getattr(trip, 'checklist', None)
     
@@ -1308,8 +1308,28 @@ def checklist_template_modal(request, trip_id):
         return HttpResponse("Keine Vorlage ausgewählt.")
         
     template = checklist.template
-    # Bernd wants ONLY items from category "Vor der Abreise" to have date defaults
+    # We only show and allow editing for "Vor der Abreise" items here
     items = template.items.filter(category__name="Vor der Abreise").order_by('text')
+    
+    if request.method == 'POST':
+        for item in items:
+            prefix = f"item_{item.id}_"
+            new_text = request.POST.get(f"{prefix}text")
+            new_days = request.POST.get(f"{prefix}days")
+            
+            if new_text is not None:
+                item.text = new_text
+            if new_days is not None:
+                try:
+                    item.due_days_before = int(new_days)
+                except (ValueError, TypeError):
+                    pass
+            item.save()
+            
+        # Return success and trigger modal closing
+        response = HttpResponse(status=204)
+        response['HX-Trigger'] = 'closeModal'
+        return response
     
     context = {
         'template': template,
@@ -1318,27 +1338,6 @@ def checklist_template_modal(request, trip_id):
     }
     return render(request, 'travel/partials/checklist_template_modal.html', context)
 
-@login_required
-def checklist_template_item_update(request, item_template_id):
-    """Saves changes to a template item (global settings)."""
-    item_template = get_object_or_404(ChecklistItemTemplate, pk=item_template_id)
-    days = request.POST.get('due_days_before')
-    text = request.POST.get('text')
-    
-    if days is not None:
-        try:
-            if days.strip() == "":
-                item_template.due_days_before = 0
-            else:
-                item_template.due_days_before = int(days)
-        except (ValueError, TypeError):
-            pass
-            
-    if text:
-        item_template.text = text
-        
-    item_template.save()
-    return HttpResponse(status=204)
 
 @login_required
 def checklist_template_manager(request, trip_id):
