@@ -1224,7 +1224,7 @@ def checklist_item_date_edit(request, item_id):
            class="form-control form-control-sm bg-dark text-warning border-warning"
            style="width: 130px; font-size: 0.75rem;"
            hx-post="{reverse('travel:checklist_item_date_save', args=[item.id])}"
-           hx-trigger="change, blur"
+           hx-trigger="blur, keyup[key=='Enter']"
            hx-swap="outerHTML"
            autoFocus>
     """
