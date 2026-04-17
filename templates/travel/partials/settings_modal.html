@@ -154,6 +154,37 @@
                     </div>
                 </div>
 
+                <!-- NEW: Offline & Sync Section -->
+                <div class="card bg-dark border-warning border-opacity-25 mb-3 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="text-warning small text-uppercase mb-3 d-flex align-items-center">
+                            <i class="bi bi-cloud-arrow-up me-2"></i>{% trans "Offline & Synchronisation" %}
+                        </h6>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="sync_auto_mobile" onchange="saveSyncPreference(this)">
+                            <label class="form-check-label text-light small fw-bold" for="sync_auto_mobile">
+                                {% trans "Bilder automatisch über Mobilfunk synchronisieren" %}
+                            </label>
+                            <div class="form-text x-small text-secondary">
+                                {% trans "Wenn deaktiviert, werden Bilder erst nach Bestätigung oder im WLAN hochgeladen." %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function saveSyncPreference(checkbox) {
+                        localStorage.setItem('auto_sync_mobile', checkbox.checked);
+                        showToast(checkbox.checked ? "✓ Auto-Sync aktiviert" : "🚫 Auto-Sync deaktiviert");
+                    }
+                    // Load preference
+                    (function() {
+                        const pref = localStorage.getItem('auto_sync_mobile') === 'true';
+                        const cb = document.getElementById('sync_auto_mobile');
+                        if (cb) cb.checked = pref;
+                    })();
+                </script>
+
                 <button type="submit" class="btn btn-warning w-100 fw-bold">
                     <i class="bi bi-save me-1"></i>Alle Einstellungen &amp; Profile speichern
                 </button>

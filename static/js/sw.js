@@ -1,6 +1,12 @@
 const CACHE_NAME = 'travel-hub-v2';
 const ASSETS = [
-    '/static/img/icon-160.png',
+    '/',
+    '/static/css/base.css',
+    '/static/img/placeholder_day.png',
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600&display=swap',
+    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+    'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
+    'https://unpkg.com/htmx.org@1.9.11'
 ];
 
 self.addEventListener('install', (event) => {
