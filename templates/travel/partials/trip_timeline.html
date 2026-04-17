@@ -33,7 +33,10 @@
                             {% if day.first_image_url %}
                             <img src="{{ day.first_image_url }}" class="card-img-top shadow-sm" alt="{{ day.location }}" loading="lazy">
                             {% else %}
-                            <img src="{% static 'img/placeholder_day.png' %}" class="card-img-top shadow-sm opacity-50" alt="{% trans 'Kein Bild verfügbar' %}" loading="lazy">
+                            <div class="card-img-top d-flex flex-column align-items-center justify-content-center bg-secondary bg-opacity-10 border-bottom border-secondary border-opacity-25" style="height: 180px;">
+                                <i class="bi bi-camera text-secondary opacity-25 mb-2" style="font-size: 2.5rem;"></i>
+                                <span class="text-secondary small opacity-50 fw-bold text-uppercase" style="letter-spacing: 1px;">{% trans "Kein Bild" %}</span>
+                            </div>
                             {% endif %}
                             
                             <div class="card-body p-3">
