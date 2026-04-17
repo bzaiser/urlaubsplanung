@@ -97,16 +97,20 @@ async function updateSyncIndicator() {
 
     if (indicator) {
         if (count > 0) {
+            console.log(`☁️ Sync-Indicator: Showing ${count} pending entries`);
             indicator.classList.remove('d-none');
-            indicator.querySelector('.badge').innerText = count;
+            const badge = indicator.querySelector('.badge');
+            if (badge) badge.innerText = count;
             indicator.classList.add('text-warning', 'animate-pulse');
         } else {
             indicator.classList.add('d-none');
+            indicator.classList.remove('animate-pulse');
         }
     }
 
     if (banner) {
         if (count > 0 && navigator.onLine) {
+            console.log("🔔 Sync-Banner: Showing banner (online)");
             banner.classList.remove('d-none');
             banner.classList.add('animate__fadeInDown');
         } else {
