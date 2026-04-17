@@ -57,8 +57,8 @@
             }
 
             // 2. Data Prep
-            const stations = {{ map_data_json|safe }};
-            const routeGeometry = {{ route_geometry_json|safe }};
+            const stations = {{ map_data_json|default:"[]"|safe }};
+            const routeGeometry = {{ route_geometry_json|default:"[]"|safe }};
             
             if (!stations || stations.length === 0) return;
 
