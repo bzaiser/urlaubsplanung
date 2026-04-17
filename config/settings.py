@@ -119,6 +119,7 @@ PWA_APP_ICONS = [
     }
 ]
 PWA_SERVICE_WORKER_PATH = os.path.join(BASE_DIR, 'static/js/sw_v28.js')
+PWA_SERVICE_WORKER_AUTO_REGISTER = False
 
 # Form limits for large matrix
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000

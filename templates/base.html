@@ -243,13 +243,20 @@
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                // Register Service Worker v28
+                // Register Service Worker v28 (Versioned to bypass aggressive iOS caching)
                 navigator.serviceWorker.register('/serviceworker_v28.js').then(function(reg) {
-                    console.log("✅ PWA: Service Worker v28 registered", reg);
+                    console.log("✅ PWA: Service Worker v28 registered");
                     monitorSW(reg);
-                    reg.update();
+                    
+                    // Only check for updates if we are actually online to prevent console errors
+                    if (navigator.onLine) {
+                        reg.update();
+                    }
                 }).catch(function(err) {
-                    showToast(`❌ PWA Register Error: ${err}`, true);
+                    // Only show registration errors if they are not due to being offline
+                    if (navigator.onLine) {
+                        console.error("❌ PWA Register Error:", err);
+                    }
                 });
             });
         }
