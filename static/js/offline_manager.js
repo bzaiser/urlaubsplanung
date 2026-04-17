@@ -122,6 +122,7 @@ async function performSync() {
 
     console.log(`🔃 Syncing ${entries.length} entries...`);
     let hasError = false;
+    let lastErrorStatus = 'Unknown';
 
     // Update UI to "Syncing" state
     const indicator = document.getElementById('sync-indicator');
@@ -157,18 +158,20 @@ async function performSync() {
             } else {
                 console.error(`❌ Server rejected sync for entry ${entry.id}: Status ${response.status}`);
                 hasError = true;
+                lastErrorStatus = response.status;
             }
         } catch (error) {
             console.error(`❌ Network error during sync for entry ${entry.id}:`, error);
             hasError = true;
+            lastErrorStatus = 'Network Error';
         }
     }
     
     if (hasError) {
-        showToast("⚠️ Manche Einträge konnten nicht synchronisiert werden.", true);
+        showToast(`⚠️ Sync fehlgeschlagen (Status: ${lastErrorStatus})`, true);
         if (indicator) {
             indicator.classList.remove('text-info');
-            indicator.classList.add('text-danger'); // Red icon for Error
+            indicator.classList.add('text-danger');
         }
     } else {
         showToast("✅ Alle Einträge erfolgreich synchronisiert!");

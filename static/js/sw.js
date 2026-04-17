@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-hub-v2';
+const CACHE_NAME = 'travel-hub-v3';
 const ASSETS = [
     '/',
     '/static/css/base.css',
