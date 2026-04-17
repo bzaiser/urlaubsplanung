@@ -195,6 +195,11 @@
             if (reason && typeof reason === 'object') {
                 reason = reason.message || JSON.stringify(reason);
             }
+            // SILENCE harmless PWA/Network errors during offline transitions
+            if (reason.includes("ServiceWorker") || reason.includes("fetch") || reason.includes("NetworkError")) {
+                console.log("ℹ️ PWA: Suppressed background network error (Offline safe).");
+                return;
+            }
             const msg = `🚨 Async Error: ${reason}`;
             console.error(msg, event.reason);
             showToast(msg, true);
