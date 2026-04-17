@@ -23,7 +23,7 @@ function initDB() {
 
         request.onsuccess = (event) => {
             db = event.target.result;
-            console.log('📦 Offline DB initialized');
+            console.log('📦 PWA: Offline DB initialized successfully');
             updateSyncIndicator();
             resolve(db);
         };

@@ -171,14 +171,47 @@
             toast.style.transform = 'translateY(0)';
             setTimeout(() => {
                 toast.style.transform = 'translateY(-100px)';
-            }, 2500);
+            }, 4000); // Increased duration for readability
         }
+
+        // --- DIAGNOSTICS: Global Error Reporting ---
+        window.onclick = function(e) {
+            console.log("🖱️ User Cliked element:", e.target);
+        };
+
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            const errorMsg = `🚨 JS Error: ${msg} (Line ${lineNo})`;
+            console.error(errorMsg, error);
+            showToast(errorMsg, true);
+            return false;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+            const msg = `🚨 Async Error: ${event.reason}`;
+            console.error(msg);
+            showToast(msg, true);
+        });
+
+        // --- HTMX Diagnostics ---
+        document.body.addEventListener('htmx:sendError', (e) => {
+            showToast("🌐 Netzwerk-Fehler: Bist du offline? App-Cache wird versucht...", true);
+        });
+
+        document.body.addEventListener('htmx:responseError', (e) => {
+            const status = e.detail.xhr.status;
+            showToast(`⚠️ Server-Fehler (${status}): Seite konnte nicht geladen werden.`, true);
+        });
 
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.getRegistration().then(function(reg) {
-                    if (reg) reg.update();
+                    if (reg) {
+                        console.log("✅ PWA: Service Worker is registered");
+                        reg.update();
+                    } else {
+                        console.warn("⚠️ PWA: No Service Worker registered yet");
+                    }
                 });
             });
         }
