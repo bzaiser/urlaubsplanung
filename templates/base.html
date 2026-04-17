@@ -173,6 +173,15 @@
                 toast.style.transform = 'translateY(-100px)';
             }, 2500);
         }
+
+        // --- PWA Reliability: Force Service Worker Check ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.getRegistration().then(function(reg) {
+                    if (reg) reg.update();
+                });
+            });
+        }
     </script>
 
 

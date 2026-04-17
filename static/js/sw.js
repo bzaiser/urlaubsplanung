@@ -1,10 +1,11 @@
-const CACHE_NAME = 'travel-hub-v8';
-const STATIC_CACHE = 'travel-hub-static-v8';
-const MEDIA_CACHE = 'travel-hub-media-v1';
-const DYNAMIC_CACHE = 'travel-hub-dynamic-v1';
+const CACHE_NAME = 'travel-hub-v9';
+const STATIC_CACHE = 'travel-hub-static-v9';
+const MEDIA_CACHE = 'travel-hub-media-v2';
+const DYNAMIC_CACHE = 'travel-hub-dynamic-v2';
 
 const ASSETS = [
     '/',
+    '/login/',
     '/static/css/base.css',
     '/static/img/placeholder_day.png',
     '/static/js/offline_manager.js',
@@ -24,23 +25,38 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+    // Take control of all pages immediately
     event.waitUntil(
-        caches.keys().then((keys) => {
-            return Promise.all(
-                keys.filter(k => k !== STATIC_CACHE && k !== MEDIA_CACHE && k !== DYNAMIC_CACHE && k !== CACHE_NAME)
-                    .map(k => caches.delete(k))
-            );
-        })
+        Promise.all([
+            self.clients.claim(),
+            caches.keys().then((keys) => {
+                return Promise.all(
+                    keys.filter(k => ![STATIC_CACHE, MEDIA_CACHE, DYNAMIC_CACHE, CACHE_NAME].includes(k))
+                        .map(k => caches.delete(k))
+                );
+            })
+        ])
     );
 });
 
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Skip non-GET requests (like POST syncs) - they are handled by offline_manager.js
+    // Skip non-GET requests
     if (event.request.method !== 'GET') return;
 
-    // 1. Media Caching (Images) - Cache First, then network
+    // 1. Navigation requests (Opening the site) - Network first with fast fallback
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
+                .catch(() => {
+                    return caches.match('/') || caches.match('/login/');
+                })
+        );
+        return;
+    }
+
+    // 2. Media Caching (Images) - Cache First
     if (url.pathname.includes('/media/')) {
         event.respondWith(
             caches.open(MEDIA_CACHE).then((cache) => {
@@ -55,7 +71,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 2. Dynamic Content (Diary Modals etc) - Stale While Revalidate
+    // 3. Dynamic Content (Diary Modals etc) - Stale While Revalidate
     if (url.pathname.includes('/day/') || url.pathname.includes('/diary/')) {
         event.respondWith(
             caches.open(DYNAMIC_CACHE).then((cache) => {
@@ -71,15 +87,10 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 3. Static Assets & App Shell - Network First, fallback to cache
+    // 4. Everything else (Static Assets)
     event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                // Optionally update static cache here if needed
-                return response;
-            })
-            .catch(() => {
-                return caches.match(event.request);
-            })
+        caches.match(event.request).then((cachedResponse) => {
+            return cachedResponse || fetch(event.request);
+        })
     );
 });
