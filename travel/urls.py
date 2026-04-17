@@ -16,7 +16,7 @@ from .views import (
     checklist_print, day_insert, day_delete_and_shift, trip_shift_dates,
     save_ui_settings, checklist_reset, offline_diary_fallback,
     checklist_item_date_edit, checklist_item_date_save,
-    checklist_template_modal, checklist_template_item_update,
+    checklist_template_modal,
     checklist_template_manager, checklist_template_create_simple,
     checklist_template_delete_simple
 )
@@ -77,7 +77,6 @@ urlpatterns = [
     path('checklist/item/<int:item_id>/date-edit/', checklist_item_date_edit, name='checklist_item_date_edit'),
     path('checklist/item/<int:item_id>/date-save/', checklist_item_date_save, name='checklist_item_date_save'),
     path('trip/<int:trip_id>/checklist/template-modal/', checklist_template_modal, name='checklist_template_modal'),
-    path('checklist/template-item/<int:item_template_id>/update/', checklist_template_item_update, name='checklist_template_item_update'),
     path('trip/<int:trip_id>/checklist/template-manager/', checklist_template_manager, name='checklist_template_manager'),
     path('trip/<int:trip_id>/checklist/template-create/', checklist_template_create_simple, name='checklist_template_create_simple'),
     path('trip/<int:trip_id>/checklist/template-delete/<int:template_id>/', checklist_template_delete_simple, name='checklist_template_delete_simple'),
