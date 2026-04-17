@@ -119,3 +119,36 @@
         </div>
     {% endfor %}
 </div>
+
+<script>
+    /**
+     * Hamster-Logic: Pre-fetch diary fragments and images for offline use.
+     * Starts after a small delay to not block the main UI.
+     */
+    (function() {
+        const prefetchContent = () => {
+            console.log("🐹 Hamster starting to collect offline supplies...");
+            
+            // 1. Prefetch Diary HTMX Fragments
+            const diaryLinks = document.querySelectorAll('[hx-get*="/diary/"]');
+            diaryLinks.forEach(link => {
+                const url = link.getAttribute('hx-get');
+                if (url) {
+                    fetch(url, { priority: 'low' }).catch(e => {});
+                }
+            });
+
+            // 2. Prefetch Images (thumbnails)
+            const images = document.querySelectorAll('.main-day-card img');
+            images.forEach(img => {
+                if (img.src) {
+                    fetch(img.src, { priority: 'low' }).catch(e => {});
+                }
+            });
+        };
+
+        if (navigator.onLine) {
+            setTimeout(prefetchContent, 2000); 
+        }
+    })();
+</script>
