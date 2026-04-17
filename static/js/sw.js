@@ -1,66 +1,35 @@
-const CACHE_NAME = 'travel-hub-v13';
-const STATIC_CACHE = 'travel-hub-static-v13';
+const CACHE_NAME = 'travel-hub-v14';
+const STATIC_CACHE = 'travel-hub-static-v14';
 const MEDIA_CACHE = 'travel-hub-media-v3';
 const DYNAMIC_CACHE = 'travel-hub-dynamic-v3';
 
-// Hardcoded Minimum App Shell if everything else fails
+// Hardcoded Emergency App Shell (Fast as lightning)
 const EMERGENCY_SHELL_HTML = `
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Hub - Offline</title>
+    <title>Travel Hub - Offline Rescue</title>
     <style>
-        body { background: #121212; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-        .container { padding: 20px; border: 1px solid #333; border-radius: 12px; background: #1e1e1e; }
-        h1 { color: #ffc107; }
-        .btn { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #ffc107; color: #000; text-decoration: none; border-radius: 6px; font-weight: bold; }
+        body { background: #0a192f; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+        .container { padding: 30px; border: 1px solid #112240; border-radius: 12px; background: #112240; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 80%; }
+        h1 { color: #64ffda; margin-top: 0; }
+        p { color: #8892b0; line-height: 1.6; }
+        .btn { display: inline-block; margin-top: 20px; padding: 12px 24px; background: #64ffda; color: #0a192f; text-decoration: none; border-radius: 4px; font-weight: bold; transition: opacity 0.2s; }
+        .btn-outline { background: transparent; border: 1px solid #64ffda; color: #64ffda; margin-left: 10px; }
+        .version { margin-top: 20px; font-size: 0.7rem; color: #495670; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Offline-Modus (v13)</h1>
-        <p>Die App konnte nicht vollständig aus dem Speicher geladen werden.</p>
-        <p>Bitte stelle kurz eine Internetverbindung her, um den Speicher zu aktualisieren.</p>
+        <h1>Travel Hub Offline (v14)</h1>
+        <p>Die Seite konnte nicht schnell genug geladen werden. Wir nutzen den Offline-Modus.</p>
         <a href="/" class="btn">Erneut versuchen</a>
+        <div class="version">System-Status: Rescue Active (v14)</div>
     </div>
 </body>
 </html>
-`;
-
-const DIARY_FALLBACK_HTML = `
-<div class="modal-header border-secondary">
-    <h5 class="modal-title text-warning"><i class="bi bi-wifi-off me-2"></i> Offline-Tagebuch (v13)</h5>
-    <button type="button" class="btn-close btn-close-white" onclick="if(typeof closeModal === 'function'){closeModal()}else{this.closest('.modal').style.display='none'}"></button>
-</div>
-<div class="modal-body bg-dark text-light">
-    <div class="alert alert-warning py-2 small">Kein Netz? Kein Problem. Deine Texte werden lokal gesichert.</div>
-    <form id="diary-form-offline">
-        <div class="mb-3"><textarea name="text" class="form-control bg-dark text-light border-secondary" rows="10" placeholder="Was hast du heute erlebt?"></textarea></div>
-        <div class="mb-3"><label class="form-label text-secondary small text-uppercase fw-bold">Bilder hinzufügen</label><input type="file" name="images" class="form-control bg-dark text-light border-secondary" multiple accept="image/*"></div>
-        <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-warning fw-bold">Lokal speichern</button>
-            <button type="button" class="btn btn-outline-secondary" onclick="if(typeof closeModal === 'function'){closeModal()}else{this.closest('.modal').style.display='none'}">Abbrechen</button>
-        </div>
-    </form>
-    <script>
-        document.getElementById('diary-form-offline').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const pathParts = window.location.pathname.split('/');
-            const dayId = pathParts.find(p => !isNaN(p) && p !== '') || 'unknown';
-            if (window.queueEntry) {
-                const images = [];
-                const files = formData.getAll('images');
-                for (const file of files) { if (file.size > 0) { images.push({ name: file.name, type: file.type, blob: file }); } }
-                await window.queueEntry(dayId, formData, images);
-                if (window.showToast) window.showToast("✓ Lokal gespeichert (v13 Fallback)");
-                if (typeof closeModal === 'function') closeModal();
-            }
-        });
-    </script>
-</div>
 `;
 
 const ASSETS = [
@@ -89,14 +58,20 @@ self.addEventListener('activate', (event) => {
     ]));
 });
 
+// Helper for Network Timeout
+const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms));
+
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     if (event.request.method !== 'GET') return;
 
-    // 1. Navigation Flow - With Emergency Shell
+    // 1. Navigation Flow - With 1.5s Network-Race
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request).catch(async () => {
+            Promise.race([
+                fetch(event.request),
+                timeout(1500) // 1.5 Seconds max wait
+            ]).catch(async () => {
                 const fallback = await caches.match('/') || await caches.match('/login/');
                 if (fallback) return fallback;
                 return new Response(EMERGENCY_SHELL_HTML, { headers: { 'Content-Type': 'text/html' } });
@@ -110,10 +85,16 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             caches.open(DYNAMIC_CACHE).then((cache) => {
                 return cache.match(event.request).then((cachedResponse) => {
-                    const fetchPromise = fetch(event.request).then((networkResponse) => {
+                    const fetchPromise = Promise.race([
+                        fetch(event.request),
+                        timeout(2000) // 2 Seconds for modals
+                    ]).then((networkResponse) => {
                         cache.put(event.request, networkResponse.clone());
                         return networkResponse;
-                    }).catch(() => new Response(DIARY_FALLBACK_HTML, { headers: { 'Content-Type': 'text/html' } }));
+                    }).catch(() => {
+                        // Return a hardcoded string fallback (v13 style) or emergency response
+                        return new Response('<h3>Offline-Modus aktiv</h3><p>Bitte nutze die v14 Notfall-Maske.</p>', { headers: { 'Content-Type': 'text/html' } });
+                    });
                     return cachedResponse || fetchPromise;
                 });
             })
@@ -121,6 +102,10 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 3. Fallbacks
-    event.respondWith(caches.match(event.request).then((res) => res || fetch(event.request)));
+    // 3. Fallbacks for assets
+    event.respondWith(
+        caches.match(event.request).then((res) => {
+            return res || fetch(event.request).catch(() => null);
+        })
+    );
 });
