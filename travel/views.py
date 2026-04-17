@@ -1244,18 +1244,22 @@ def checklist_item_date_save(request, item_id):
         except (ValueError, TypeError):
             pass
     
+    if not item.due_date:
+        return HttpResponse("")
+    
     # Return the updated badge
     from datetime import date
     today = date.today()
-    badge_class = "bg-danger" if item.due_date and item.due_date < today else "bg-secondary text-opacity-75"
+    badge_class = "bg-danger" if item.due_date < today else "bg-secondary text-opacity-75"
     
-    display_date = item.due_date.strftime("%d. %m.") if item.due_date else '---'
+    display_date = item.due_date.strftime("%d. %m.")
     
     html = f"""
     <span class="badge rounded-pill {badge_class} small pointer" 
           style="font-size: 0.7rem; cursor: pointer;"
           hx-get="{reverse('travel:checklist_item_date_edit', args=[item.id])}"
-          hx-swap="outerHTML">
+          hx-swap="outerHTML"
+          title="Datum ändern">
         <i class="bi bi-clock me-1"></i>{display_date}
     </span>
     """
@@ -1328,6 +1332,35 @@ def checklist_template_item_update(request, item_template_id):
         
     item_template.save()
     return HttpResponse(status=204)
+
+@login_required
+def checklist_template_manager(request, trip_id):
+    """Returns a modal to manage (create/delete) global checklist templates."""
+    trip = get_object_or_404(Trip, pk=trip_id)
+    templates = ChecklistTemplate.objects.all().order_by('name')
+    
+    context = {
+        'templates': templates,
+        'active_trip': trip
+    }
+    return render(request, 'travel/partials/checklist_template_manager_modal.html', context)
+
+@login_required
+def checklist_template_create_simple(request, trip_id):
+    """Creates a new empty checklist template."""
+    name = request.POST.get('name')
+    if name:
+        ChecklistTemplate.objects.create(name=name)
+        
+    # Return to the manager modal to show updated list
+    return checklist_template_manager(request, trip_id)
+
+@login_required
+def checklist_template_delete_simple(request, trip_id, template_id):
+    """Deletes a checklist template."""
+    template = get_object_or_404(ChecklistTemplate, pk=template_id)
+    template.delete()
+    return checklist_template_manager(request, trip_id)
 
 @login_required
 def checklist_item_delete(request, item_id):

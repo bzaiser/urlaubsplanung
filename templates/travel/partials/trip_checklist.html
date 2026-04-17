@@ -23,8 +23,8 @@
                 {% if checklist.items.exists %}
                     <button hx-get="{% url 'travel:checklist_template_modal' active_trip.id %}"
                             hx-target="#modal-container"
-                            class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-gear-fill me-1"></i>{% trans "Vorlage bearbeiten" %}
+                            class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-clock-history me-1"></i>{% trans "Termin-Vorgaben" %}
                     </button>
                     <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
                             hx-confirm="{% trans 'Möchtest du die gesamte Checkliste wirklich zurücksetzen? Alle Einträge werden gelöscht.' %}"
@@ -39,13 +39,20 @@
                           class="d-flex gap-2 w-100" style="max-width: 400px;">
                         {% csrf_token %}
                         <select name="template_id" class="form-select form-select-sm bg-dark text-light border-secondary flex-grow-1">
-                            <option value="">-- {% trans "Vorlage wählen" %} --</option>
+                            <option value="">-- {% trans "Reisetyp wählen" %} --</option>
                             {% for t in templates %}
                                 <option value="{{ t.id }}">{{ t.name }}</option>
                             {% endfor %}
                         </select>
-                        <button type="submit" class="btn btn-sm btn-outline-warning">
-                            {% trans "OK" %}
+                        <button type="submit" class="btn btn-sm btn-outline-warning text-nowrap">
+                            <i class="bi bi-download me-1"></i>{% trans "Laden" %}
+                        </button>
+                        <!-- Button for template manager -->
+                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                hx-get="{% url 'travel:checklist_template_manager' active_trip.id %}"
+                                hx-target="#modal-container"
+                                title="{% trans 'Vorlagen verwalten / Neu anlegen' %}">
+                            <i class="bi bi-gear"></i>
                         </button>
                     </form>
                 {% endif %}
@@ -114,7 +121,8 @@
                                                 <span class="badge rounded-pill {% if item.due_date < today %}bg-danger{% else %}bg-secondary text-opacity-75{% endif %} small pointer" 
                                                       style="font-size: 0.7rem; cursor: pointer;"
                                                       hx-get="{% url 'travel:checklist_item_date_edit' item.id %}"
-                                                      hx-swap="outerHTML">
+                                                      hx-swap="outerHTML"
+                                                      title="{% trans 'Datum ändern' %}">
                                                     <i class="bi bi-clock me-1"></i>{{ item.due_date|date:"d.m." }}
                                                 </span>
                                             {% endif %}

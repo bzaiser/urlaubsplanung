@@ -309,10 +309,26 @@ h1, h2 {
     overflow-y: auto;
     outline: 0;
     pointer-events: none;
+    /* Flex-Center for the content */
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
 
 #modal-container.show {
-    display: block;
+    display: flex; /* Changed from block to flex for centering */
+    pointer-events: auto;
+}
+
+/* Modal Content Box refinement */
+.modal-content-premium {
+    width: 100%;
+    max-width: 500px; /* Reduced from fullscreen */
+    background: var(--bg-color);
+    border: 1px solid var(--accent-gold);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    position: relative;
     pointer-events: auto;
 }
 

@@ -1,0 +1,49 @@
+{% load i18n %}
+<div class="modal-content-premium bg-dark text-light border-secondary">
+    <div class="modal-header border-secondary border-opacity-25">
+        <h5 class="modal-title text-info">
+            <i class="bi bi-collection me-2"></i>{% trans "Vorlagen / Reisetypen verwalten" %}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        <!-- Create New Template Form -->
+        <form hx-post="{% url 'travel:checklist_template_create_simple' active_trip.id %}" 
+              hx-target="#modal-container" hx-swap="innerHTML" class="mb-4">
+            {% csrf_token %}
+            <label class="form-label small text-secondary">{% trans "Neue Vorlage anlegen" %}</label>
+            <div class="input-group input-group-sm">
+                <input type="text" name="name" class="form-control bg-dark text-light border-secondary" 
+                       placeholder="{% trans 'z.B. Camping, Flugreise...' %}" required>
+                <button class="btn btn-outline-info" type="submit">
+                    <i class="bi bi-plus-lg me-1"></i>{% trans "Anlegen" %}
+                </button>
+            </div>
+        </form>
+
+        <label class="form-label small text-secondary mt-2">{% trans "Bestehende Vorlagen" %}</label>
+        <div class="list-group list-group-flush bg-transparent border rounded border-secondary border-opacity-25">
+            {% for t in templates %}
+                <div class="list-group-item bg-transparent border-secondary border-opacity-10 d-flex justify-content-between align-items-center py-2">
+                    <span class="text-light">{{ t.name }}</span>
+                    <button class="btn btn-link text-danger p-0" 
+                            hx-post="{% url 'travel:checklist_template_delete_simple' active_trip.id t.id %}"
+                            hx-confirm="{% trans 'Diese Vorlage wirklich unwiderruflich löschen?' %}"
+                            hx-target="#modal-container"
+                            title="{% trans 'Löschen' %}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            {% empty %}
+                <div class="list-group-item bg-transparent text-center py-3 text-secondary">
+                    {% trans "Keine Vorlagen vorhanden." %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="modal-footer border-secondary border-opacity-25">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+            {% trans "Schließen" %}
+        </button>
+    </div>
+</div>
