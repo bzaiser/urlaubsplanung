@@ -26,14 +26,14 @@
             {% if not checklist.items.exists %}
                 <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" hx-target="#dashboard-refresh" class="d-flex gap-2">
                     {% csrf_token %}
-                    <select name="template_id" class="form-select form-select-sm bg-dark text-light border-secondary">
+                    <select name="template_id" class="form-select form-select-sm bg-dark text-light border-secondary flex-grow-1">
                         <option value="">-- {% trans "Vorlage wählen" %} --</option>
                         {% for t in templates %}
                             <option value="{{ t.id }}">{{ t.name }}</option>
                         {% endfor %}
                     </select>
-                    <button type="submit" class="btn btn-warning btn-sm">
-                        {% trans "Anwenden" %}
+                    <button type="submit" class="btn btn-sm btn-outline-warning">
+                        {% trans "OK" %}
                     </button>
                 </form>
             {% endif %}
@@ -62,7 +62,7 @@
                             <input class="form-check-input" type="checkbox" name="save_to_template" id="saveTemplateCheck">
                             <label class="form-check-label text-secondary small" for="saveTemplateCheck">{% trans "In Vorlage" %}</label>
                         </div>
-                        <button type="submit" class="btn btn-warning px-4">
+                        <button type="submit" class="btn btn-outline-warning py-1 px-3">
                             <i class="bi bi-plus-lg"></i>
                         </button>
                     </div>
