@@ -15,7 +15,7 @@
         <p class="text-secondary small mb-0">{% trans "Bereite deinen Trip vor und hake alles Nötige ab." %}</p>
         </div>
         
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 w-100-mobile">
 
             {% if checklist.items.exists %}
                 <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
@@ -29,7 +29,7 @@
             {% if not checklist.items.exists %}
                 <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" hx-target="#dashboard-refresh" class="d-flex gap-2">
                     {% csrf_token %}
-                    <select name="template_id" class="form-select form-select-sm bg-dark text-light border-secondary flex-grow-1">
+                    <select name="template_id" class="form-select form-select-sm bg-dark text-light border-secondary flex-grow-1" style="min-width: 160px;">
                         <option value="">-- {% trans "Vorlage wählen" %} --</option>
                         {% for t in templates %}
                             <option value="{{ t.id }}">{{ t.name }}</option>
@@ -161,6 +161,9 @@
         }
         .checklist-add-btn-container {
             margin-top: 1rem;
+        }
+        .w-100-mobile {
+            width: 100% !important;
         }
     }
     
