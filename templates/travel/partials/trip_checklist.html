@@ -1,5 +1,5 @@
 {% load i18n %}
-<div class="checklist-container p-3 p-md-4">
+<div class="checklist-container p-3 p-md-4" id="checklist-container">
     <!-- Header with Template Selection -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
@@ -17,7 +17,7 @@
             {% if checklist.items.exists %}
                 <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
                         hx-confirm="{% trans 'Möchtest du die gesamte Checkliste wirklich zurücksetzen? Alle Einträge werden gelöscht.' %}"
-                        hx-target="#dashboard-refresh"
+                        hx-target="#checklist-container"
                         class="btn btn-outline-danger btn-sm">
                     <i class="bi bi-trash me-1"></i>{% trans "Zurücksetzen" %}
                 </button>
@@ -106,7 +106,7 @@
                                         
                                         <button hx-delete="{% url 'travel:checklist_item_delete' item.id %}"
                                                 hx-confirm="{% trans 'Wirklich löschen?' %}"
-                                                hx-target="#dashboard-refresh"
+                                                hx-target="#checklist-container"
                                                 class="btn btn-link btn-sm text-danger p-0 opacity-0 transition-opacity">
                                             <i class="bi bi-trash"></i>
                                         </button>
