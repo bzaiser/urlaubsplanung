@@ -919,12 +919,20 @@ body {
 /* --- Scroll Turbo Navigator (Minimalist v30) --- */
 .scroll-navigator {
     position: fixed;
-    bottom: 40px; /* Closer to bottom again but minimal */
+    bottom: 40px;
     right: 10px;
     z-index: 1050;
-    background: transparent; /* No more bulky bar */
+    background: transparent;
     border: none;
     backdrop-filter: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0; /* Hidden by default */
+    pointer-events: none;
+}
+
+.scroll-navigator.visible {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .btn-scroll-nav {

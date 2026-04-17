@@ -280,7 +280,7 @@
             modal.classList.add('show');
         }
 
-        // --- Scroll Turbo Logic ---
+        // --- Scroll Turbo Logic (v30.2 Dynamic) ---
         function scrollToDest(dest) {
             if (dest === 'top') {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -288,6 +288,26 @@
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             }
         }
+
+        function checkScrollVisibility() {
+            const nav = document.querySelector('.scroll-navigator');
+            if (!nav) return;
+            
+            const isScrollable = document.documentElement.scrollHeight > window.innerHeight + 200;
+            const scrolledDown = window.scrollY > 100;
+            
+            if (isScrollable && scrolledDown) {
+                nav.classList.add('visible');
+            } else {
+                nav.classList.remove('visible');
+            }
+        }
+
+        window.addEventListener('scroll', checkScrollVisibility);
+        window.addEventListener('resize', checkScrollVisibility);
+        document.addEventListener('DOMContentLoaded', checkScrollVisibility);
+        // Also check when HTMX content is swapped (e.g. switching trips)
+        document.body.addEventListener('htmx:afterOnLoad', () => setTimeout(checkScrollVisibility, 100));
     </script>
 
     <!-- Minimalist Scroll Navigator (Up/Down Arrows) -->
