@@ -61,14 +61,16 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-12 col-md-3 d-flex align-items-center">
-                    <div class="form-check form-switch me-3">
-                        <input class="form-check-input" type="checkbox" name="save_to_template" id="saveTemplateCheck">
-                        <label class="form-check-label text-secondary small" for="saveTemplateCheck">{% trans "In Vorlage" %}</label>
+                <div class="col-12 col-md-3 checklist-add-btn-container">
+                    <div class="d-flex align-items-center w-100">
+                        <div class="form-check form-switch me-3 mb-0">
+                            <input class="form-check-input" type="checkbox" name="save_to_template" id="saveTemplateCheck">
+                            <label class="form-check-label text-secondary small" for="saveTemplateCheck">{% trans "In Vorlage" %}</label>
+                        </div>
+                        <button type="submit" class="btn btn-premium-gold flex-grow-1">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
                     </div>
-                    <button type="submit" class="btn btn-premium-gold w-100">
-                        <i class="bi bi-plus-lg"></i>
-                    </button>
                 </div>
             </form>
         </div>
@@ -148,5 +150,26 @@
     }
     .transition-opacity {
         transition: opacity 0.2s ease-in-out;
+    }
+
+    /* Mobile Enhancements (v36.1) */
+    @media (max-width: 576px) {
+        .checklist-container {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        .transition-opacity {
+            opacity: 1 !important; /* Always visible on mobile */
+        }
+        .checklist-add-btn-container {
+            margin-top: 1rem;
+        }
+    }
+    
+    /* Ensure visibility on touch devices override */
+    @media (hover: none) {
+        .transition-opacity {
+            opacity: 1 !important;
+        }
     }
 </style>
