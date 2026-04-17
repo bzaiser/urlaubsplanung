@@ -24,7 +24,7 @@ function initDB() {
         request.onsuccess = (event) => {
             db = event.target.result;
             console.log('📦 PWA: Offline DB initialized successfully');
-            if (window.showToast) showToast("📦 Lokaler Speicher bereit (v24)");
+            if (window.showToast) showToast("📦 Lokaler Speicher bereit (v25)");
             updateSyncIndicator();
             resolve(db);
         };
