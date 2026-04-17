@@ -7,14 +7,16 @@
                 <h4 class="text-warning mb-0">
                     <i class="bi bi-list-check me-2"></i>{% trans "Reise-Checkliste" %}
                 </h4>
-                <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" 
-               class="btn btn-link text-warning p-0 ms-2" title="{% trans 'Blanko-Liste (PDF)' %}">
-                <i class="bi bi-file-earmark-pdf fs-4"></i>
-            </a>
-            <a href="{% url 'travel:checklist_print' active_trip.id %}?status=1" target="_blank" 
-               class="btn btn-link text-warning p-0 ms-1" title="{% trans 'Status-Liste mit Häkchen (PDF)' %}">
-                <i class="bi bi-file-earmark-check fs-4"></i>
-            </a>
+                <div class="ms-3 d-flex gap-2">
+                    <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" 
+                       class="btn btn-sm btn-outline-secondary" title="{% trans 'Blanko-Liste drucken' %}">
+                        <i class="bi bi-printer me-1"></i>{% trans "Blanko" %}
+                    </a>
+                    <a href="{% url 'travel:checklist_print' active_trip.id %}?status=1" target="_blank" 
+                       class="btn btn-sm btn-outline-warning" title="{% trans 'Aktuelle Status-Liste drucken' %}">
+                        <i class="bi bi-file-earmark-check me-1"></i>{% trans "Drucken" %}
+                    </a>
+                </div>
             </div>
         </div>
         
@@ -24,7 +26,7 @@
                     <button hx-get="{% url 'travel:checklist_template_modal' active_trip.id %}"
                             hx-target="#modal-container"
                             class="btn btn-outline-warning btn-sm">
-                        <i class="bi bi-clock-history me-1"></i>{% trans "Termin-Vorgaben" %}
+                        <i class="bi bi-clock-history me-1"></i>{% trans "Vorgaben für Datum" %}
                     </button>
                     <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
                             hx-confirm="{% trans 'Möchtest du die gesamte Checkliste wirklich zurücksetzen? Alle Einträge werden gelöscht.' %}"
