@@ -3,16 +3,19 @@
     <!-- Header with Template Selection -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h4 class="text-warning mb-1">
+        <div class="d-flex align-items-center gap-3 mb-1">
+            <h4 class="text-warning mb-0">
                 <i class="bi bi-list-check me-2"></i>{% trans "Reise-Checkliste" %}
             </h4>
-            <p class="text-secondary small mb-0">{% trans "Bereite deinen Trip vor und hake alles Nötige ab." %}</p>
+            <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" 
+               class="btn btn-link text-danger p-0" title="{% trans 'PDF Drucken' %}">
+                <i class="bi bi-file-earmark-pdf fs-4"></i>
+            </a>
+        </div>
+        <p class="text-secondary small mb-0">{% trans "Bereite deinen Trip vor und hake alles Nötige ab." %}</p>
         </div>
         
         <div class="d-flex gap-2">
-            <a href="{% url 'travel:checklist_print' active_trip.id %}" target="_blank" class="btn btn-outline-light btn-sm">
-                <i class="bi bi-printer me-1"></i>{% trans "Drucken" %}
-            </a>
 
             {% if checklist.items.exists %}
                 <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
