@@ -290,14 +290,13 @@
         }
     </script>
 
-    <!-- Floating Scroll Navigator -->
-    <div class="scroll-navigator d-flex flex-column gap-2 shadow-lg rounded-pill p-1 position-relative">
-        <span class="position-absolute start-50 translate-middle-x mb-1 text-secondary fw-bold" style="font-size: 0.5rem; bottom: -15px; opacity: 0.5;">v28</span>
+    <!-- Minimalist Scroll Navigator (Up/Down Arrows) -->
+    <div class="scroll-navigator d-flex flex-column gap-1">
         <button onclick="scrollToDest('top')" class="btn-scroll-nav" title="Ganz nach oben">
-            <i class="bi bi-chevron-double-up"></i>
+            <i class="bi bi-chevron-up"></i>
         </button>
         <button onclick="scrollToDest('bottom')" class="btn-scroll-nav" title="Ganz nach unten">
-            <i class="bi bi-chevron-double-down"></i>
+            <i class="bi bi-chevron-down"></i>
         </button>
     </div>
     {% endblock %}
