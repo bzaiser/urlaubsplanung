@@ -117,7 +117,7 @@
                                                     {{ item.text }}
                                                 </label>
                                             </div>
-                                            {% if item.due_date and not item.is_checked %}
+                                            {% if cat.name == "Vor der Abreise" and item.due_date and not item.is_checked %}
                                                 <span class="badge rounded-pill {% if item.due_date < today %}bg-danger{% else %}bg-secondary text-opacity-75{% endif %} small pointer" 
                                                       style="font-size: 0.7rem; cursor: pointer;"
                                                       hx-get="{% url 'travel:checklist_item_date_edit' item.id %}"

@@ -1308,8 +1308,8 @@ def checklist_template_modal(request, trip_id):
         return HttpResponse("Keine Vorlage ausgewählt.")
         
     template = checklist.template
-    # Group items by category for the editor
-    items = template.items.all().order_by('category__order', 'text')
+    # Bernd wants ONLY items from category "Vor der Abreise" to have date defaults
+    items = template.items.filter(category__name="Vor der Abreise").order_by('text')
     
     context = {
         'template': template,

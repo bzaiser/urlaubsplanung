@@ -4,7 +4,7 @@
         <h5 class="modal-title text-info">
             <i class="bi bi-collection me-2"></i>{% trans "Vorlagen / Reisetypen verwalten" %}
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" onclick="closeModal()" aria-label="Close"></button>
     </div>
     <div class="modal-body">
         <!-- Create New Template Form -->
@@ -42,7 +42,7 @@
         </div>
     </div>
     <div class="modal-footer border-secondary border-opacity-25">
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="closeModal()">
             {% trans "Schließen" %}
         </button>
     </div>
