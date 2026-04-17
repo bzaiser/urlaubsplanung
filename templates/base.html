@@ -223,9 +223,9 @@
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                // Register v22 - Minimalist Stable
-                navigator.serviceWorker.register('/serviceworker.js?v=22').then(function(reg) {
-                    console.log("✅ PWA: Service Worker v22 registered", reg);
+                // Register v23 - THE FILENAME HAMMER
+                navigator.serviceWorker.register('/serviceworker_v23.js').then(function(reg) {
+                    console.log("✅ PWA: Service Worker v23 registered", reg);
                     monitorSW(reg);
                     reg.update();
                 }).catch(function(err) {
@@ -262,7 +262,7 @@
 
     <!-- Floating Scroll Navigator -->
     <div class="scroll-navigator d-flex flex-column gap-2 shadow-lg rounded-pill p-1 position-relative">
-        <span class="position-absolute start-50 translate-middle-x mb-1 text-secondary fw-bold" style="font-size: 0.5rem; bottom: -15px; opacity: 0.5;">v22</span>
+        <span class="position-absolute start-50 translate-middle-x mb-1 text-secondary fw-bold" style="font-size: 0.5rem; bottom: -15px; opacity: 0.5;">v23</span>
         <button onclick="scrollToDest('top')" class="btn-scroll-nav" title="Ganz nach oben">
             <i class="bi bi-chevron-double-up"></i>
         </button>

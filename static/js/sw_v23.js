@@ -1,5 +1,5 @@
-const CACHE_NAME = 'travel-hub-v22';
-const STATIC_CACHE = 'travel-hub-static-v22';
+const CACHE_NAME = 'travel-hub-v23';
+const STATIC_CACHE = 'travel-hub-static-v23';
 
 const ASSETS = [
     '/',
