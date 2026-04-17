@@ -96,6 +96,20 @@
             }
         });
 
+        // Robust way to close modals via server triggers
+        document.body.addEventListener('closeModal', () => {
+            if (typeof closeModal === 'function') {
+                closeModal();
+            } else {
+                // Fallback if global function is missing
+                const mc = document.getElementById('modal-container');
+                if (mc) {
+                    mc.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                }
+            }
+        });
+
         // Specific handling for Diary Updates
         document.body.addEventListener('diaryUpdated', (e) => {
             closeModal();
