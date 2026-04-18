@@ -121,7 +121,8 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "11. LOGISTIK: Nutze für JEDES Event einen präzisen, geokodierbaren Standort (z.B. 'Flughafen Frankfurt', 'Hotel Adlon Berlin'). Ermittle für JEDEN Ort und JEDES Event zusätzlich die exakten Koordinaten (Breiten- und Längengrad), damit wir die Route schön auf einer Karte anzeigen können. Gib diese als 'lat' and 'lon' (Float-Zahlen) im JSON aus.\n"
         "12. LOGISTIK: Bei JEDEM Transport-Event MUSS ein Feld 'distance_km' (als Zahl) und 'end_time' (Ankunftszeit als HH:MM) vorhanden sein.\n"
         "13. LOGISTIK: Bei JEDER Aktivität MUSS ein Feld 'end_time' (Ende der Aktivität) vorhanden sein.\n"
-        "14. LOGISTIK: Bei Flügen/Zügen MUSS ein separates Event für Anfahrt/Check-in (2-3h vorher) eingeplant werden.\n"
+        "14. LOGISTIK: Bei Langstrecken mit Zwischenlandungen MUSS für JEDE Zwischenstation (Transit/Umstieg) ein eigenes Event erstellt werden (z.B. 'Transit: Flughafen Hongkong'), damit die Route auf der Karte präzise dargestellt werden kann.\n"
+        "15. LOGISTIK: Bei Transporten MUSS die vollständige Kette im Location-Feld stehen (z.B. 'Oberstenfeld -> Frankfurt -> Hongkong -> Manila'), wenn es sich um eine zusammenhängende Reise handelt.\n"
         "16. UNTERKÜNFTE: Gruppiere ALLE festen Unterkünfte (Hotel, Bungalow, Airbnb, Ferienhaus) als 'HOTEL'. Nutze 'CAMPING' (Campingplatz) oder 'PITCH' (Stellplatz/Freies Stehen) NUR bei Wohnmobil-Touren.\n"
         "17. VERPFLEGUNG: Wenn Verpflegungswünsche (Selbstkochen vs. Restaurant) vorhanden sind, berechne KEINE Euro-Beträge. Gib stattdessen ein Objekt 'food_preferences' mit den Feldern 'cooking_ratio' (0.0-1.0), 'dining_out_ratio' (0.0-1.0) und 'price_level' ('low', 'med', 'high') aus.\n"
         "18. GLOBAL_EXPENSES: Erfasse NUR zusätzliche Gebühren wie 'Maut', 'Vignette' oder 'Fähre-Pauschale' in der Liste 'global_expenses'. (KEINE Verpflegung hier eintragen!).\n"
@@ -257,8 +258,20 @@ def normalize_itinerary(data):
                         event['title'] = event.get('name', event.get('activity', event.get('description', 'Aktivität')))
                     
                     # Map synonyms for 'location' (Event level)
-                    if 'location' not in event or not event['location']:
-                        event['location'] = event.get('city', event.get('place', event.get('destination', event.get('ort', day['location']))))
+                    if 'location' not in event or not event['location'] or event['location'] == day['location']:
+                        # Try to extract from title if it's a transport event and location is just the day's start
+                        potential_loc = event.get('city', event.get('place', event.get('destination', event.get('ort'))))
+                        if not potential_loc and (event.get('type') in ['FLIGHT', 'TRAIN', 'BUS', 'CAR', 'FERRY']):
+                            # Simple extraction: "Flight to Manila" -> "Manila"
+                            title = event.get('title', '')
+                            if ' nach ' in title:
+                                potential_loc = title.split(' nach ')[-1].strip()
+                            elif ' to ' in title.lower():
+                                potential_loc = title.lower().split(' to ')[-1].strip().title()
+                            elif ':' in title:
+                                potential_loc = title.split(':')[-1].strip()
+                        
+                        event['location'] = potential_loc or event.get('location', day['location'])
 
                     # Map synonyms for 'cost_estimated'
                     if 'cost_estimated' not in event or not event['cost_estimated']:
