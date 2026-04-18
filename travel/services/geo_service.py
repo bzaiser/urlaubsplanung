@@ -75,7 +75,7 @@ def update_trip_coordinates(trip, limit=2):
     # Only if we still have room in our batch limit
     remaining_limit = limit - len(days_to_geocode)
     if remaining_limit > 0:
-        from .models import Event
+        from ..models import Event
         searchable_missing_events = Event.objects.filter(
             day__trip=trip,
             is_geocoded=False
@@ -93,7 +93,7 @@ def update_trip_coordinates(trip, limit=2):
 
     # Re-check if anything (Day or Event) is still pending
     days_pending = trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists()
-    from .models import Event
+    from ..models import Event
     events_pending = Event.objects.filter(day__trip=trip, is_geocoded=False).exclude(location='').exists()
     
     return days_pending or events_pending
