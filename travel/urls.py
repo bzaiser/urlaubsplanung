@@ -3,7 +3,7 @@ from .views import (
     TripDashboardView, trip_create, trip_edit, trip_delete,
     event_create, event_edit, event_delete, 
     event_inline_update, event_quick_add, 
-    event_inline_create, day_bulk_edit, 
+    event_inline_create, day_bulk_edit, day_edit,
     day_inline_update, event_upload_voucher,
     event_bulk_delete, event_bulk_move,
     settings_modal, ai_wizard, template_create,
