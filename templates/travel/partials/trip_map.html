@@ -112,23 +112,30 @@
 
             map.on('movestart zoomstart', () => { window.mapWasInteracted = true; });
 
+            // 5. Routing (Draw this FIRST)
+            let roadLine = null;
+            if (routeGeometry && routeGeometry.length > 0) {
+                roadLine = L.polyline(routeGeometry, {
+                    color: '#ffc107', weight: 5, opacity: 0.8, lineJoin: 'round'
+                }).addTo(map);
+                
+                if (!window.mapWasInteracted) {
+                    map.fitBounds(roadLine.getBounds(), { padding: [50, 50] });
+                }
+            }
+
             // Layer Switcher
             const baseMaps = {
                 '<i class="bi bi-moon-stars me-2"></i>Dunkel': dark,
                 '<i class="bi bi-map me-2"></i>Standard': standard,
                 '<i class="bi bi-globe me-2"></i>Satellit': satellite
             };
-            L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
-
-            // 5. Routing (Draw this FIRST so it's in the background)
-            if (routeGeometry && routeGeometry.length > 0) {
-                const roadLine = L.polyline(routeGeometry, {
-                    color: '#ffc107', weight: 5, opacity: 0.8, lineJoin: 'round'
-                }).addTo(map);
-                if (!window.mapWasInteracted) {
-                    map.fitBounds(roadLine.getBounds(), { padding: [50, 50] });
-                }
+            const overlayMaps = {};
+            if (roadLine) {
+                overlayMaps['<i class="bi bi-signpost-split me-2"></i>Route'] = roadLine;
             }
+            
+            L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
             // 6. Markers (Draw these SECOND so they are on top)
             const markers = [];
