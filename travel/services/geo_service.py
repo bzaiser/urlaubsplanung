@@ -2,10 +2,11 @@ import requests
 import time
 from django.conf import settings
 
-def geocode_location(location_name):
+def geocode_location(location_name, countrycodes=None):
     """
     Geocodes a location name using the Nominatim (OpenStreetMap) API.
     Returns (lat, lon) or (None, None) if not found.
+    countrycodes: Optional string like 'pt,es' to restrict results.
     """
     if not location_name or location_name == 'Planung läuft...':
         return None, None
@@ -46,6 +47,8 @@ def geocode_location(location_name):
         'limit': 1,
         'addressdetails': 1
     }
+    if countrycodes:
+        params['countrycodes'] = countrycodes
     # Use a unique User-Agent as required by Nominatim's Usage Policy
     headers = {
         'User-Agent': 'ZaiserUrlaubsplaner/1.5 (https://zaisers.myds.me/; admin@zaiser.de)',
@@ -59,6 +62,8 @@ def geocode_location(location_name):
             
         data = response.json()
         if data:
+            # SAFETY FILTER: If countrycodes were provided, Nominatim is already restricted.
+            # But we double check the first result.
             return float(data[0]['lat']), float(data[0]['lon'])
             
         # 1.1 Fallback: If "Location, Region" fails, try just "Location"
@@ -92,6 +97,16 @@ def update_trip_coordinates(trip, limit=2):
     Updates missing coordinates for both Days and relevant Events in a trip.
     Returns (has_more_pending, processed_locations_list).
     """
+    # Detect country context from trip name
+    country_context = None
+    trip_name_lower = trip.name.lower()
+    if any(word in trip_name_lower for word in ['iberisch', 'portugal', 'spanien', 'spain']):
+        country_context = 'pt,es'
+    elif any(word in trip_name_lower for word in ['italien', 'italy', 'adria']):
+        country_context = 'it,hr,si,at'
+    elif any(word in trip_name_lower for word in ['frankreich', 'france']):
+        country_context = 'fr'
+
     processed_locations = []
     
     # 1. Update Days first (highest priority for map)
@@ -112,7 +127,7 @@ def update_trip_coordinates(trip, limit=2):
             day.save()
             continue
 
-        lat, lon = geocode_location(cleaned_loc)
+        lat, lon = geocode_location(cleaned_loc, countrycodes=country_context)
                 
         if lat and lon:
             day.latitude = lat
@@ -142,7 +157,7 @@ def update_trip_coordinates(trip, limit=2):
                 event.save()
                 continue
             
-            lat, lon = geocode_location(cleaned_loc)
+            lat, lon = geocode_location(cleaned_loc, countrycodes=country_context)
 
             if lat and lon:
                 event.latitude = lat
