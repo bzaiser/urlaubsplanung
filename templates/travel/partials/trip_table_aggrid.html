@@ -146,7 +146,8 @@
 <div id="ag-grid-wrapper" style="width: 100%; position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch;">
     <div id="ag-trip-grid" class="ag-theme-quartz-dark" style="width: 100%; min-width: 1000px; font-family: 'Outfit', sans-serif;" 
          data-persons="{{ active_trip.persons_count|default:1 }}"
-         data-trip-id="{{ active_trip.id }}"></div>
+         data-trip-id="{{ active_trip.id }}"
+         data-show-map="{% if show_map %}true{% else %}false{% endif %}"></div>
 
     <style>
         /* Force UI Font & User Custom Variables for the Grid */
@@ -673,17 +674,13 @@
                         
                         updateSummary();
 
-                        // Auto-Map-Open: Open the map if triggered by the special 'show_map' URL param
-                        const urlParams = new URLSearchParams(window.location.search);
-                        if (urlParams.get('show_map') === '1') {
+                        // Auto-Map-Open Logic: Open if data-show-map is true
+                        const gridEl = document.getElementById('ag-trip-grid');
+                        if (gridEl && gridEl.dataset.showMap === 'true') {
                             const mapEl = document.getElementById('offcanvasRouteMap');
                             if (mapEl && typeof bootstrap !== 'undefined') {
                                 const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(mapEl);
                                 bsOffcanvas.show();
-                                
-                                // Clean up URL without triggering a page refresh
-                                const newUrl = window.location.pathname + window.location.search.replace(/[?&]show_map=1/, '').replace(/^&/, '?').replace(/\?$/, '');
-                                window.history.replaceState({path: newUrl}, '', newUrl);
                             }
                         }
                     },
