@@ -104,7 +104,7 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "3. JSON-DATEN: Gib am Ende den Plan als valides JSON-Objekt aus.\n\n"
         "REGELN:\n"
         "1. SPRACHE: Alles auf DEUTSCH.\n"
-        "2. KONKRET: Nenne echte Sehenswürdigkeiten, Hotels und Restaurants. Keine Platzhalter!\n"
+        "2. KONKRET: Nenne EXAKTE Namen von Sehenswürdigkeiten, Hotels und Flughäfen im Feld 'location'. Vermeide pauschale Städtenamen (wie nur 'Manila'), wenn ein genauer POI (z.B. 'City Garden Grand Hotel') bekannt ist. Keine Platzhalter!\n"
         "3. DAUER & TERMINE: Erzeuge EXAKT " + str(days) + " Tage. " + ("Halte dich STRIKT an das Startdatum (" + str(start_date) + ")." if int(days) < 7 else "Das Startdatum ist " + str(start_date) + ".") + "\n"
     )
     
@@ -118,7 +118,7 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "8. STIL: Bevorzuge Bungalows in Strandnähe, lokale Streetfood-Märkte (RESTAURANT) und Aktivitäten wie Wandern, Tauchen oder Roller-Touren.\n"
         "9. SICHERHEIT: KEINE Bilder, KEINE Google Maps Links, KEINE externen Medien in der Antwort.\n"
         "10. LOGISTIK: Jeder einzelne der " + str(days) + " Tage MUSS mindestens ein Event enthalten (KEINE leeren Tage).\n"
-        "11. LOGISTIK: Innerhalb eines Aufenthalts (vom Check-in bis zum Check-out am selben Ort/Hotel) MUSS das Feld 'location' für jeden Tag absolut identisch geschrieben sein (exakte Schreibweise), damit die Gruppierung funktioniert.\n"
+        "11. LOGISTIK: Nutze für JEDES Event einen präzisen, geokodierbaren Standort (z.B. 'Flughafen Frankfurt', 'Hotel Adlon Berlin'). Nur wenn mehrere Tage zum exakt selben Aufenthalt im selben Hotel gehören, verwende dort den identischen Hotel-Namen für das Feld 'location' des TAGES.\n"
         "12. LOGISTIK: Bei JEDEM Transport-Event MUSS ein Feld 'distance_km' (als Zahl) und 'end_time' (Ankunftszeit als HH:MM) vorhanden sein.\n"
         "13. LOGISTIK: Bei JEDER Aktivität MUSS ein Feld 'end_time' (Ende der Aktivität) vorhanden sein.\n"
         "14. LOGISTIK: Bei Flügen/Zügen MUSS ein separates Event für Anfahrt/Check-in (2-3h vorher) eingeplant werden.\n"
