@@ -595,14 +595,15 @@
                             const isCollapsed = window.collapsedStations.has('global');
                             return `<div class="station-header-grid px-3 ${isCollapsed ? 'collapsed' : ''}" 
                                          onclick="window.toggleStation('global')"
-                                         style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal);" 
-                                         class="fw-semibold h-100 d-flex align-items-center justify-content-between fs-6">
+                                         style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
                                 <div class="d-flex align-items-center">
                                     <span class="caret-icon">▼</span>
                                     <span>📦 Pauschale Posten / Budget</span>
                                 </div>
-                                <button onclick="event.stopPropagation(); htmx.ajax('GET', '/trip/{{ active_trip.id }}/expense/new/', { target: '#modal-container', swap: 'innerHTML' })" class="btn-grid-add">➕ BUDGET</button>
+                                <button onclick="event.stopPropagation(); htmx.ajax('GET', '/trip/{{ active_trip.id }}/expense/new/', { target: '#modal-container', swap: 'innerHTML' })" 
+                                        class="btn-grid-add">➕ BUDGET</button>
                             </div>`;
+                        }
                         } else if (d.is_station_header) {
                             const isCollapsed = window.collapsedStations.has(d.station_key);
                             return `<div class="station-header-grid px-3 ${isCollapsed ? 'collapsed' : ''}" 
