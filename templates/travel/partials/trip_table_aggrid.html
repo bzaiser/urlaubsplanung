@@ -187,13 +187,19 @@
 
         /* Clickable column indicator */
         .ag-full-width-row .title-area {
+            display: flex !important;
+            align-items: center !important;
+            height: 100%;
+        }
+
+        .ag-full-width-row .location-text {
             min-width: 180px !important;
             max-width: 180px !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
             white-space: nowrap !important;
-            display: flex !important;
-            align-items: center !important;
+            display: inline-block !important;
+            vertical-align: middle;
         }
 
         .pointer-column {
@@ -606,12 +612,12 @@
                             return `<div class="station-header-grid ${isCollapsed ? 'collapsed' : ''}" 
                                          onclick="window.toggleStation('global')"
                                          style="padding: 0; background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
-                                <div class="title-area" style="height: 100%;">
+                                <div class="title-area">
                                     <div style="width: 40px; display: flex; justify-content: center; align-items: center;">
                                         <span class="caret-icon">▼</span>
                                     </div>
-                                    <div style="padding-left: 0px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                        <span style="font-weight: 600;">📦 Pauschale Posten / Budget</span>
+                                    <div style="padding-left: 0px; display: flex; align-items: center;">
+                                        <span class="location-text" style="font-weight: 600;">📦 Pauschale Posten / Budget</span>
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -632,16 +638,17 @@
                             const isSelected = params.node.isSelected();
                             
                             return `<div class="day-header-grid" style="padding: 0; background: rgba(255, 255, 255, 0.12); border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
-                                <div class="title-area" style="height: 100%;">
+                                <div class="title-area">
                                     <div style="width: 40px; display: flex; justify-content: center; align-items: center;">
                                         <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="window.agGridApi.getRowNode('${d.id}').setSelected(this.checked)">
                                     </div>
-                                    <div style="padding-left: 0px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    <div style="padding-left: 0px; display: flex; align-items: center;">
                                         <span style="font-weight: 700; color: var(--text-primary); white-space: nowrap;">📅 ${d.date_display}</span>
                                         <span style="font-size: 0.8rem; opacity: 0.6; min-width: 35px; margin-left: 8px;">${d.day_name}</span>
                                         
                                         <!-- Editable Day Location -->
-                                        <span onclick="htmx.ajax('GET', '/day/${d.day_id}/edit/', { target: '#modal-container', swap: 'innerHTML' })" 
+                                        <span class="location-text" 
+                                              onclick="htmx.ajax('GET', '/day/${d.day_id}/edit/', { target: '#modal-container', swap: 'innerHTML' })" 
                                               style="color: var(--accent-teal); cursor: pointer; font-weight: 500; padding: 2px 8px; border-radius: 4px; transition: background 0.2s; margin-left: 4px;"
                                               onmouseover="this.style.background='rgba(0,128,128,0.1)'"
                                               onmouseout="this.style.background='transparent'">
