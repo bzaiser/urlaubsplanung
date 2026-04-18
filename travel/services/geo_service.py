@@ -92,7 +92,7 @@ def geocode_location(location_name, countrycodes=None):
         
     return None, None
 
-def update_trip_coordinates(trip, limit=2):
+def update_trip_coordinates(trip, limit=10):
     """
     Updates missing coordinates for both Days and relevant Events in a trip.
     Returns (has_more_pending, processed_locations_list).
