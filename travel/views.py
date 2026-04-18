@@ -658,7 +658,13 @@ def day_edit(request, pk):
         day.save()
         if request.htmx:
             response = HttpResponse("")
-            response['HX-Refresh'] = 'true'
+            # Silent update for Path A
+            response['HX-Trigger'] = json.dumps({
+                "dayLocationUpdated": {
+                    "day_id": f"day-header-{day.id}",
+                    "location": day.location
+                }
+            })
             return response
         return redirect('travel:dashboard')
     
