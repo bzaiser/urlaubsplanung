@@ -612,7 +612,7 @@
                             return `<div class="station-header-grid ${isCollapsed ? 'collapsed' : ''}" 
                                          onclick="window.toggleStation('global')"
                                          style="padding: 0; background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
-                                <div class="title-area">
+                                <div class="title-area" style="min-width: 350px;">
                                     <div style="width: 40px; display: flex; justify-content: center; align-items: center;">
                                         <span class="caret-icon">▼</span>
                                     </div>
@@ -621,6 +621,8 @@
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 10px;">
+                                    <!-- Spacer to align with + EINTRAG below -->
+                                    <div style="min-width: 105px;"></div> 
                                     <button onclick="event.stopPropagation(); htmx.ajax('GET', '/trip/{{ active_trip.id }}/expense/new/', { target: '#modal-container', swap: 'innerHTML' })" 
                                             class="btn-grid-add" style="margin-right: 0;">➕ BUDGET</button>
                                 </div>
@@ -638,7 +640,7 @@
                             const isSelected = params.node.isSelected();
                             
                             return `<div class="day-header-grid" style="padding: 0; background: rgba(255, 255, 255, 0.12); border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
-                                <div class="title-area">
+                                <div class="title-area" style="min-width: 350px;">
                                     <div style="width: 40px; display: flex; justify-content: center; align-items: center;">
                                         <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="window.agGridApi.getRowNode('${d.id}').setSelected(this.checked)">
                                     </div>
@@ -657,8 +659,10 @@
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 10px;">
-                                    <button onclick="htmx.ajax('GET', '/day/${d.day_id}/diary/', { target: '#modal-container', swap: 'innerHTML' })" 
-                                            class="btn-diary">📖 TAGEBUCH</button>
+                                    <div style="min-width: 105px;">
+                                        <button onclick="htmx.ajax('GET', '/day/${d.day_id}/diary/', { target: '#modal-container', swap: 'innerHTML' })" 
+                                                class="btn-diary">📖 TAGEBUCH</button>
+                                    </div>
                                     <button onclick="htmx.ajax('GET', '/day/${d.day_id}/event/type-picker/', { target: '#modal-container', swap: 'innerHTML' })" 
                                             class="btn-grid-add">➕ EINTRAG</button>
                                 </div>
