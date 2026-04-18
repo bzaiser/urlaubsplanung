@@ -11,15 +11,25 @@
     <div id="trip-map" class="flex-grow-1 position-relative" style="width: 100%; min-height: 400px; z-index: 1; cursor: crosshair;">
         {% if not map_data_json or map_data_json == '[]' %}
             <div class="d-flex flex-column align-items-center justify-content-center h-100 bg-dark text-secondary">
-                <div class="spinner-border text-warning mb-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <div class="fw-bold text-uppercase small opacity-75">Koordinaten werden ermittelt...</div>
-                <div class="x-small opacity-50 text-center px-4">Deine Route wird gerade berechnet.<br>Dies kann beim ersten Mal kurz dauern.</div>
-                
-                <a href="{% url 'travel:force_geocode' active_trip.id %}" class="btn btn-sm btn-outline-warning mt-3 shadow-sm" style="z-index: 1001;">
-                    <i class="bi bi-rocket-takeoff me-1"></i> Geo-Turbo zünden
-                </a>
+                {% if geocoding_pending %}
+                    <div class="spinner-border text-warning mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="fw-bold text-uppercase small opacity-75">Koordinaten werden ermittelt...</div>
+                    <div class="x-small opacity-50 text-center px-4">Deine Route wird gerade berechnet.<br>Dies kann beim ersten Mal kurz dauern.</div>
+                    
+                    <a href="{% url 'travel:force_geocode' active_trip.id %}" class="btn btn-sm btn-outline-warning mt-3 shadow-sm" style="z-index: 1001;">
+                        <i class="bi bi-rocket-takeoff me-1"></i> Geo-Turbo zünden
+                    </a>
+                {% else %}
+                    <i class="bi bi-geo-fill display-4 mb-3 opacity-25"></i>
+                    <div class="fw-bold text-uppercase small opacity-75">Keine Standorte gefunden</div>
+                    <div class="x-small opacity-50 text-center px-4">Wir konnten für deine Reiseziele keine Koordinaten finden.<br>Prüfe bitte die Schreibweise der Orte.</div>
+                    
+                    <a href="{% url 'travel:force_geocode' active_trip.id %}" class="btn btn-sm btn-outline-info mt-3 shadow-sm" style="z-index: 1001;">
+                        <i class="bi bi-arrow-repeat me-1"></i> Erneut versuchen
+                    </a>
+                {% endif %}
             </div>
         {% else %}
             <!-- Floating Manual Trigger (if map already has data but might be incomplete) -->

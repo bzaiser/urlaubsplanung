@@ -243,7 +243,7 @@ def get_dashboard_context(request, active_trip=None):
             )
             
             if geocoding_was_pending:
-                geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=3)
+                geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=6)
                 context['last_geocoded'] = ", ".join(processed_locations)
             
             # Inform template if auto-refresh is needed (every 15s)
