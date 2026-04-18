@@ -211,9 +211,9 @@ def get_dashboard_context(request, active_trip=None):
                     })
                     coords_for_routing.append([float(first_day.longitude), float(first_day.latitude)])
             
-            context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
-            # Route geometry is rendered if already available, but not fetched synchronously anymore
-            context['route_geometry_json'] = json.dumps([]) 
+            # Fetch route geometry synchronously for now to restore visibility
+            route_geometry = geo_service.get_route_geometry(coords_for_routing)
+            context['route_geometry_json'] = json.dumps(route_geometry)
         
     return context
 
