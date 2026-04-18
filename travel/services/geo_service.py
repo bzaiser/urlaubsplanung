@@ -94,8 +94,8 @@ def update_trip_coordinates(trip, limit=2):
     
     days_to_geocode = searchable_missing_days[:limit]
     for day in days_to_geocode:
-        # Try Location, then Info
-        candidate_strings = [day.location, day.info]
+        # Try Location
+        candidate_strings = [day.location]
         lat, lon = None, None
         best_name = day.location
         for s in candidate_strings:
