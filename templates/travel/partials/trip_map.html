@@ -140,21 +140,37 @@
             // 6. Markers (Draw these SECOND so they are on top)
             const markers = [];
             const currentView = '{{ view_type }}';
+            const coordsUsed = {}; // For jitter detection
 
             stations.forEach((s) => {
                 if (s.lat && s.lon) {
-                    const pos = [s.lat, s.lon];
+                    let lat = parseFloat(s.lat);
+                    let lon = parseFloat(s.lon);
                     const isEvent = s.is_event || false;
+
+                    // Jitter / Offset for overlapping points
+                    const key = `${lat.toFixed(4)}_${lon.toFixed(4)}`;
+                    if (coordsUsed[key]) {
+                        // Apply a tiny random offset so overlapping markers crawl out from behind each other
+                        lat += (Math.random() - 0.5) * 0.0002;
+                        lon += (Math.random() - 0.5) * 0.0002;
+                    }
+                    coordsUsed[key] = true;
+
+                    const pos = [lat, lon];
                     
                     const marker = L.circleMarker(pos, {
-                        radius: isEvent ? 5 : 8,
+                        radius: isEvent ? 10 : 8, // Events are now LARGER and on top
                         fillColor: isEvent ? "#17a2b8" : "#ffc107", // Blue for events, Yellow for stations
                         color: "#fff",
-                        weight: 2,
+                        weight: isEvent ? 3 : 2, // Events have a thicker border
                         opacity: 1,
                         fillOpacity: 0.9,
-                        className: 'map-clickable-marker'
+                        className: 'map-clickable-marker',
+                        pane: isEvent ? 'markerPane' : 'overlayPane' // Force events to a higher layer if possible 
                     }).addTo(map);
+
+                    if (isEvent) marker.bringToFront();
 
                     // Bind popup with more info
                     let popupContent = `
@@ -163,7 +179,7 @@
                     `;
                     
                     if (isEvent) {
-                        popupContent += `<small class="text-info">${s.event_type}: ${s.title}</small>`;
+                        popupContent += `<small class="text-info"><strong>${s.event_type}</strong>: ${s.title}</small>`;
                     } else {
                         popupContent += `<small class="text-muted">${s.days_count} Tage • ${s.nights_count} Nächte</small>`;
                     }
@@ -181,8 +197,9 @@
 
                     marker.on('click', function() {
                         // 0. Visual Pulse on Marker to show it was clicked
+                        const originalRadius = isEvent ? 10 : 8;
                         this.setRadius(20);
-                        setTimeout(() => this.setRadius(currentView === 'timeline' ? 8 : 10), 300);
+                        setTimeout(() => this.setRadius(originalRadius), 300);
 
                         // 1. Sync with Timeline (Diary View)
                         const targetId = `station-${s.index}`;
@@ -200,80 +217,44 @@
                                 const rowId = `day-header-${dayIdStr}`;
                                 let rowNode = window.agGridApi.getRowNode(rowId);
                                 
-                                // Show starting search toast
-                                if (currentView === 'table') {
-                                    showToast(`Suche ${s.location}...`);
-                                }
-
-                                // Fallback: Comprehensive search if direct getRowNode fails
                                 if (!rowNode) {
                                     window.agGridApi.forEachNode((node) => {
-                                        if (node.data) {
-                                            // Try ID, day_id (number), or fuzzy location match
-                                            if (node.data.id === rowId || 
-                                                node.data.day_id == s.day_id ||
-                                                (node.data.location && node.data.location.includes(s.location))) {
-                                                rowNode = node;
-                                            }
+                                        if (node.data && (node.data.id === rowId || node.data.day_id == s.day_id)) {
+                                            rowNode = node;
                                         }
                                     });
                                 }
 
                                 if (rowNode) {
-                                    const stationKey = rowNode.data.station_key;
-                                    
-                                    // Auto-expand if station is collapsed
-                                    if (window.collapsedStations && window.collapsedStations.has(stationKey)) {
-                                        window.collapsedStations.delete(stationKey);
-                                        window.agGridApi.onFilterChanged();
-                                    }
-                                    
-                                    // AG Grid autoHeight means we must scroll the browser, not the grid internally
-                                    // We search for the row element in the DOM using its row-id
                                     setTimeout(() => {
                                         const rowEl = document.querySelector(`[row-id="${rowNode.id}"]`);
                                         if (rowEl) {
                                             rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                            
-                                            // Highlight effect on the DOM element for better visibility
                                             rowEl.style.transition = 'background-color 0.5s';
-                                            const originalBg = rowEl.style.backgroundColor;
                                             rowEl.style.backgroundColor = 'rgba(255, 193, 7, 0.3)';
-                                            setTimeout(() => {
-                                                rowEl.style.backgroundColor = originalBg;
-                                            }, 1000);
-                                        } else {
-                                            // Fallback to internal if DOM not yet ready or height changed
-                                            window.agGridApi.ensureNodeVisible(rowNode);
+                                            setTimeout(() => rowEl.style.backgroundColor = '', 1000);
                                         }
-                                        
-                                        // Still use flashCells for the internal feedback if available
-                                        try {
-                                            window.agGridApi.flashCells({ rowNodes: [rowNode], flashDuration: 1000, fadeDuration: 500 });
-                                        } catch(e){}
                                     }, 100);
-
-                                    if (currentView === 'table') {
-                                        showToast(`✓ ${s.location} gefunden`);
-                                    }
-                                } else {
-                                    if (currentView === 'table') {
-                                        showToast(`⚠️ Tag ${s.location} nicht gefunden`, true);
-                                    }
                                 }
                             } catch (e) {
                                 console.warn("AG-Grid Sync Error:", e);
                             }
                         }
 
-                        // 3. Conditional Auto-Open Diary (Only in timeline view)
                         if (currentView === 'timeline' && typeof htmx !== 'undefined' && s.day_id) {
                             htmx.ajax('GET', `/day/${s.day_id}/diary/`, {target:'#modal-container', swap:'innerHTML'});
                         }
                     });
                     
-                    marker.on('mouseover', function() { this.setRadius(12); this.setStyle({fillColor: '#fff', color: '#ffc107'}); });
-                    marker.on('mouseout', function() { this.setRadius(8); this.setStyle({fillColor: '#ffc107', color: '#fff'}); });
+                    marker.on('mouseover', function() { 
+                        this.setRadius(isEvent ? 14 : 12); 
+                        this.setStyle({fillColor: '#fff', color: isEvent ? '#17a2b8' : '#ffc107'}); 
+                    });
+                    marker.on('mouseout', function() { 
+                        const originalRadius = isEvent ? 10 : 8;
+                        this.setRadius(originalRadius); 
+                        this.setStyle({fillColor: isEvent ? '#17a2b8' : '#ffc107', color: '#fff'}); 
+                    });
                     markers.push(marker);
                 }
             });
