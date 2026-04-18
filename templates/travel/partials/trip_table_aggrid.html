@@ -685,7 +685,7 @@
                             if (!eventId) return;
 
                             if (params.data.is_global_expense) {
-                                htmx.ajax('GET', `/trip/{{ active_trip.id }}/expense/${eventId.replace('global-', '')}/edit/`, { target: '#modal-container', swap: 'innerHTML' });
+                                htmx.ajax('GET', `/expense/${eventId.replace('global-', '')}/edit/`, { target: '#modal-container', swap: 'innerHTML' });
                             } else {
                                 htmx.ajax('GET', `/event/${eventId}/edit/`, { target: '#modal-container', swap: 'innerHTML' });
                             }
