@@ -256,21 +256,18 @@
                     const m = d % 60;
                     return `${h}h ${m.toString().padStart(2, '0')}m`;
                 } catch(e) { return ''; }
-            }
-
-            async function syncChange(params) {
+                        async function syncChange(params) {
                 const field = params.colDef.field;
                 let val = params.newValue;
                 const oldValue = params.oldValue;
                 
-                // Don't sync if value hasn't actually changed (prevents ghost saves on double-click)
+                // Don't sync if value hasn't actually changed
                 if (val === oldValue) return;
                 
+                if (params.data.is_station_header) return;
                 const dayId = params.data.day_id || params.data.id;
-                
-                if (params.data.is_station_header) return; // Don't sync header rows
 
-                // Live calculation for duration
+                // Live calculation for duration in the grid
                 if (field === 'dep_time' || field === 'arr_time') {
                     const duration = calculateDuration(params.data.dep_time, params.data.arr_time);
                     params.node.setDataValue('duration', duration);
@@ -285,50 +282,40 @@
                 } else {
                     const eventId = params.data.id;
                     url = `/event/${eventId}/inline-update/`;
-                    
                     const fieldMapping = {
-                        'dep_time': 'time',
-                        'arr_time': 'end_time',
-                        'flight_no': 'detail_info',
-                        'hotel_title': 'hotel_title',
-                        'location': 'location',
-                        'meals_info': 'meals_info',
-                        'cost_booked': 'cost_booked',
-                        'cost_estimated': 'cost_estimated',
-                        'cost_per_person': 'cost_per_person',
-                        'cost_total': 'cost_total',
-                        'activities_info': 'activities_info',
-                        'booking_via': 'booking_via',
-                        'is_paid': 'is_paid',
-                        'type': 'type',
-                        'title': 'title'
+                        'dep_time': 'time', 'arr_time': 'end_time', 'flight_no': 'detail_info',
+                        'hotel_title': 'hotel_title', 'location': 'location', 'meals_info': 'meals_info',
+                        'cost_booked': 'cost_booked', 'cost_estimated': 'cost_estimated',
+                        'cost_per_person': 'cost_per_person', 'cost_total': 'cost_total',
+                        'activities_info': 'activities_info', 'booking_via': 'booking_via',
+                        'is_paid': 'is_paid', 'type': 'type', 'title': 'title'
                     };
-                    
-                    const djangoField = fieldMapping[field] || field;
-                    formData.append('field', djangoField);
+                    formData.append('field', fieldMapping[field] || field);
                 }
 
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
                         body: formData,
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token }}'
-                        }
+                        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
                     });
                     
                     if (response.ok) {
                         showToast("✓ Gespeichert");
                         
-                        if (field === 'dep_time' || field === 'arr_time') {
-                            const text = await response.text();
-                            if (text.includes('id="duration')) {
-                                const temp = document.createElement('div');
-                                temp.innerHTML = text;
-                                const durationCell = temp.querySelector('td');
-                                if (durationCell) {
-                                    params.node.setDataValue('duration', durationCell.innerText.trim());
-                                }
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            const data = await response.json();
+                            if (data.status === 'success' && data.lat && data.lon) {
+                                // Live update for the pin icon!
+                                params.node.setDataValue('lat', data.lat);
+                                params.node.setDataValue('lon', data.lon);
+                                params.api.refreshCells({ rowNodes: [params.node], force: true });
+                            } else if (field === 'location') {
+                                // Clear coordinates if geocoding failed
+                                params.node.setDataValue('lat', null);
+                                params.node.setDataValue('lon', null);
+                                params.api.refreshCells({ rowNodes: [params.node], force: true });
                             }
                         }
                     } else {

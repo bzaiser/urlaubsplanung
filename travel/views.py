@@ -582,9 +582,29 @@ def event_inline_update(request, pk=None, day_id=None):
             event.title = value
         elif field == 'location':
             event.location = value
+            # Instant Geocoding for manual edits!
+            from .services import geo_service
+            if value:
+                lat, lon = geo_service.geocode_location(value, event.day.trip)
+                if lat and lon:
+                    event.latitude = lat
+                    event.longitude = lon
+                    event.is_geocoded = True
+            else:
+                event.latitude = None
+                event.longitude = None
+                event.is_geocoded = False
         else:
             setattr(event, field, value)
         event.save()
+        
+        # If location changed, return the coordinates so the frontend can show the pin immediately
+        if field == 'location':
+            return JsonResponse({
+                'status': 'success',
+                'lat': float(event.latitude) if event.latitude else None,
+                'lon': float(event.longitude) if event.longitude else None,
+            })
         
     # Re-enable OOB duration update
     if field in ['time', 'end_time']:
@@ -719,9 +739,29 @@ def day_inline_update(request, pk):
     day = get_object_or_404(Day, pk=pk)
     location = request.POST.get('value', request.POST.get('location'))
     # Allow empty location
-    day.location = location if location is not None else day.location
-    day.save()
-    return HttpResponse(day.location or "")
+    if location is not None:
+        day.location = location
+        # Instant Geocoding for manual edits!
+        from .services import geo_service
+        if location:
+            lat, lon = geo_service.geocode_location(location, day.trip)
+            if lat and lon:
+                day.latitude = lat
+                day.longitude = lon
+                day.is_geocoded = True
+        else:
+            day.latitude = None
+            day.longitude = None
+            day.is_geocoded = False
+        day.save()
+    
+    # Return JSON for AG-Grid to capture new coordinates
+    return JsonResponse({
+        'status': 'success',
+        'location': day.location,
+        'lat': float(day.latitude) if day.latitude else None,
+        'lon': float(day.longitude) if day.longitude else None,
+    })
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
