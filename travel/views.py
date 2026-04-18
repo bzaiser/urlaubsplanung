@@ -198,15 +198,16 @@ def get_dashboard_context(request, active_trip=None):
             map_data = []
             coords_for_routing = []
             for i, station in enumerate(active_trip.grouped_stations, 1):
-                station_key = f"st-{i}"
-                for day in station['days']:
-                    # Check for travel events on EVERY day of the station
-                    travel_events = day.events.filter(
-                        type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR'],
-                        latitude__isnull=False
-                    ).order_by('time', 'id')
-                    
-                    for ev in travel_events:
+                first_day = station['days'][0]
+                
+                # Check for travel events on the first day of each station
+                # solely to find potential different start locations (like Frankfurt)
+                travel_events = first_day.events.filter(
+                    type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']
+                ).order_by('time', 'id')
+                
+                for ev in travel_events:
+                    if ev.latitude and ev.longitude:
                         coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
                         map_data.append({
                             'location': ev.location,
@@ -215,12 +216,11 @@ def get_dashboard_context(request, active_trip=None):
                             'is_event': True,
                             'event_type': ev.type,
                             'title': ev.title,
-                            'day_id': day.id,
-                            'index': f"{day.id}e"
+                            'day_id': first_day.id,
+                            'index': f"{i}e"
                         })
 
-                # Add the main station location (using first day coordinate)
-                first_day = station['days'][0]
+                # Add the main station (THIS IS WHAT ALWAYS WORKED BEFORE)
                 if first_day.latitude and first_day.longitude:
                     map_data.append({
                         'location': station['location'],
