@@ -355,11 +355,12 @@ def event_create(request, day_id):
             event.day = day
             event.save()
             
-            # Handle new voucher if uploaded via main form
-            if request.FILES.get('voucher'):
+            # Handle new vouchers if uploaded via main form (multiple supported)
+            vouchers = request.FILES.getlist('voucher')
+            if vouchers:
                 from .models import TripVoucher
-                f = request.FILES['voucher']
-                TripVoucher.objects.create(event=event, file=f, original_filename=f.name)
+                for f in vouchers:
+                    TripVoucher.objects.create(event=event, file=f, original_filename=f.name)
             
             if request.htmx:
                 response = HttpResponse("")
@@ -418,11 +419,12 @@ def event_edit(request, pk):
         form = EventForm(request.POST, request.FILES, instance=event)
         if form.is_valid():
             event = form.save()
-            # Handle new voucher if uploaded via main form
-            if request.FILES.get('voucher'):
+            # Handle new vouchers if uploaded via main form (multiple supported)
+            vouchers = request.FILES.getlist('voucher')
+            if vouchers:
                 from .models import TripVoucher
-                f = request.FILES['voucher']
-                TripVoucher.objects.create(event=event, file=f, original_filename=f.name)
+                for f in vouchers:
+                    TripVoucher.objects.create(event=event, file=f, original_filename=f.name)
             
             if request.htmx:
                 response = HttpResponse("")
@@ -687,17 +689,20 @@ from django.http import JsonResponse
 @csrf_exempt
 @login_required
 def event_upload_voucher(request, pk):
-    """Directly uploads a file to an existing event via AJAX/HTMX."""
-    if request.method == 'POST' and request.FILES.get('voucher'):
+    """Directly uploads one or more files to an existing event via AJAX/HTMX."""
+    if request.method == 'POST' and request.FILES.getlist('voucher'):
         from .models import TripVoucher
         event = get_object_or_404(Event, pk=pk)
-        f = request.FILES['voucher']
-        voucher = TripVoucher.objects.create(
-            event=event,
-            file=f,
-            original_filename=f.name
-        )
-        return JsonResponse({'status': 'success', 'voucher_url': voucher.file.url})
+        vouchers = request.FILES.getlist('voucher')
+        last_url = ""
+        for f in vouchers:
+            voucher = TripVoucher.objects.create(
+                event=event,
+                file=f,
+                original_filename=f.name
+            )
+            last_url = voucher.file.url
+        return JsonResponse({'status': 'success', 'voucher_url': last_url})
     return JsonResponse({'status': 'error'}, status=400)
 
 @login_required
@@ -1027,11 +1032,12 @@ def global_expense_create(request, trip_id):
             unit_price=unit_price, units=units
         )
         
-        # Handle new voucher if uploaded via main form
-        if request.FILES.get('voucher'):
+        # Handle new vouchers if uploaded via main form (multiple supported)
+        vouchers = request.FILES.getlist('voucher')
+        if vouchers:
             from .models import TripVoucher
-            f = request.FILES['voucher']
-            TripVoucher.objects.create(expense=expense, file=f, original_filename=f.name)
+            for f in vouchers:
+                TripVoucher.objects.create(expense=expense, file=f, original_filename=f.name)
         return HttpResponse(headers={'HX-Refresh': 'true'})
     return render(request, 'travel/partials/global_expense_form.html', {'trip': trip})
 
@@ -1048,11 +1054,12 @@ def global_expense_edit(request, pk):
             pass
         expense.save()
         
-        # Handle new voucher if uploaded via main form
-        if request.FILES.get('voucher'):
+        # Handle new vouchers if uploaded via main form (multiple supported)
+        vouchers = request.FILES.getlist('voucher')
+        if vouchers:
             from .models import TripVoucher
-            f = request.FILES['voucher']
-            TripVoucher.objects.create(expense=expense, file=f, original_filename=f.name)
+            for f in vouchers:
+                TripVoucher.objects.create(expense=expense, file=f, original_filename=f.name)
             
         return HttpResponse(headers={'HX-Refresh': 'true'})
     return render(request, 'travel/partials/global_expense_form.html', {'expense': expense, 'trip': expense.trip})
@@ -1123,17 +1130,20 @@ def export_trip_ics(request, pk):
 
 @login_required
 def expense_upload_voucher(request, pk):
-    """Directly uploads a file to an existing global expense via AJAX/HTMX."""
-    if request.method == 'POST' and request.FILES.get('voucher'):
+    """Directly uploads one or more files to an existing global expense via AJAX/HTMX."""
+    if request.method == 'POST' and request.FILES.getlist('voucher'):
         from .models import TripVoucher
         expense = get_object_or_404(GlobalExpense, pk=pk)
-        f = request.FILES['voucher']
-        voucher = TripVoucher.objects.create(
-            expense=expense,
-            file=f,
-            original_filename=f.name
-        )
-        return JsonResponse({'status': 'success', 'voucher_url': voucher.file.url})
+        vouchers = request.FILES.getlist('voucher')
+        last_url = ""
+        for f in vouchers:
+            voucher = TripVoucher.objects.create(
+                expense=expense,
+                file=f,
+                original_filename=f.name
+            )
+            last_url = voucher.file.url
+        return JsonResponse({'status': 'success', 'voucher_url': last_url})
     return JsonResponse({'status': 'error'}, status=400)
 
 @login_required

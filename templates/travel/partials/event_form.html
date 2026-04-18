@@ -246,9 +246,11 @@
                         <p class="text-secondary small italic mb-3">Keine Anhänge vorhanden.</p>
                     {% endif %}
 
-                    <div class="mt-2">
+                    <div class="mt-2 text-start">
                         <label class="form-label x-small text-uppercase text-secondary mb-1">Neuen Beleg hinzufügen</label>
-                        <input type="file" name="voucher" class="form-control form-control-sm border-secondary bg-dark shadow-none">
+                        <input type="file" name="voucher" class="form-control form-control-sm border-secondary bg-dark shadow-none"
+                               multiple hx-encoding="multipart/form-data">
+                        <div class="form-text x-small">Wähle eine oder mehrere Dateien aus.</div>
                     </div>
                 </div>
 
