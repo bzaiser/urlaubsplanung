@@ -647,14 +647,30 @@ def trip_shift_dates(request, pk):
     return render(request, 'travel/partials/trip_shift_modal.html', {'trip': trip})
 
 @login_required
+def day_edit(request, pk):
+    """Provides a modal for editing a single day's title/location."""
+    day = get_object_or_404(Day, pk=pk)
+    if request.method == 'POST':
+        location = request.POST.get('location', '')
+        day.location = location
+        day.save()
+        if request.htmx:
+            response = HttpResponse("")
+            response['HX-Refresh'] = 'true'
+            return response
+        return redirect('travel:dashboard')
+    
+    return render(request, 'travel/partials/day_form.html', {'day': day})
+
+@login_required
 def day_inline_update(request, pk):
-    """Updates the location of a day via HTMX."""
+    """Updates the location of a day via HTMX (background sync)."""
     day = get_object_or_404(Day, pk=pk)
     location = request.POST.get('value', request.POST.get('location'))
     # Allow empty location
     day.location = location if location is not None else day.location
     day.save()
-    return HttpResponse(day.location)
+    return HttpResponse(day.location or "")
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse

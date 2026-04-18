@@ -37,6 +37,7 @@ urlpatterns = [
     path('expense/<int:pk>/upload-voucher/', expense_upload_voucher, name='expense_upload_voucher'),
     path('day/<int:day_id>/quick-add/', event_quick_add, name='event_quick_add'),
     path('day/<int:day_id>/inline-create/', event_inline_create, name='event_inline_create'),
+    path('day/<int:pk>/edit/', day_edit, name='day_edit'),
     path('day/<int:pk>/inline-update/', day_inline_update, name='day_inline_update'),
     path('event/bulk-delete/', event_bulk_delete, name='event_bulk_delete'),
     path('event/bulk-move/', event_bulk_move, name='event_bulk_move'),

@@ -617,9 +617,17 @@
                                     <div style="width: 40px; display: flex; justify-content: center; align-items: center;">
                                         <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="window.agGridApi.getRowNode('${d.id}').setSelected(this.checked)">
                                     </div>
-                                    <div style="padding-left: 0px; display: flex; align-items: center;">
-                                        <span style="font-weight: 700; min-width: 90px; color: var(--text-primary);">📅 ${d.date_display}</span>
-                                        <span style="font-size: 0.8rem; opacity: 0.6; margin-left: 10px; width: 40px;">${d.day_name}</span>
+                                    <div style="padding-left: 0px; display: flex; align-items: center; gap: 12px;">
+                                        <span style="font-weight: 700; color: var(--text-primary); white-space: nowrap;">📅 ${d.date_display}</span>
+                                        <span style="font-size: 0.8rem; opacity: 0.6; min-width: 35px;">${d.day_name}</span>
+                                        
+                                        <!-- Editable Day Location -->
+                                        <span onclick="htmx.ajax('GET', '/day/${d.day_id}/edit/', { target: '#modal-container', swap: 'innerHTML' })" 
+                                              style="color: var(--accent-teal); cursor: pointer; font-weight: 500; padding: 2px 8px; border-radius: 4px; transition: background 0.2s;"
+                                              onmouseover="this.style.background='rgba(0,128,128,0.1)'"
+                                              onmouseout="this.style.background='transparent'">
+                                            ${d.location || '<span style="opacity:0.4; font-style:italic;">(Ort hinzufügen)</span>'}
+                                        </span>
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 10px;">
