@@ -228,19 +228,25 @@ def get_dashboard_context(request, active_trip=None):
                                 'index': f"{i}e"
                             })
 
-                # Add the main station location
-                first_day = station['days'][0]
-                if first_day.latitude and first_day.longitude:
+                # Add the main station location (Robust search: find FIRST day in group with coords)
+                best_day_for_pin = None
+                for d in station['days']:
+                    if d.latitude and d.longitude:
+                        best_day_for_pin = d
+                        break
+                
+                if best_day_for_pin:
                     map_data.append({
                         'location': station['location'],
-                        'lat': float(first_day.latitude),
-                        'lon': float(first_day.longitude),
+                        'lat': float(best_day_for_pin.latitude),
+                        'lon': float(best_day_for_pin.longitude),
                         'days_count': station['days_count'],
                         'nights_count': station['nights_count'],
-                        'day_id': first_day.id,
+                        'day_id': best_day_for_pin.id,
                         'index': i
                     })
-                    coords_for_routing.append([float(first_day.longitude), float(first_day.latitude)])
+                    coords_for_routing.append([float(best_day_for_pin.longitude), float(best_day_for_pin.latitude)])
+
             
             context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
             
