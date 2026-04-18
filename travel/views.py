@@ -201,68 +201,68 @@ def get_dashboard_context(request, active_trip=None):
 
         context['grid_data_json'] = json.dumps(grid_data, cls=DjangoJSONEncoder)
         context['ui_settings_json'] = json.dumps(active_trip.ui_settings or {})
-                # 3. Prepare Map Data (Step-by-Step Transparency: Show everything with coords)
-        map_data = []
-        coords_for_routing = []
-        
-        # Collect every single day with coordinates
-        for d_idx, day in enumerate(active_trip.days.all().order_by('date'), 1):
-            if day.latitude and day.longitude:
+    # 3. Prepare Map Data (Step-by-Step Transparency: Show everything with coords)
+    map_data = []
+    coords_for_routing = []
+    
+    # Collect every single day with coordinates
+    for d_idx, day in enumerate(active_trip.days.all().order_by('date'), 1):
+        if day.latitude and day.longitude:
+            map_data.append({
+                'location': day.location,
+                'lat': float(day.latitude),
+                'lon': float(day.longitude),
+                'day_id': day.id,
+                'index': d_idx,
+                'is_event': False
+            })
+            coords_for_routing.append([float(day.longitude), float(day.latitude)])
+            
+        # Also collect every event with coordinates
+        for e_idx, ev in enumerate(day.events.all(), 1):
+            if ev.latitude and ev.longitude:
                 map_data.append({
-                    'location': day.location,
-                    'lat': float(day.latitude),
-                    'lon': float(day.longitude),
+                    'location': ev.location,
+                    'lat': float(ev.latitude),
+                    'lon': float(ev.longitude),
+                    'is_event': True,
+                    'event_type': ev.type,
+                    'title': ev.title,
                     'day_id': day.id,
-                    'index': d_idx,
-                    'is_event': False
+                    'index': f"{d_idx}.{e_idx}"
                 })
-                coords_for_routing.append([float(day.longitude), float(day.latitude)])
-                
-            # Also collect every event with coordinates
-            for e_idx, ev in enumerate(day.events.all(), 1):
-                if ev.latitude and ev.longitude:
-                    map_data.append({
-                        'location': ev.location,
-                        'lat': float(ev.latitude),
-                        'lon': float(ev.longitude),
-                        'is_event': True,
-                        'event_type': ev.type,
-                        'title': ev.title,
-                        'day_id': day.id,
-                        'index': f"{d_idx}.{e_idx}"
-                    })
-                    coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
+                coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
+    
+    context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
+    
+    # Trigger background geocoding for missing items
+    from .models import Event
+    geocoding_was_pending = (
+        active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists() or
+        Event.objects.filter(day__trip=active_trip, is_geocoded=False, type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']).exclude(location='').exists()
+    )
+    
+    # Defaults
+    route_geometry = []
+    processed_locations = []
+    
+    # Silent Background Processing (HTMX only)
+    if request.htmx and geocoding_was_pending:
+        geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=3)
         
-        context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
-
-            
-            # Trigger background geocoding for missing days or events
-            from .models import Event
-            geocoding_was_pending = (
-                active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists() or
-                Event.objects.filter(day__trip=active_trip, is_geocoded=False, type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']).exclude(location='').exists()
-            )
-            
-            # Silent Background Processing:
-            # We ONLY trigger heavy geocoding or routing if this is an HTMX refresh (background).
-            # The initial full page load remains lightning fast (< 3s goal).
-            if request.htmx and geocoding_was_pending:
-                # Moderate limit (3 items) to avoid hitting OSM/OSRM rate limits while refreshing
-                geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=3)
-                # Deduplicate and clean locations for cleaner UI (e.g. avoid "Villa, Villa" or empty strings)
-                unique_locations = list(dict.fromkeys([loc for loc in processed_locations if loc and loc.strip()]))
-                context['last_geocoded'] = ", ".join(unique_locations)
-            
-            context['geocoding_pending'] = geocoding_was_pending
-            
-            # Routing: Calculate whenever we have coordinates
-            route_geometry = []
-            if len(coords_for_routing) > 1:
-                route_geometry = geo_service.get_route_geometry(coords_for_routing)
-
-            
-            context['route_geometry_json'] = json.dumps(route_geometry)
+        # Deduplicate and clean for UI
+        unique_locations = list(dict.fromkeys([loc for loc in processed_locations if loc and loc.strip()]))
+        context['last_geocoded'] = ", ".join(unique_locations)
         
+        # Routing calculation
+        if len(coords_for_routing) > 1:
+            route_geometry = geo_service.get_route_geometry(coords_for_routing)
+
+    context['geocoding_pending'] = geocoding_was_pending
+    context['route_geometry_json'] = json.dumps(route_geometry)
+    context['last_geocoded_raw'] = processed_locations
+    context['trip'] = active_trip
+
     return context
 
 class TripDashboardView(LoginRequiredMixin, ListView):
