@@ -648,7 +648,9 @@
                                         
                                         <!-- Editable Day Location -->
                                         <span class="location-text" 
-                                              onclick="htmx.ajax('GET', '/day/${d.day_id}/edit/', { target: '#modal-container', swap: 'innerHTML' })" 
+                                              hx-get="/day/${d.day_id}/edit/" 
+                                              hx-target="#modal-container" 
+                                              hx-trigger="click"
                                               style="color: var(--accent-teal); cursor: pointer; font-weight: 500; padding: 2px 8px; border-radius: 4px; transition: background 0.2s; margin-left: 4px;"
                                               onmouseover="this.style.background='rgba(0,128,128,0.1)'"
                                               onmouseout="this.style.background='transparent'">

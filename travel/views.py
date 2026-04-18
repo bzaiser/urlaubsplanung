@@ -72,7 +72,7 @@ def get_dashboard_context(request, active_trip=None):
     
     # Checklist Context
     if active_trip and view_type == 'checklist':
-        checklist, _ = TripChecklist.objects.get_or_create(trip=active_trip)
+        checklist = TripChecklist.objects.filter(trip=active_trip).first()
         context['checklist'] = checklist
         context['templates'] = ChecklistTemplate.objects.all()
         context['categories'] = ChecklistCategory.objects.all().prefetch_related(

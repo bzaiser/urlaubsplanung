@@ -257,9 +257,9 @@
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                // Register Service Worker v28 (Versioned to bypass aggressive iOS caching)
-                navigator.serviceWorker.register('/serviceworker_v28.js').then(function(reg) {
-                    console.log("✅ PWA: Service Worker v28 registered");
+                // Register Service Worker v29 (Cache-Bust Fix)
+                navigator.serviceWorker.register('/static/js/sw_v29.js').then(function(reg) {
+                    console.log("✅ PWA: Service Worker v29 registered");
                     monitorSW(reg);
                     
                     // Only check for updates if we are actually online to prevent console errors
