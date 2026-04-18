@@ -231,8 +231,7 @@
             function formatCurrency(val) {
                 return (val || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
             }
-
-            function updateHiddenDayIds(ids) {
+                        function updateHiddenDayIds(ids) {
                 const form = document.getElementById('bulk-edit-form');
                 if (!form) return;
                 form.querySelectorAll('input[name="day_ids"]').forEach(i => i.remove());
@@ -243,7 +242,9 @@
                     input.value = id;
                     form.appendChild(input);
                 });
-                        function calculateDuration(dep, arr) {
+            }
+
+            function calculateDuration(dep, arr) {
                 if (!dep || !arr) return '';
                 try {
                     const [h1, m1] = dep.split(':').map(Number);
