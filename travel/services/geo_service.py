@@ -17,9 +17,9 @@ def geocode_location(location_name):
         'limit': 1,
         'addressdetails': 1
     }
-    # Mimic a standard browser to avoid 403 Forbidden blocks from Nominatim
+    # Use a unique User-Agent as required by Nominatim's Usage Policy
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'ZaiserUrlaubsplaner/1.5 (https://zaisers.myds.me/; admin@zaiser.de)',
         'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7'
     }
     
