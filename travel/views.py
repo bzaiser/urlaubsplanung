@@ -137,6 +137,8 @@ def get_dashboard_context(request, active_trip=None):
                         'type': event.type,
                         'title': event.title,
                         'location': event.location or day.location,
+                        'lat': float(event.latitude) if event.latitude else (float(day.latitude) if day.latitude and not event.location else None),
+                        'lon': float(event.longitude) if event.longitude else (float(day.longitude) if day.longitude and not event.location else None),
                         'dep_time': event.time.strftime('%H:%M') if event.time else '',
                         'arr_time': event.end_time.strftime('%H:%M') if event.end_time else '',
                         'duration': event.duration or '',

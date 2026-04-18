@@ -437,7 +437,7 @@
                         editable: params => params.node.rowPinned !== 'bottom',
                         headerTooltip: 'Zielort der Reiseetappe', 
                         cellClass: 'event-row-indent fw-medium',
-                        cellStyle: { 'font-weight': '500' }
+                        cellStyle: { 'font-weight': '500' }, cellRenderer: p => { if (!p.value) return ''; let html = p.value; if (p.data && p.data.lat && p.data.lon) { html = `<span title="Lokalisiert" style="color: #2ecc71;">📍</span> ` + html; } return html; }
                     },
                     { 
                         headerName: 'Typ', 
@@ -654,7 +654,7 @@
                                               style="color: var(--accent-teal); cursor: pointer; font-weight: 500; padding: 2px 8px; border-radius: 4px; transition: background 0.2s; margin-left: 4px;"
                                               onmouseover="this.style.background='rgba(0,128,128,0.1)'"
                                               onmouseout="this.style.background='transparent'">
-                                            ${d.location || '<span style="opacity:0.4; font-style:italic;">(Ort)</span>'}
+                                            ${(d.lat && d.lon) ? '<span title="Lokalisiert" style="color: #2ecc71; font-size: 0.9em;">📍</span> ' : ''}${d.location || '<span style="opacity:0.4; font-style:italic;">(Ort)</span>'}
                                         </span>
                                     </div>
                                 </div>
