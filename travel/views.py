@@ -647,6 +647,7 @@ def trip_shift_dates(request, pk):
     return render(request, 'travel/partials/trip_shift_modal.html', {'trip': trip})
 
 @login_required
+@never_cache
 def day_edit(request, pk):
     """Provides a modal for editing a single day's title/location."""
     day = get_object_or_404(Day, pk=pk)
@@ -1108,6 +1109,7 @@ def add_adjustment_food(request, trip_id):
     return HttpResponse(headers={'HX-Refresh': 'true'})
 
 @login_required
+@never_cache
 def edit_diary(request, day_id):
     day = get_object_or_404(Day, id=day_id)
     diary, created = DiaryEntry.objects.get_or_create(day=day)
@@ -1378,7 +1380,10 @@ def checklist_template_create_simple(request, trip_id):
     # Return to the manager modal to show updated list
     return checklist_template_manager(request, trip_id)
 
+from django.views.decorators.cache import never_cache
+
 @login_required
+@never_cache
 def checklist_template_delete_simple(request, trip_id, template_id):
     """Deletes a checklist template."""
     template = get_object_or_404(ChecklistTemplate, pk=template_id)
