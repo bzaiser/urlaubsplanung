@@ -211,6 +211,8 @@ def get_dashboard_context(request, active_trip=None):
                     })
                     coords_for_routing.append([float(first_day.longitude), float(first_day.latitude)])
             
+            context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
+            
             # Trigger background geocoding for missing days (3 per refresh)
             geocoding_was_pending = active_trip.days.filter(latitude__isnull=True).exists()
             if geocoding_was_pending:
