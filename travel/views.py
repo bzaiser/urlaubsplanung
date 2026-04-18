@@ -251,16 +251,10 @@ def get_dashboard_context(request, active_trip=None):
                 Event.objects.filter(day__trip=active_trip, is_geocoded=False, type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']).exclude(location='').exists()
             )
             
-            if geocoding_was_pending:
-                geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=6)
-                context['last_geocoded'] = ", ".join(processed_locations)
-            
-            # Inform template if auto-refresh is needed (every 15s)
+            # Geocoding and Routing are now handled via HTMX or force-geocode endpoint
+            # to prevent blocking the initial page render (3-second goal)
             context['geocoding_pending'] = geocoding_was_pending
-            
-            # Fetch route geometry synchronously for now to restore visibility
-            route_geometry = geo_service.get_route_geometry(coords_for_routing)
-            context['route_geometry_json'] = json.dumps(route_geometry)
+            context['route_geometry_json'] = json.dumps([]) # Background loading later
         
     return context
 

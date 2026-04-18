@@ -95,24 +95,23 @@ def update_trip_coordinates(trip, limit=2):
     
     days_to_geocode = searchable_missing_days[:limit]
     for day in days_to_geocode:
-        # Try Location
-        candidate_strings = [day.location]
-        lat, lon = None, None
-        best_name = day.location
-        for s in candidate_strings:
-            if s and len(s) > 2:
-                lat, lon = geocode_location(s)
-                if lat and lon: 
-                    best_name = s
-                    break
+        # Avoid blocking for empty or placeholder locations
+        cleaned_loc = day.location.strip()
+        if not cleaned_loc or cleaned_loc in ['', 'Planung läuft...', 'TBD', '?']:
+            day.is_geocoded = True
+            day.save()
+            continue
+
+        lat, lon = geocode_location(cleaned_loc)
                 
         if lat and lon:
             day.latitude = lat
             day.longitude = lon
         day.is_geocoded = True
         day.save()
-        processed_locations.append(best_name or "Unbekannter Ort")
-        time.sleep(1.5)
+        processed_locations.append(cleaned_loc or "Unbekannter Ort")
+        time.sleep(1.5) # Wait ONLY if we actually did a geocoding lookup
+
             
     # 2. Update Events (Only travel types that affect the route)
     remaining_limit = limit - len(days_to_geocode)
@@ -126,23 +125,21 @@ def update_trip_coordinates(trip, limit=2):
         
         events_to_geocode = searchable_missing_events[:remaining_limit]
         for event in events_to_geocode:
-            # Try Location, then Title
-            candidate_strings = [event.location, event.title]
-            lat, lon = None, None
-            best_name = event.location or event.title
-            for s in candidate_strings:
-                if s and len(s) > 2:
-                    lat, lon = geocode_location(s)
-                    if lat and lon: 
-                        best_name = s
-                        break
+            # Avoid blocking for empty or placeholder locations/titles
+            cleaned_loc = (event.location or event.title or "").strip()
+            if not cleaned_loc or cleaned_loc in ['', 'Planung läuft...', 'TBD', '?']:
+                event.is_geocoded = True
+                event.save()
+                continue
+            
+            lat, lon = geocode_location(cleaned_loc)
 
             if lat and lon:
                 event.latitude = lat
                 event.longitude = lon
             event.is_geocoded = True
             event.save()
-            processed_locations.append(best_name or "Unbekannter Eintrag")
+            processed_locations.append(cleaned_loc or "Unbekannter Eintrag")
             time.sleep(1.5)
 
     # Re-check if anything (Day or Event) is still pending
