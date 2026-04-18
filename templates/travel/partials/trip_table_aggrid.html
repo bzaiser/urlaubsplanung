@@ -152,9 +152,14 @@
     <style>
         /* Force UI Font & User Custom Variables for the Grid */
         .ag-theme-quartz-dark {
-            --ag-font-family: 'Outfit', sans-serif !important;
+            --ag-font-family: 'Inter', sans-serif !important;
             --ag-font-size: 13px;
             --ag-border-radius: 4px;
+        }
+
+        /* Headers keep the brand font 'Outfit' */
+        .ag-header-cell-label, .ag-full-width-row .station-header-grid, .ag-full-width-row .day-header-grid {
+            font-family: 'Outfit', sans-serif !important;
         }
         
         /* Fix ghosting/overlapping checkboxes */
