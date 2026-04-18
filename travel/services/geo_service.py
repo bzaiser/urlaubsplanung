@@ -10,7 +10,7 @@ def geocode_location(location_name):
     if not location_name or location_name == 'Planung läuft...':
         return None, None
     
-    # 1. CLEANING: Remove common travel prefixes to get the pure location
+    # 1. CLEANING: Remove icons AND common travel prefixes to get the pure location
     clean_location = location_name
     
     # Extract first part if "Start -> End"
@@ -18,23 +18,24 @@ def geocode_location(location_name):
          clean_location = clean_location.split('->')[0].strip()
     elif ' - ' in clean_location:
          clean_location = clean_location.split(' - ')[0].strip()
+
+    # Step A: Strip icons and special chars FIRST (so they don't block prefix detection)
+    import re
+    clean_location = re.sub(r'\(.*\)', '', clean_location).strip() # Strip (via Singapore)
+    clean_location = re.sub(r'[^\w\s,\-]', '', clean_location).strip() # Strip Icons
          
-    # Strip common prefixes (case insensitive)
+    # Step B: Strip common prefixes (case insensitive)
     prefixes_to_strip = [
         'flug nach', 'flug von', 'anfahrt zum', 'anfahrt nach', 'anfahrt von',
         'rückreise nach', 'fahrt nach', 'check-in:', 'check-out:', 'hotel:',
         'besuch der', 'besuch des', 'wanderung zum', 'wanderung am', 'tour zum',
         'roller-tour zur', 'taxi zum', 'privat-taxi zum', 'schnellfähre nach',
-        'fähre von', 'flug nach'
+        'fähre von', 'flug nach', 'anfahrt', 'taxi', 'privat-transfer zum', 'privat-taxi'
     ]
-    import re
     for prefix in prefixes_to_strip:
-        pattern = re.compile(re.escape(prefix), re.IGNORECASE)
+        pattern = re.compile(rf'\b{re.escape(prefix)}\b', re.IGNORECASE)
         clean_location = pattern.sub('', clean_location).strip()
     
-    # Final cleanup (strip icons and special chars)
-    clean_location = re.sub(r'[^\w\s,\-]', '', clean_location).strip()
-
     if not clean_location or len(clean_location) < 3:
         return None, None
 
