@@ -267,10 +267,11 @@ def get_dashboard_context(request, active_trip=None):
             
             context['geocoding_pending'] = geocoding_was_pending
             
-            # Routing: Only calculate if requested or in background
+            # Routing: Calculate whenever we have coordinates
             route_geometry = []
-            if request.htmx and not geocoding_was_pending:
+            if len(coords_for_routing) > 1:
                 route_geometry = geo_service.get_route_geometry(coords_for_routing)
+
             
             context['route_geometry_json'] = json.dumps(route_geometry)
         
