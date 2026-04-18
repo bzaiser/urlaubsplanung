@@ -18,26 +18,14 @@
                     <div class="fw-bold text-uppercase small opacity-75">Koordinaten werden ermittelt...</div>
                     <div class="x-small opacity-50 text-center px-4">Deine Route wird gerade berechnet.<br>Dies kann beim ersten Mal kurz dauern.</div>
                     
-                    <a href="{% url 'travel:force_geocode' active_trip.id %}" class="btn btn-sm btn-outline-warning mt-3 shadow-sm" style="z-index: 1001;">
-                        <i class="bi bi-rocket-takeoff me-1"></i> Geo-Turbo zünden
-                    </a>
                 {% else %}
                     <i class="bi bi-geo-fill display-4 mb-3 opacity-25"></i>
                     <div class="fw-bold text-uppercase small opacity-75">Keine Standorte gefunden</div>
                     <div class="x-small opacity-50 text-center px-4">Wir konnten für deine Reiseziele keine Koordinaten finden.<br>Prüfe bitte die Schreibweise der Orte.</div>
                     
-                    <a href="{% url 'travel:force_geocode' active_trip.id %}" class="btn btn-sm btn-outline-info mt-3 shadow-sm" style="z-index: 1001;">
-                        <i class="bi bi-arrow-repeat me-1"></i> Erneut versuchen
-                    </a>
                 {% endif %}
             </div>
         {% else %}
-            <!-- Floating Manual Trigger (if map already has data but might be incomplete) -->
-            <div class="position-absolute top-0 end-0 m-3" style="z-index: 1000;">
-                <a href="{% url 'travel:force_geocode' active_trip.id %}" class="btn btn-xs btn-dark opacity-75 shadow-sm border-secondary text-warning" title="Route aktualisieren">
-                    <i class="bi bi-arrow-repeat me-1"></i> Turbo
-                </a>
-            </div>
         {% endif %}
     </div>
     

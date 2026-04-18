@@ -118,7 +118,7 @@ PWA_APP_ICONS = [
         'sizes': '160x160'
     }
 ]
-PWA_SERVICE_WORKER_PATH = os.path.join(BASE_DIR, 'static/js/sw_v29.js')
+PWA_SERVICE_WORKER_PATH = os.path.join(BASE_DIR, 'static/js/sw_v30.js')
 PWA_SERVICE_WORKER_AUTO_REGISTER = False
 
 # Form limits for large matrix
