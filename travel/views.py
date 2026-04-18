@@ -214,7 +214,6 @@ def get_dashboard_context(request, active_trip=None):
             # Trigger background geocoding for missing days (3 per refresh)
             geocoding_was_pending = active_trip.days.filter(latitude__isnull=True).exists()
             if geocoding_was_pending:
-                from .services import geo_service
                 geo_service.update_trip_coordinates(active_trip, limit=3)
 
             # Re-check status for the template
