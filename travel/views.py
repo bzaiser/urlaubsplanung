@@ -254,7 +254,7 @@ def get_dashboard_context(request, active_trip=None):
             # Silent Background Processing:
             # We ONLY trigger heavy geocoding or routing if this is an HTMX refresh (background).
             # The initial full page load remains lightning fast (< 3s goal).
-            if self.request.htmx and geocoding_was_pending:
+            if request.htmx and geocoding_was_pending:
                 # Moderate limit (3 items) to avoid hitting OSM/OSRM rate limits while refreshing
                 geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=3)
                 context['last_geocoded'] = ", ".join(processed_locations)
@@ -263,7 +263,7 @@ def get_dashboard_context(request, active_trip=None):
             
             # Routing: Only calculate if requested or in background
             route_geometry = []
-            if self.request.htmx and not geocoding_was_pending:
+            if request.htmx and not geocoding_was_pending:
                 route_geometry = geo_service.get_route_geometry(coords_for_routing)
             
             context['route_geometry_json'] = json.dumps(route_geometry)
