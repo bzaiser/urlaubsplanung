@@ -70,12 +70,17 @@ self.addEventListener('fetch', (event) => {
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request).then(response => {
-                if (response.ok) {
+                // Leaner caching: only update cache if connection is good and response is successful
+                if (response.ok && response.status === 200) {
                     const copy = response.clone();
-                    caches.open(STATIC_CACHE).then(cache => cache.put(event.request, copy));
+                    caches.open(STATIC_CACHE).then(cache => {
+                        // Background update - doesn't block the response to user
+                        cache.put(event.request, copy);
+                    });
                 }
                 return response;
             }).catch(async () => {
+                // Reliable fallback
                 const fallback = await caches.match('/') || await caches.match('/login/');
                 return fallback || new Response(EMERGENCY_SHELL_HTML, { headers: { 'Content-Type': 'text/html' } });
             })

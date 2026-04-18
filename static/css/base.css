@@ -422,20 +422,26 @@ h1, h2 {
     border-color: var(--glass-border) !important;
 }
 
-/* HTMX Indicators */
+/* --- HTMX UI Feedback --- */
 .htmx-indicator {
     display: none;
-    opacity: 0;
     transition: opacity 200ms ease-in;
 }
 .htmx-request .htmx-indicator {
-    display: block !important;
-    opacity: 1;
+    display: inline-block;
 }
 .htmx-request.htmx-indicator {
-    display: block !important;
-    opacity: 1;
+    display: inline-block;
 }
+
+/* Specific indicator helpers */
+.indicator-show { display: none; }
+.htmx-request .indicator-show { display: inline-block; }
+.htmx-request .indicator-hide { display: none; }
+
+.spinner-show { display: none !important; }
+.htmx-request .spinner-show { display: block !important; }
+.htmx-request .spinner-hide { display: none !important; }
 
 /* Diary & Gallery Styles */
 .diary-gallery {

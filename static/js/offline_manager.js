@@ -28,8 +28,10 @@ async function initDB() {
                 db = event.target.result;
                 console.log('📦 PWA: Database initialized.');
                 updateSyncIndicator();
-                // Start background sync safely without blocking
-                initBackgroundSync().catch(err => console.error("Background sync failed to start:", err));
+                // Postpone background sync to give priority to the main UI (Planner)
+                setTimeout(() => {
+                    initBackgroundSync().catch(err => console.error("Background sync failed to start:", err));
+                }, 4000); // 4s delay
                 resolve(db);
             };
 
@@ -63,7 +65,8 @@ async function initBackgroundSync() {
         const dataArray = Array.isArray(gridData) ? gridData : [];
         if (dataArray.length === 0) return;
 
-        const dayIds = [...new Set(dataArray.filter(r => r && r.day_id).map(r => r.day_id))];
+        // Entschlackung: Only sync a maximum of 5 days in the background to avoid cluttering performance
+        const dayIds = [...new Set(dataArray.filter(r => r && r.day_id).map(r => r.day_id))].slice(0, 5);
         
         if (dayIds.length > 0) {
             synchronizeTripData(dayIds);
