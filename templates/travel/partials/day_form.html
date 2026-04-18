@@ -1,15 +1,16 @@
 {% load i18n %}
-<div class="modal-dialog modal-md"> <!-- modal-md für eine kompaktere Ansicht -->
+<div class="modal-dialog modal-md">
     <div class="modal-content bg-dark border">
         <div class="modal-header border-secondary pb-2">
-            <h5 class="modal-title text-teal">
-                <i class="bi bi-calendar-event me-2"></i>{% trans "Tag bearbeiten" %}
+            <h5 class="modal-title text-warning">
+                <i class="bi bi-pencil me-1"></i>{% trans "Tag bearbeiten" %}
                 <small class="text-secondary fw-normal ms-2">({{ day.date|date:"d. M" }})</small>
             </h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white" onclick="closeModal()" aria-label="Close"></button>
         </div>
 
         <form hx-post="{% url 'travel:day_edit' day.id %}" 
+              hx-target="#trip-overview" 
               hx-on::after-request="if(event.detail.successful) closeModal()">
             {% csrf_token %}
 
@@ -20,35 +21,17 @@
                            class="form-control" 
                            value="{{ day.location|default:'' }}" 
                            placeholder="z.B. Phuket Town" autofocus>
-                    <div class="form-text text-secondary" style="font-size: 0.75rem;">
-                        {% trans "Dieser Name erscheint in der Tabellen-Überschrift und im Tagebuch." %}
-                    </div>
                 </div>
             </div>
 
             <div class="modal-footer border-secondary">
-                <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3" onclick="closeModal()">
                     {% trans "Abbrechen" %}
                 </button>
-                <button type="submit" class="btn btn-premium-teal flex-grow-1 fw-bold text-uppercase">
-                    <i class="bi bi-check2 me-1"></i>{% trans "Speichern" %}
+                <button type="submit" class="btn btn-warning flex-grow-1">
+                    <i class="bi bi-save me-1"></i>{% trans "Speichern" %}
                 </button>
             </div>
         </form>
     </div>
 </div>
-
-<style>
-    .btn-premium-teal {
-        background: linear-gradient(45deg, var(--accent-teal), #00a8a8);
-        border: none;
-        color: #fff;
-        transition: all 0.3s ease;
-    }
-    .btn-premium-teal:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 5px 15px rgba(0, 128, 128, 0.3);
-        filter: brightness(1.1);
-        color: #fff;
-    }
-</style>

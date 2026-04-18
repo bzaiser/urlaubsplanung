@@ -658,13 +658,7 @@ def day_edit(request, pk):
         day.save()
         if request.htmx:
             response = HttpResponse("")
-            # Trigger client-side grid update instead of full page refresh
-            response['HX-Trigger'] = json.dumps({
-                "dayLocationUpdated": {
-                    "day_id": day.id,
-                    "location": day.location
-                }
-            })
+            response['HX-Refresh'] = 'true'
             return response
         return redirect('travel:dashboard')
     
