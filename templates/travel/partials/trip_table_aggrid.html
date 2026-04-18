@@ -512,10 +512,10 @@
                             return html;
                         }
                     },
-                    { headerName: 'Start', field: 'dep_time', width: 65, editable: true, valueParser: p => timeParser(p), headerTooltip: 'Voraussichtlicher Beginn / Abfahrt', cellClass: 'text-center font-monospace' },
-                    { headerName: 'Ende', field: 'arr_time', width: 65, editable: true, valueParser: p => timeParser(p), headerTooltip: 'Voraussichtliches Ende / Ankunft', cellClass: 'text-center font-monospace' },
+                    { headerName: 'Start', field: 'dep_time', width: 65, editable: true, valueParser: p => timeParser(p), headerTooltip: 'Voraussichtlicher Beginn / Abfahrt', cellClass: 'text-center' },
+                    { headerName: 'Ende', field: 'arr_time', width: 65, editable: true, valueParser: p => timeParser(p), headerTooltip: 'Voraussichtliches Ende / Ankunft', cellClass: 'text-center' },
                     { headerName: 'Dauer', field: 'duration', width: 85, cellClass: 'text-center opacity-75', headerTooltip: 'Berechnete Dauer der Etappe' },
-                    { headerName: 'km', field: 'distance_km', width: 65, editable: true, headerTooltip: 'Entfernung in Kilometern', cellClass: 'text-center font-monospace text-teal' },
+                    { headerName: 'km', field: 'distance_km', width: 65, editable: true, headerTooltip: 'Entfernung in Kilometern', cellClass: 'text-center text-teal' },
                     { 
                         headerName: 'Schätz.', 
                         field: 'cost_estimated', 
@@ -523,7 +523,7 @@
                         editable: params => !params.data.is_checkout, 
                         valueFormatter: p => formatCurrency(p.value), 
                         headerTooltip: 'Voraussichtliche / Kalkulierte Kosten', 
-                        cellClass: p => 'text-end font-monospace ' + (p.data.is_checkout ? 'opacity-25' : 'opacity-75')
+                        cellClass: p => 'text-end ' + (p.data.is_checkout ? 'opacity-25' : 'opacity-75')
                     },
                     { 
                         headerName: 'Gebucht', 
@@ -532,7 +532,7 @@
                         editable: params => !params.data.is_checkout, 
                         valueFormatter: p => formatCurrency(p.value), 
                         headerTooltip: 'Bereits fix gebuchter Preis', 
-                        cellClass: p => 'text-end font-monospace ' + (p.data.is_checkout ? 'opacity-25' : 'text-teal')
+                        cellClass: p => 'text-end ' + (p.data.is_checkout ? 'opacity-25' : 'text-teal')
                     },
                     { 
                         headerName: 'Beleg', 
