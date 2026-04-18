@@ -2,7 +2,7 @@
 <div class="h-100 d-flex flex-column" 
      id="map-inner-container"
      {% if geocoding_pending %}
-     hx-get="{% url 'travel:dashboard' %}?view=map"
+     hx-get="{% url 'travel:dashboard' %}?view=map&trip_id={{ active_trip.id }}"
      hx-trigger="every 15s"
      hx-target="#map-panel-body"
      {% endif %}>

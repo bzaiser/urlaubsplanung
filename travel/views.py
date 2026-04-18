@@ -263,7 +263,9 @@ def get_dashboard_context(request, active_trip=None):
             if request.htmx and geocoding_was_pending:
                 # Moderate limit (3 items) to avoid hitting OSM/OSRM rate limits while refreshing
                 geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=3)
-                context['last_geocoded'] = ", ".join(processed_locations)
+                # Deduplicate locations for cleaner UI (e.g. avoid "Villa, Villa")
+                unique_locations = list(dict.fromkeys(processed_locations))
+                context['last_geocoded'] = ", ".join(unique_locations)
             
             context['geocoding_pending'] = geocoding_was_pending
             
