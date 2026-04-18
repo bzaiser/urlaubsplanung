@@ -211,6 +211,15 @@ def get_dashboard_context(request, active_trip=None):
                     })
                     coords_for_routing.append([float(first_day.longitude), float(first_day.latitude)])
             
+            # Trigger background geocoding for missing days (3 per refresh)
+            geocoding_was_pending = active_trip.days.filter(latitude__isnull=True).exists()
+            if geocoding_was_pending:
+                from .services import geo_service
+                geo_service.update_trip_coordinates(active_trip, limit=3)
+
+            # Re-check status for the template
+            context['geocoding_pending'] = active_trip.days.filter(latitude__isnull=True).exists()
+            
             # Fetch route geometry synchronously for now to restore visibility
             route_geometry = geo_service.get_route_geometry(coords_for_routing)
             context['route_geometry_json'] = json.dumps(route_geometry)
