@@ -258,7 +258,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 // Register Service Worker v29 (Cache-Bust Fix)
-                navigator.serviceWorker.register('/static/js/sw_v29.js').then(function(reg) {
+                navigator.serviceWorker.register('/serviceworker_v29.js').then(function(reg) {
                     console.log("✅ PWA: Service Worker v29 registered");
                     monitorSW(reg);
                     
