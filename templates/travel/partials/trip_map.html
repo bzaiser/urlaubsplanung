@@ -3,7 +3,7 @@
      id="map-inner-container"
      {% if geocoding_pending %}
      hx-get="{% url 'travel:dashboard' %}?view=map"
-     hx-trigger="every 3s"
+     hx-trigger="every 15s"
      hx-target="#map-panel-body"
      {% endif %}>
     

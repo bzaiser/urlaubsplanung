@@ -214,12 +214,13 @@ def get_dashboard_context(request, active_trip=None):
             context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
             
             # Trigger background geocoding for missing days (3 per refresh)
-            geocoding_was_pending = active_trip.days.filter(latitude__isnull=True).exists()
+            # Use is_geocoded=False to avoid infinite loops for unsearchable locations
+            geocoding_was_pending = active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists()
             if geocoding_was_pending:
                 geo_service.update_trip_coordinates(active_trip, limit=3)
 
-            # Re-check status for the template
-            context['geocoding_pending'] = active_trip.days.filter(latitude__isnull=True).exists()
+            # Re-check status for the template (using the same safe flag)
+            context['geocoding_pending'] = active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists()
             
             # Fetch route geometry synchronously for now to restore visibility
             route_geometry = geo_service.get_route_geometry(coords_for_routing)
