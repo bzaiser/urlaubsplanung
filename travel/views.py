@@ -201,54 +201,40 @@ def get_dashboard_context(request, active_trip=None):
 
         context['grid_data_json'] = json.dumps(grid_data, cls=DjangoJSONEncoder)
         context['ui_settings_json'] = json.dumps(active_trip.ui_settings or {})
+                # 3. Prepare Map Data (Step-by-Step Transparency: Show everything with coords)
+        map_data = []
+        coords_for_routing = []
         
-        # Prepare Map Data (NON-BLOCKING)
-        if view_type in ['map', 'timeline', 'table'] and active_trip.grouped_stations:
-            map_data = []
-            coords_for_routing = []
-            for i, station in enumerate(active_trip.grouped_stations, 1):
-                # Check for travel events on ALL days of each station
-                # e.g. Frankfurt on Day 1, Flight on Day 2
-                for day in station['days']:
-                    travel_events = day.events.filter(
-                        type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']
-                    ).order_by('time', 'id')
-                    
-                    for ev in travel_events:
-                        if ev.latitude and ev.longitude:
-                            coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
-                            map_data.append({
-                                'location': ev.location,
-                                'lat': float(ev.latitude),
-                                'lon': float(ev.longitude),
-                                'is_event': True,
-                                'event_type': ev.type,
-                                'title': ev.title,
-                                'day_id': day.id,
-                                'index': f"{i}e"
-                            })
-
-                # Add the main station location (Robust search: find FIRST day in group with coords)
-                best_day_for_pin = None
-                for d in station['days']:
-                    if d.latitude and d.longitude:
-                        best_day_for_pin = d
-                        break
+        # Collect every single day with coordinates
+        for d_idx, day in enumerate(active_trip.days.all().order_by('date'), 1):
+            if day.latitude and day.longitude:
+                map_data.append({
+                    'location': day.location,
+                    'lat': float(day.latitude),
+                    'lon': float(day.longitude),
+                    'day_id': day.id,
+                    'index': d_idx,
+                    'is_event': False
+                })
+                coords_for_routing.append([float(day.longitude), float(day.latitude)])
                 
-                if best_day_for_pin:
+            # Also collect every event with coordinates
+            for e_idx, ev in enumerate(day.events.all(), 1):
+                if ev.latitude and ev.longitude:
                     map_data.append({
-                        'location': station['location'],
-                        'lat': float(best_day_for_pin.latitude),
-                        'lon': float(best_day_for_pin.longitude),
-                        'days_count': station['days_count'],
-                        'nights_count': station['nights_count'],
-                        'day_id': best_day_for_pin.id,
-                        'index': i
+                        'location': ev.location,
+                        'lat': float(ev.latitude),
+                        'lon': float(ev.longitude),
+                        'is_event': True,
+                        'event_type': ev.type,
+                        'title': ev.title,
+                        'day_id': day.id,
+                        'index': f"{d_idx}.{e_idx}"
                     })
-                    coords_for_routing.append([float(best_day_for_pin.longitude), float(best_day_for_pin.latitude)])
+                    coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
+        
+        context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
 
-            
-            context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
             
             # Trigger background geocoding for missing days or events
             from .models import Event
