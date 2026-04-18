@@ -17,6 +17,7 @@ import json
 from .services import ai_service, logic_service, checklist_service, geo_service
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.decorators.cache import never_cache
 
 def _generate_days(trip):
     """Utility to generate Day objects for the trip duration."""
@@ -1380,7 +1381,6 @@ def checklist_template_create_simple(request, trip_id):
     # Return to the manager modal to show updated list
     return checklist_template_manager(request, trip_id)
 
-from django.views.decorators.cache import never_cache
 
 @login_required
 @never_cache
