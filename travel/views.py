@@ -198,30 +198,29 @@ def get_dashboard_context(request, active_trip=None):
             map_data = []
             coords_for_routing = []
             for i, station in enumerate(active_trip.grouped_stations, 1):
-                # 1. Check for travel events on the FIRST day of this station
-                # that might have a different start coordinate (e.g. Flight from Frankfurt)
-                first_day = station['days'][0]
-                travel_events = first_day.events.filter(
-                    type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR'],
-                    latitude__isnull=False
-                ).order_by('time', 'id')
-                
-                for ev in travel_events:
-                    # Only add if it's not already very close to the day's main location
-                    # (To avoid overlapping dots if start/end are the same)
-                    coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
-                    map_data.append({
-                        'location': ev.location,
-                        'lat': float(ev.latitude),
-                        'lon': float(ev.longitude),
-                        'is_event': True,
-                        'event_type': ev.type,
-                        'title': ev.title,
-                        'day_id': first_day.id,
-                        'index': f"{i}e"
-                    })
+                station_key = f"st-{i}"
+                for day in station['days']:
+                    # Check for travel events on EVERY day of the station
+                    travel_events = day.events.filter(
+                        type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR'],
+                        latitude__isnull=False
+                    ).order_by('time', 'id')
+                    
+                    for ev in travel_events:
+                        coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
+                        map_data.append({
+                            'location': ev.location,
+                            'lat': float(ev.latitude),
+                            'lon': float(ev.longitude),
+                            'is_event': True,
+                            'event_type': ev.type,
+                            'title': ev.title,
+                            'day_id': day.id,
+                            'index': f"{day.id}e"
+                        })
 
-                # 2. Add the main station location
+                # Add the main station location (using first day coordinate)
+                first_day = station['days'][0]
                 if first_day.latitude and first_day.longitude:
                     map_data.append({
                         'location': station['location'],
@@ -236,14 +235,21 @@ def get_dashboard_context(request, active_trip=None):
             
             context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
             
-            # Trigger background geocoding for missing days (3 per refresh)
-            # Use is_geocoded=False to avoid infinite loops for unsearchable locations
-            geocoding_was_pending = active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists()
+            # Trigger background geocoding for missing days or events
+            from .models import Event
+            geocoding_was_pending = (
+                active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists() or
+                Event.objects.filter(day__trip=active_trip, is_geocoded=False).exclude(location='').exists()
+            )
+            
             if geocoding_was_pending:
                 geo_service.update_trip_coordinates(active_trip, limit=3)
 
-            # Re-check status for the template (using the same safe flag)
-            context['geocoding_pending'] = active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists()
+            # Re-check status for the template (must be true for auto-refresh to work)
+            context['geocoding_pending'] = (
+                active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists() or
+                Event.objects.filter(day__trip=active_trip, is_geocoded=False).exclude(location='').exists()
+            )
             
             # Fetch route geometry synchronously for now to restore visibility
             route_geometry = geo_service.get_route_geometry(coords_for_routing)
