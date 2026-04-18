@@ -1533,6 +1533,15 @@ def save_ui_settings(request, trip_id):
     return JsonResponse({'status': 'error', 'message': 'Only POST allowed'}, status=405)
 
 @login_required
+def force_geocode(request, trip_id):
+    """Manually trigger geocoding for all missing items in a trip (no batch limit)."""
+    trip = get_object_or_404(Trip, id=trip_id)
+    # Use a higher limit for manual force (e.g. 50 items)
+    geo_service.update_trip_coordinates(trip, limit=50)
+    return HttpResponseRedirect(f"{reverse('travel:dashboard')}?trip_id={trip.id}&view=map")
+
+
+@login_required
 def offline_diary_fallback(request):
     """Simple view to serve the offline fallback template for PWA caching."""
     return render(request, 'travel/partials/diary_offline_fallback.html')

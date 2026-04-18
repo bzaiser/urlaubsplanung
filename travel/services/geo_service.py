@@ -39,6 +39,15 @@ def geocode_location(location_name):
         data = response.json()
         if data:
             return float(data[0]['lat']), float(data[0]['lon'])
+            
+        # 1.1 Fallback for Philippines (specifically for Bernd's current itinerary)
+        if "," not in clean_location:
+            params['q'] = f"{clean_location}, Philippines"
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            data = response.json()
+            if data:
+                return float(data[0]['lat']), float(data[0]['lon'])
+                
     except Exception as e:
         print(f"Geocoding error for {clean_location}: {e}")
         # Log response content if JSON decoding failed
