@@ -1002,12 +1002,8 @@
                     .then(res => res.json())
                     .then(data => {
                         if (data.status === 'success') {
-                            // Update the grid data locally
-                            const rowNode = window.agGridApi.getRowNode(rowId);
-                            if (rowNode) {
-                                rowNode.setDataValue('voucher_url', data.voucher_url);
-                                showToast('✓ Beleg hochgeladen');
-                            }
+                            showToast('✓ Beleg hochgeladen');
+                            setTimeout(() => window.location.reload(), 100);
                         }
                     });
                 };

@@ -216,9 +216,14 @@
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="form-label small text-uppercase text-warning fw-bold mb-0">{% trans "Beleg / Anhang" %}</label>
                         {% if form.instance.voucher %}
-                            <a href="{{ form.instance.voucher.url }}" target="_blank" class="btn btn-sm btn-outline-warning py-0 px-2">
-                                <small>ÖFFNEN</small>
-                            </a>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-secondary x-small font-monospace" title="{{ form.instance.voucher.name }}">
+                                    {{ form.instance.voucher.name|cut:"vouchers/"|truncatechars:30 }}
+                                </span>
+                                <a href="{{ form.instance.voucher.url }}" target="_blank" class="btn btn-sm btn-outline-warning py-0 px-2">
+                                    <small>ÖFFNEN</small>
+                                </a>
+                            </div>
                         {% endif %}
                     </div>
                     <input type="file" name="voucher" class="form-control form-control-sm">
