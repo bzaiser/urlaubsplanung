@@ -118,9 +118,11 @@
             stations.forEach((s) => {
                 if (s.lat && s.lon) {
                     const pos = [s.lat, s.lon];
+                    const isEvent = s.is_event || false;
+                    
                     const marker = L.circleMarker(pos, {
-                        radius: 8,
-                        fillColor: "#ffc107",
+                        radius: isEvent ? 5 : 8,
+                        fillColor: isEvent ? "#17a2b8" : "#ffc107", // Blue for events, Yellow for stations
                         color: "#fff",
                         weight: 2,
                         opacity: 1,
@@ -128,21 +130,28 @@
                         className: 'map-clickable-marker'
                     }).addTo(map);
 
-                    // Bind popup ONLY if in timeline view, otherwise it feels "useless" in the planner
-                    if (currentView === 'timeline') {
-                        marker.bindPopup(`
-                            <div class="p-1">
-                                <strong class="text-dark">${s.location}</strong><br>
-                                <small class="text-muted">${s.days_count} Tage • ${s.nights_count} Nächte</small><br>
-                                <hr class="my-1 opacity-25">
-                                <a href="javascript:void(0)" 
-                                onclick="htmx.ajax('GET', '/day/${s.day_id}/diary/', {target:'#modal-container', swap:'innerHTML'})"
-                                class="text-primary small fw-bold d-block text-decoration-none py-1">
-                                <i class="bi bi-book me-1"></i>Tagebuch öffnen
-                                </a>
-                            </div>
-                        `);
+                    // Bind popup with more info
+                    let popupContent = `
+                        <div class="p-1">
+                            <strong class="text-dark">${s.location}</strong><br>
+                    `;
+                    
+                    if (isEvent) {
+                        popupContent += `<small class="text-info">${s.event_type}: ${s.title}</small>`;
+                    } else {
+                        popupContent += `<small class="text-muted">${s.days_count} Tage • ${s.nights_count} Nächte</small>`;
                     }
+                    
+                    popupContent += `
+                            <hr class="my-1 opacity-25">
+                            <a href="javascript:void(0)" 
+                            onclick="htmx.ajax('GET', '/day/${s.day_id}/diary/', {target:'#modal-container', swap:'innerHTML'})"
+                            class="text-primary small fw-bold d-block text-decoration-none py-1">
+                            <i class="bi bi-book me-1"></i>Tagebuch öffnen
+                            </a>
+                        </div>
+                    `;
+                    marker.bindPopup(popupContent);
 
                     marker.on('click', function() {
                         // 0. Visual Pulse on Marker to show it was clicked

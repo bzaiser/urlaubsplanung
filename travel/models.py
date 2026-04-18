@@ -165,6 +165,11 @@ class Event(models.Model):
     booking_url = models.URLField(_("Buchungs-Link"), max_length=500, blank=True)
     detail_info = models.CharField(_("Details (Flug-Nr, Terminal, etc.)"), max_length=255, blank=True)
     
+    # Geocoding fields [NEW]
+    latitude = models.DecimalField(_("Breitengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(_("Längengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
+    is_geocoded = models.BooleanField(_("Geokodiert"), default=False)
+    
     # Financials and Info from Excel
     meals_info = models.CharField(_("Essen"), max_length=255, blank=True)
     activities_info = models.CharField(_("Ausflüge und Eintritt"), max_length=255, blank=True)

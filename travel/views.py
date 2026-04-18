@@ -198,7 +198,30 @@ def get_dashboard_context(request, active_trip=None):
             map_data = []
             coords_for_routing = []
             for i, station in enumerate(active_trip.grouped_stations, 1):
+                # 1. Check for travel events on the FIRST day of this station
+                # that might have a different start coordinate (e.g. Flight from Frankfurt)
                 first_day = station['days'][0]
+                travel_events = first_day.events.filter(
+                    type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR'],
+                    latitude__isnull=False
+                ).order_by('time', 'id')
+                
+                for ev in travel_events:
+                    # Only add if it's not already very close to the day's main location
+                    # (To avoid overlapping dots if start/end are the same)
+                    coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
+                    map_data.append({
+                        'location': ev.location,
+                        'lat': float(ev.latitude),
+                        'lon': float(ev.longitude),
+                        'is_event': True,
+                        'event_type': ev.type,
+                        'title': ev.title,
+                        'day_id': first_day.id,
+                        'index': f"{i}e"
+                    })
+
+                # 2. Add the main station location
                 if first_day.latitude and first_day.longitude:
                     map_data.append({
                         'location': station['location'],
