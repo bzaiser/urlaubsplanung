@@ -71,14 +71,14 @@ def update_trip_coordinates(trip, limit=2):
         day.save()
         time.sleep(1.5)
             
-    # 2. Update Events (Travel types like FLIGHT, TRAIN, etc.)
-    # Only if we still have room in our batch limit
+    # 2. Update Events (Only travel types that affect the route)
     remaining_limit = limit - len(days_to_geocode)
     if remaining_limit > 0:
         from ..models import Event
         searchable_missing_events = Event.objects.filter(
             day__trip=trip,
-            is_geocoded=False
+            is_geocoded=False,
+            type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']
         ).exclude(location='')
         
         events_to_geocode = searchable_missing_events[:remaining_limit]

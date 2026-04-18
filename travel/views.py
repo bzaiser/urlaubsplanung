@@ -239,7 +239,7 @@ def get_dashboard_context(request, active_trip=None):
             from .models import Event
             geocoding_was_pending = (
                 active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists() or
-                Event.objects.filter(day__trip=active_trip, is_geocoded=False).exclude(location='').exists()
+                Event.objects.filter(day__trip=active_trip, is_geocoded=False, type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']).exclude(location='').exists()
             )
             
             if geocoding_was_pending:
@@ -248,7 +248,7 @@ def get_dashboard_context(request, active_trip=None):
             # Re-check status for the template (must be true for auto-refresh to work)
             context['geocoding_pending'] = (
                 active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists() or
-                Event.objects.filter(day__trip=active_trip, is_geocoded=False).exclude(location='').exists()
+                Event.objects.filter(day__trip=active_trip, is_geocoded=False, type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']).exclude(location='').exists()
             )
             
             # Fetch route geometry synchronously for now to restore visibility
