@@ -982,12 +982,15 @@
             window.triggerUpload = function(rowId) {
                 const input = document.createElement('input');
                 input.type = 'file';
+                input.multiple = true;
                 input.onchange = e => {
-                    const file = e.target.files[0];
-                    if (!file) return;
+                    const files = e.target.files;
+                    if (!files || files.length === 0) return;
                     
                     const formData = new FormData();
-                    formData.append('voucher', file);
+                    for (let i = 0; i < files.length; i++) {
+                        formData.append('voucher', files[i]);
+                    }
                     
                     const isGlobal = String(rowId).startsWith('global-');
                     const cleanId = isGlobal ? rowId.replace('global-', '') : rowId;
