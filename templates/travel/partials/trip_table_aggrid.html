@@ -186,6 +186,16 @@
         }
 
         /* Clickable column indicator */
+        .ag-full-width-row .title-area {
+            min-width: 180px !important;
+            max-width: 180px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+
         .pointer-column {
             cursor: pointer !important;
             color: var(--accent-teal) !important;
@@ -596,7 +606,7 @@
                             return `<div class="station-header-grid ${isCollapsed ? 'collapsed' : ''}" 
                                          onclick="window.toggleStation('global')"
                                          style="padding: 0; background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
-                                <div style="display: flex; align-items: center; height: 100%; min-width: 180px; max-width: 180px;">
+                                <div class="title-area" style="height: 100%;">
                                     <div style="width: 40px; display: flex; justify-content: center; align-items: center;">
                                         <span class="caret-icon">▼</span>
                                     </div>
@@ -622,7 +632,7 @@
                             const isSelected = params.node.isSelected();
                             
                             return `<div class="day-header-grid" style="padding: 0; background: rgba(255, 255, 255, 0.12); border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-primary); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
-                                <div style="display: flex; align-items: center; height: 100%; min-width: 180px; max-width: 180px;">
+                                <div class="title-area" style="height: 100%;">
                                     <div style="width: 40px; display: flex; justify-content: center; align-items: center;">
                                         <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="window.agGridApi.getRowNode('${d.id}').setSelected(this.checked)">
                                     </div>
@@ -1035,6 +1045,20 @@
                     window.agGridApi.setGridOption('pinnedBottomRowData', pinnedData);
                 }
             }
+
+            // --- Zero-Refresh Grid Update Logic ---
+            document.addEventListener('dayLocationUpdated', function(evt) {
+                const data = evt.detail;
+                if (window.agGridApi) {
+                    const rowNode = window.agGridApi.getRowNode(data.day_id);
+                    if (rowNode) {
+                        // Update node data and refresh row
+                        rowNode.setDataValue('location', data.location);
+                        window.agGridApi.refreshCells({ rowNodes: [rowNode], force: true });
+                        showToast(`✓ Ort aktualisiert: ${data.location}`);
+                    }
+                }
+            });
 
             // Simple initialization on load
             if (document.readyState === 'complete' || document.readyState === 'interactive') {
