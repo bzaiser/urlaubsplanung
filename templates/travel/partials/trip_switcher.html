@@ -68,30 +68,48 @@
                 </button>
             </div>
             
-            <!-- Map Toggle (Moved to Row 2 on mobile via d-flex order, but kept here for logic) -->
-            <button class="nav-icon-btn d-md-none ms-2" 
-                    type="button"
-                    data-bs-toggle="offcanvas" 
-                    data-bs-target="#offcanvasRouteMap" 
-                    aria-controls="offcanvasRouteMap"
-                    title="{% trans 'Karte einblenden' %}">
-                <i class="bi bi-map-fill"></i>
-            </button>
+            <!-- Map Toggle (Mobile) -->
+            {% if view_type == 'checklist' %}
+                <button class="nav-icon-btn d-md-none ms-2" 
+                        hx-get="{% url 'travel:dashboard' %}?view=table&show_map=1"
+                        hx-target="#dashboard-refresh"
+                        title="{% trans 'Zum Planer & Karte öffnen' %}">
+                    <i class="bi bi-map-fill"></i>
+                </button>
+            {% else %}
+                <button class="nav-icon-btn d-md-none ms-2" 
+                        type="button"
+                        data-bs-toggle="offcanvas" 
+                        data-bs-target="#offcanvasRouteMap" 
+                        aria-controls="offcanvasRouteMap"
+                        title="{% trans 'Karte einblenden' %}">
+                    <i class="bi bi-map-fill"></i>
+                </button>
+            {% endif %}
         {% endif %}
     </div>
 
     <!-- RIGHT: Actions & Settings -->
     <div class="d-flex align-items-center gap-1 gap-md-2 flex-shrink-0 order-2 ms-auto">
         {% if active_trip %}
-            <!-- Map Toggle (Only visible on Desktop here) -->
-            <button class="nav-icon-btn d-none d-md-flex" 
-                    type="button"
-                    data-bs-toggle="offcanvas" 
-                    data-bs-target="#offcanvasRouteMap" 
-                    aria-controls="offcanvasRouteMap"
-                    title="{% trans 'Karte einblenden' %}">
-                <i class="bi bi-map-fill"></i>
-            </button>
+            <!-- Map Toggle (Desktop) -->
+            {% if view_type == 'checklist' %}
+                <button class="nav-icon-btn d-none d-md-flex" 
+                        hx-get="{% url 'travel:dashboard' %}?view=table&show_map=1"
+                        hx-target="#dashboard-refresh"
+                        title="{% trans 'Zum Planer & Karte öffnen' %}">
+                    <i class="bi bi-map-fill"></i>
+                </button>
+            {% else %}
+                <button class="nav-icon-btn d-none d-md-flex" 
+                        type="button"
+                        data-bs-toggle="offcanvas" 
+                        data-bs-target="#offcanvasRouteMap" 
+                        aria-controls="offcanvasRouteMap"
+                        title="{% trans 'Karte einblenden' %}">
+                    <i class="bi bi-map-fill"></i>
+                </button>
+            {% endif %}
         {% endif %}
 
         <!-- Meatball Menu (Always visible) -->

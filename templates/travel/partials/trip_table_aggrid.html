@@ -672,6 +672,20 @@
                         }
                         
                         updateSummary();
+
+                        // Auto-Map-Open: Open the map if triggered by the special 'show_map' URL param
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.get('show_map') === '1') {
+                            const mapEl = document.getElementById('offcanvasRouteMap');
+                            if (mapEl && typeof bootstrap !== 'undefined') {
+                                const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(mapEl);
+                                bsOffcanvas.show();
+                                
+                                // Clean up URL without triggering a page refresh
+                                const newUrl = window.location.pathname + window.location.search.replace(/[?&]show_map=1/, '').replace(/^&/, '?').replace(/\?$/, '');
+                                window.history.replaceState({path: newUrl}, '', newUrl);
+                            }
+                        }
                     },
                     onColumnResized: (p) => saveColumnState(p),
                     onColumnMoved: (p) => saveColumnState(p),
@@ -685,8 +699,11 @@
                         updateSummary();
                     },
                     onRowClicked: (params) => {
-                        // Bidirectional Sync: Panning the map when row is clicked
-                        if (params.data && params.data.lat && params.data.lon && typeof window.flyToLocation === 'function') {
+                        // Smart Map Sync: Only fly to location if the map is already open
+                        const mapEl = document.getElementById('offcanvasRouteMap');
+                        const isVisible = mapEl && mapEl.classList.contains('show');
+
+                        if (isVisible && params.data && params.data.lat && params.data.lon && typeof window.flyToLocation === 'function') {
                             window.flyToLocation(params.data.lat, params.data.lon, params.data.station_index);
                         }
                     },
