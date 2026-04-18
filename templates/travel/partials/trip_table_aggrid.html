@@ -414,7 +414,7 @@
                         headerName: 'Typ', 
                         field: 'type', 
                         width: 65, 
-                        editable: true,
+                        editable: false,
                         headerTooltip: 'Art des Events (Flug, Hotel, etc.)',
                         cellEditor: TypeCellEditor,
                         cellRenderer: p => {
@@ -444,6 +444,7 @@
                         field: 'title', 
                         minWidth: 200,
                         flex: 1,
+                        editable: false,
                         colSpan: params => {
                             if (params.data && params.data.is_global_expense) return 5;
                             return 1;
@@ -565,7 +566,7 @@
                         filter: true, 
                         resizable: true,
                         editable: params => !params.data.is_global_expense,
-                        singleClickEdit: true,
+                        singleClickEdit: false,
                         tooltipComponent: null 
                     },
                     rowSelection: 'multiple',
@@ -628,8 +629,22 @@
                         }
                         return 32; 
                     },
+                    onCellClicked: (params) => {
+                        // Tablet UX: One click on Info/Title column opens the modal immediately
+                        if (params.colDef.field === 'title' && params.data && !params.data.is_day_header && !params.data.is_station_header) {
+                            const eventId = params.data.id;
+                            if (!eventId) return;
+
+                            if (params.data.is_global_expense) {
+                                htmx.ajax('GET', `/trip/{{ active_trip.id }}/expense/${eventId.replace('global-', '')}/edit/`, { target: '#modal-container', swap: 'innerHTML' });
+                            } else {
+                                htmx.ajax('GET', `/event/${eventId}/edit/`, { target: '#modal-container', swap: 'innerHTML' });
+                            }
+                        }
+                    },
                     onCellDoubleClicked: (params) => {
-                        if (params.data && !params.data.is_day_header && !params.data.is_station_header) {
+                        // Desktop UX: Double click still works for everything else
+                        if (params.colDef.field !== 'title' && params.data && !params.data.is_day_header && !params.data.is_station_header) {
                             try {
                                 // IMPORTANT: Cancel the single-click edit that started
                                 params.api.stopEditing(true);
