@@ -52,6 +52,13 @@ def get_dashboard_context(request, active_trip=None):
                 'days__diary__images', 'days__events'
             ).first()
             
+            # Resilience: If ID was provided but trip not found, clear it from session
+            if not active_trip:
+                if 'active_trip_id' in request.session:
+                    del request.session['active_trip_id']
+                # Also clear from URL params conceptually for the next logic step
+                trip_id = None
+            
         # Fallback to the latest trip if the specific ID wasn't found or no ID was provided
         if not active_trip:
             active_trip = Trip.objects.prefetch_related(
@@ -364,13 +371,12 @@ def trip_delete(request, pk):
         if request.session.get('active_trip_id') == pk:
             request.session['active_trip_id'] = None
         if request.htmx:
-            # We return both the trip list and the switcher (OOB)
-            context = get_dashboard_context(request)
-            html = render(request, 'travel/partials/trip_list.html', context).content.decode('utf-8')
-            # Pass is_oob=True for the switcher swap
-            context['is_oob'] = True
-            html += render(request, 'travel/partials/trip_switcher.html', context).content.decode('utf-8')
-            return HttpResponse(html)
+            # SAFETY RE-INITIALIZATION: Return a hard redirect to clear URL parameters
+            # and prevent Service Worker cache conflicts with deleted IDs.
+            from django.urls import reverse
+            response = HttpResponse("")
+            response['HX-Redirect'] = reverse('travel:dashboard')
+            return response
         return redirect('travel:dashboard')
     
     # Return confirmation partial for GET

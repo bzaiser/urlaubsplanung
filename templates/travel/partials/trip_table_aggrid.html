@@ -243,9 +243,7 @@
                     input.value = id;
                     form.appendChild(input);
                 });
-            }
-
-            function calculateDuration(dep, arr) {
+                        function calculateDuration(dep, arr) {
                 if (!dep || !arr) return '';
                 try {
                     const [h1, m1] = dep.split(':').map(Number);
@@ -256,7 +254,9 @@
                     const m = d % 60;
                     return `${h}h ${m.toString().padStart(2, '0')}m`;
                 } catch(e) { return ''; }
-                        async function syncChange(params) {
+            }
+
+            async function syncChange(params) {
                 const field = params.colDef.field;
                 let val = params.newValue;
                 const oldValue = params.oldValue;
