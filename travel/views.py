@@ -263,8 +263,8 @@ def get_dashboard_context(request, active_trip=None):
             if request.htmx and geocoding_was_pending:
                 # Moderate limit (3 items) to avoid hitting OSM/OSRM rate limits while refreshing
                 geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=3)
-                # Deduplicate locations for cleaner UI (e.g. avoid "Villa, Villa")
-                unique_locations = list(dict.fromkeys(processed_locations))
+                # Deduplicate and clean locations for cleaner UI (e.g. avoid "Villa, Villa" or empty strings)
+                unique_locations = list(dict.fromkeys([loc for loc in processed_locations if loc and loc.strip()]))
                 context['last_geocoded'] = ", ".join(unique_locations)
             
             context['geocoding_pending'] = geocoding_was_pending
@@ -1595,8 +1595,14 @@ def save_ui_settings(request, trip_id):
 
 @login_required
 def force_geocode(request, trip_id):
-    """Manually trigger geocoding for all missing items in a trip (no batch limit)."""
+    """Manually trigger geocoding for all missing or failed items in a trip (no batch limit)."""
     trip = get_object_or_404(Trip, id=trip_id)
+    
+    # Reset failed attempts so they can try again with the new logic
+    from .models import Day, Event
+    Day.objects.filter(trip=trip, is_geocoded=True, latitude__isnull=True).update(is_geocoded=False)
+    Event.objects.filter(day__trip=trip, is_geocoded=True, latitude__isnull=True).update(is_geocoded=False)
+    
     # Use a higher limit for manual force (e.g. 50 items)
     geo_service.update_trip_coordinates(trip, limit=50)
     return HttpResponseRedirect(f"{reverse('travel:dashboard')}?trip_id={trip.id}&view=map")
