@@ -28,5 +28,9 @@ docker compose --env-file .env exec web python3 manage.py compilemessages
 echo "🎨 Collecting static files..."
 docker compose --env-file .env exec web python3 manage.py collectstatic --noinput
 
+# Optional: Reset failed geocoding for a fresh attempt with improved logic
+echo "🧹 Resetting failed geocoding attempts..."
+docker compose --env-file .env exec web python3 manage.py shell -c "from travel.models import Day, Event; Day.objects.filter(is_geocoded=True, latitude__isnull=True).update(is_geocoded=False); Event.objects.filter(is_geocoded=True, latitude__isnull=True).update(is_geocoded=False); print('✨ Failed geocodes reset!')"
+
 echo "-----------------------------------"
 echo "⚡ TURBO Update complete! Changes should be live instantly."
