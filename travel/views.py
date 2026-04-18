@@ -191,12 +191,8 @@ def get_dashboard_context(request, active_trip=None):
         context['grid_data_json'] = json.dumps(grid_data, cls=DjangoJSONEncoder)
         context['ui_settings_json'] = json.dumps(active_trip.ui_settings or {})
         
-        # Prepare Map Data
+        # Prepare Map Data (NON-BLOCKING)
         if view_type in ['map', 'timeline', 'table'] and active_trip.grouped_stations:
-            # Auto-geocode missing coordinates (max 2 per request to avoid timeout)
-            geocoding_pending = geo_service.update_trip_coordinates(active_trip, limit=2)
-            context['geocoding_pending'] = geocoding_pending
-            
             map_data = []
             coords_for_routing = []
             for i, station in enumerate(active_trip.grouped_stations, 1):
@@ -214,12 +210,8 @@ def get_dashboard_context(request, active_trip=None):
                     coords_for_routing.append([float(first_day.longitude), float(first_day.latitude)])
             
             context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
-            
-            # Fetch road routing geometry
-            route_geometry = []
-            if len(coords_for_routing) >= 2:
-                route_geometry = geo_service.get_route_geometry(coords_for_routing)
-            context['route_geometry_json'] = json.dumps(route_geometry)
+            # Route geometry is rendered if already available, but not fetched synchronously anymore
+            context['route_geometry_json'] = json.dumps([]) 
         
     return context
 
