@@ -61,7 +61,17 @@ def geocode_location(location_name):
         if data:
             return float(data[0]['lat']), float(data[0]['lon'])
             
-        # 1.1 Fallback for Philippines (specifically for Bernd's current itinerary)
+        # 1.1 Fallback: If "Location, Region" fails, try just "Location"
+        if "," in clean_location:
+            simpler_location = clean_location.split(',')[0].strip()
+            if len(simpler_location) > 2:
+                params['q'] = simpler_location
+                response = requests.get(url, params=params, headers=headers, timeout=10)
+                data = response.json()
+                if data:
+                    return float(data[0]['lat']), float(data[0]['lon'])
+
+        # 1.2 Fallback for Philippines (specifically for Bernd's old itineraries)
         if "," not in clean_location:
             params['q'] = f"{clean_location}, Philippines"
             response = requests.get(url, params=params, headers=headers, timeout=10)
