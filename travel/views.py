@@ -147,10 +147,11 @@ def get_dashboard_context(request, active_trip=None):
                         'payment_method': event.get_payment_method_display() if event.payment_method != 'NONE' else '',
                         'cancellation_deadline': event.cancellation_deadline.strftime('%d.%m.') if event.cancellation_deadline else '',
                         'days_until_storno': (event.cancellation_deadline - date.today()).days if event.cancellation_deadline else None,
+                        'cost_actual': float(event.cost_actual),
+                        'voucher_url': event.vouchers.first().file.url if event.vouchers.exists() else None,
+                        'distance_km': event.distance_km,
+                        'meals_info': event.meals_info,
                         'is_paid': event.is_paid,
-                        'voucher_url': event.voucher.url if event.voucher else '',
-                        'booking_url': event.booking_url,
-                        'nights': event.nights,
                         'is_checkin': event.is_checkin,
                         'is_checkout': event.is_checkout,
                         'breakfast_included': event.breakfast_included,
@@ -183,8 +184,9 @@ def get_dashboard_context(request, active_trip=None):
                 'unit_price': float(exp.unit_price),
                 'units': exp.units,
                 'cost_booked': float(exp.total_amount),
+                'cost_total': float(exp.total_amount),
+                'voucher_url': exp.vouchers.first().file.url if exp.vouchers.exists() else None,
                 'cost_estimated': 0,
-                'voucher_url': exp.voucher.url if exp.voucher else None,
                 'is_auto_calculated': exp.is_auto_calculated,
             })
 
@@ -352,6 +354,13 @@ def event_create(request, day_id):
             event = form.save(commit=False)
             event.day = day
             event.save()
+            
+            # Handle new voucher if uploaded via main form
+            if request.FILES.get('voucher'):
+                from .models import TripVoucher
+                f = request.FILES['voucher']
+                TripVoucher.objects.create(event=event, file=f, original_filename=f.name)
+            
             if request.htmx:
                 response = HttpResponse("")
                 response['HX-Refresh'] = 'true'
@@ -408,7 +417,13 @@ def event_edit(request, pk):
     if request.method == 'POST':
         form = EventForm(request.POST, request.FILES, instance=event)
         if form.is_valid():
-            form.save()
+            event = form.save()
+            # Handle new voucher if uploaded via main form
+            if request.FILES.get('voucher'):
+                from .models import TripVoucher
+                f = request.FILES['voucher']
+                TripVoucher.objects.create(event=event, file=f, original_filename=f.name)
+            
             if request.htmx:
                 response = HttpResponse("")
                 response['HX-Refresh'] = 'true'
@@ -674,11 +689,29 @@ from django.http import JsonResponse
 def event_upload_voucher(request, pk):
     """Directly uploads a file to an existing event via AJAX/HTMX."""
     if request.method == 'POST' and request.FILES.get('voucher'):
+        from .models import TripVoucher
         event = get_object_or_404(Event, pk=pk)
-        event.voucher = request.FILES['voucher']
-        event.save()
-        return JsonResponse({'status': 'success', 'voucher_url': event.voucher.url})
+        f = request.FILES['voucher']
+        voucher = TripVoucher.objects.create(
+            event=event,
+            file=f,
+            original_filename=f.name
+        )
+        return JsonResponse({'status': 'success', 'voucher_url': voucher.file.url})
     return JsonResponse({'status': 'error'}, status=400)
+
+@login_required
+def voucher_delete(request, pk):
+    """Deletes a specific attachment."""
+    from .models import TripVoucher
+    voucher = get_object_or_404(TripVoucher, pk=pk)
+    if request.method == 'POST':
+        voucher.delete()
+        if request.htmx:
+            response = HttpResponse("")
+            response['HX-Refresh'] = 'true'
+            return response
+    return HttpResponse(status=405)
 
 @login_required
 def event_bulk_delete(request):
@@ -989,10 +1022,16 @@ def global_expense_create(request, trip_id):
             unit_price = 0
             units = 1
             
-        GlobalExpense.objects.create(
+        expense = GlobalExpense.objects.create(
             trip=trip, title=title, expense_type=expense_type,
             unit_price=unit_price, units=units
         )
+        
+        # Handle new voucher if uploaded via main form
+        if request.FILES.get('voucher'):
+            from .models import TripVoucher
+            f = request.FILES['voucher']
+            TripVoucher.objects.create(expense=expense, file=f, original_filename=f.name)
         return HttpResponse(headers={'HX-Refresh': 'true'})
     return render(request, 'travel/partials/global_expense_form.html', {'trip': trip})
 
@@ -1008,6 +1047,13 @@ def global_expense_edit(request, pk):
         except (ValueError, TypeError):
             pass
         expense.save()
+        
+        # Handle new voucher if uploaded via main form
+        if request.FILES.get('voucher'):
+            from .models import TripVoucher
+            f = request.FILES['voucher']
+            TripVoucher.objects.create(expense=expense, file=f, original_filename=f.name)
+            
         return HttpResponse(headers={'HX-Refresh': 'true'})
     return render(request, 'travel/partials/global_expense_form.html', {'expense': expense, 'trip': expense.trip})
 
@@ -1079,10 +1125,15 @@ def export_trip_ics(request, pk):
 def expense_upload_voucher(request, pk):
     """Directly uploads a file to an existing global expense via AJAX/HTMX."""
     if request.method == 'POST' and request.FILES.get('voucher'):
+        from .models import TripVoucher
         expense = get_object_or_404(GlobalExpense, pk=pk)
-        expense.voucher = request.FILES['voucher']
-        expense.save()
-        return JsonResponse({'status': 'success', 'voucher_url': expense.voucher.url})
+        f = request.FILES['voucher']
+        voucher = TripVoucher.objects.create(
+            expense=expense,
+            file=f,
+            original_filename=f.name
+        )
+        return JsonResponse({'status': 'success', 'voucher_url': voucher.file.url})
     return JsonResponse({'status': 'error'}, status=400)
 
 @login_required

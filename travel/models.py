@@ -164,7 +164,6 @@ class Event(models.Model):
     booking_via = models.CharField(_("Gebucht über"), max_length=100, blank=True)
     booking_url = models.URLField(_("Buchungs-Link"), max_length=500, blank=True)
     detail_info = models.CharField(_("Details (Flug-Nr, Terminal, etc.)"), max_length=255, blank=True)
-    voucher = models.FileField(_("Voucher/Anhang"), upload_to="vouchers/", null=True, blank=True)
     
     # Financials and Info from Excel
     meals_info = models.CharField(_("Essen"), max_length=255, blank=True)
@@ -437,7 +436,6 @@ class GlobalExpense(models.Model):
     total_amount = models.DecimalField(_("Gesamtbetrag"), max_digits=12, decimal_places=2, default=0)
     
     notes = models.TextField(_("Notizen"), blank=True)
-    voucher = models.FileField(_("Voucher/Anhang"), upload_to="vouchers/", null=True, blank=True)
     is_auto_calculated = models.BooleanField(_("Automatisch berechnet"), default=False)
 
     class Meta:
@@ -513,3 +511,17 @@ class TripChecklistItem(models.Model):
         verbose_name = _("Reise-Checklisten-Eintrag")
         verbose_name_plural = _("Reise-Checklisten-Einträge")
         ordering = ['is_checked', 'category', 'id']
+
+class TripVoucher(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="vouchers", null=True, blank=True)
+    expense = models.ForeignKey(GlobalExpense, on_delete=models.CASCADE, related_name="vouchers", null=True, blank=True)
+    file = models.FileField(_("Beleg"), upload_to="vouchers/")
+    original_filename = models.CharField(_("Original-Dateiname"), max_length=255, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Beleg / Anhang")
+        verbose_name_plural = _("Belege / Anhänge")
+
+    def __str__(self):
+        return self.original_filename or os.path.basename(self.file.name)

@@ -211,22 +211,45 @@
                     </div>
                 </div>
 
-                <!-- Media & Files -->
-                <div class="border border-secondary border-dashed rounded-3 p-2 mb-2">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label small text-uppercase text-warning fw-bold mb-0">{% trans "Beleg / Anhang" %}</label>
-                        {% if form.instance.voucher %}
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="text-secondary x-small font-monospace" title="{{ form.instance.voucher.name }}">
-                                    {{ form.instance.voucher.name|cut:"vouchers/"|truncatechars:30 }}
-                                </span>
-                                <a href="{{ form.instance.voucher.url }}" target="_blank" class="btn btn-sm btn-outline-warning py-0 px-2">
-                                    <small>ÖFFNEN</small>
-                                </a>
-                            </div>
-                        {% endif %}
+                <!-- Media & Files: Multi-Attachment System -->
+                <div class="border border-secondary border-dashed rounded-3 p-3 mb-2 bg-black bg-opacity-25">
+                    <label class="form-label small text-uppercase text-warning fw-bold mb-2 d-block">
+                        <i class="bi bi-paperclip me-1"></i>{% trans "Belege / Anhänge" %}
+                    </label>
+                    
+                    {% if event.vouchers.all %}
+                        <div class="list-group list-group-flush mb-3 border-bottom border-secondary">
+                            {% for v in event.vouchers.all %}
+                                <div class="list-group-item bg-transparent border-secondary px-0 py-2 d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                        <i class="bi bi-file-earmark-text text-secondary fs-5"></i>
+                                        <span class="text-light fs-6 font-monospace text-truncate" title="{{ v.original_filename }}">
+                                            {{ v.original_filename|truncatechars:40 }}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex gap-2 ms-2">
+                                        <a href="{{ v.file.url }}" target="_blank" class="btn btn-sm btn-outline-warning py-1 px-3">
+                                            <i class="bi bi-eye mr-1"></i>{% trans "ÖFFNEN" %}
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2"
+                                                hx-post="{% url 'travel:voucher_delete' v.id %}"
+                                                hx-confirm="{% trans 'Diesen Anhang wirklich löschen?' %}"
+                                                hx-target="#modal-container"
+                                                title="{% trans 'Löschen' %}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-secondary small italic mb-3">Keine Anhänge vorhanden.</p>
+                    {% endif %}
+
+                    <div class="mt-2">
+                        <label class="form-label x-small text-uppercase text-secondary mb-1">Neuen Beleg hinzufügen</label>
+                        <input type="file" name="voucher" class="form-control form-control-sm border-secondary bg-dark shadow-none">
                     </div>
-                    <input type="file" name="voucher" class="form-control form-control-sm">
                 </div>
 
                 <!-- Conflict Warning -->

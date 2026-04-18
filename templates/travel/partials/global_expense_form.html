@@ -40,6 +40,49 @@
                         <span class="input-group-text">€</span>
                     </div>
                 </div>
+
+                <!-- Media & Files: Multi-Attachment System -->
+                <div class="border border-secondary border-dashed rounded-3 p-3 mb-2 bg-black bg-opacity-25">
+                    <label class="form-label small text-uppercase text-warning fw-bold mb-2 d-block">
+                        <i class="bi bi-paperclip me-1"></i>{% trans "Belege / Anhänge" %}
+                    </label>
+                    
+                    {% if expense.vouchers.all %}
+                        <div class="list-group list-group-flush mb-3 border-bottom border-secondary">
+                            {% for v in expense.vouchers.all %}
+                                <div class="list-group-item bg-transparent border-secondary px-0 py-2 d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                        <i class="bi bi-file-earmark-text text-secondary fs-5"></i>
+                                        <span class="text-light fs-6 font-monospace text-truncate" title="{{ v.original_filename }}">
+                                            {{ v.original_filename|truncatechars:40 }}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex gap-2 ms-2">
+                                        <a href="{{ v.file.url }}" target="_blank" class="btn btn-sm btn-outline-warning py-1 px-3">
+                                            <i class="bi bi-eye mr-1"></i>{% trans "ÖFFNEN" %}
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2"
+                                                hx-post="{% url 'travel:voucher_delete' v.id %}"
+                                                hx-confirm="{% trans 'Diesen Anhang wirklich löschen?' %}"
+                                                hx-target="#modal-container"
+                                                title="{% trans 'Löschen' %}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-secondary small italic mb-3">Keine Anhänge vorhanden.</p>
+                    {% endif %}
+
+                    <div class="mt-2 text-start">
+                        <label class="form-label x-small text-uppercase text-secondary mb-1">Neuen Beleg hinzufügen</label>
+                        <input type="file" name="voucher" class="form-control form-control-sm border-secondary bg-dark shadow-none"
+                               hx-encoding="multipart/form-data">
+                        <div class="form-text x-small">Wähle eine Datei aus und speichere dann die Ausgabe.</div>
+                    </div>
+                </div>
             </div>
 
             <div class="modal-footer border-secondary">
