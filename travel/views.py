@@ -205,22 +205,14 @@ def get_dashboard_context(request, active_trip=None):
     map_data = []
     coords_for_routing = []
     
-    # Collect every single day with coordinates
+    # Collect coordinates, prioritizing granular events over general day locations
     for d_idx, day in enumerate(active_trip.days.all().order_by('date'), 1):
-        if day.latitude and day.longitude:
-            map_data.append({
-                'location': day.location,
-                'lat': float(day.latitude),
-                'lon': float(day.longitude),
-                'day_id': day.id,
-                'index': d_idx,
-                'is_event': False
-            })
-            coords_for_routing.append([float(day.longitude), float(day.latitude)])
-            
-        # Also collect every event with coordinates
-        for e_idx, ev in enumerate(day.events.all(), 1):
-            if ev.latitude and ev.longitude:
+        # 1. Check if day has any geocoded events
+        day_events = day.events.filter(latitude__isnull=False, longitude__isnull=False).order_by('time', 'id')
+        
+        if day_events.exists():
+            # Use only the specific events for this day
+            for e_idx, ev in enumerate(day_events, 1):
                 map_data.append({
                     'location': ev.location,
                     'lat': float(ev.latitude),
@@ -232,6 +224,17 @@ def get_dashboard_context(request, active_trip=None):
                     'index': f"{d_idx}.{e_idx}"
                 })
                 coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
+        elif day.latitude and day.longitude:
+            # Fallback to general day location only if no granular events exist
+            map_data.append({
+                'location': day.location,
+                'lat': float(day.latitude),
+                'lon': float(day.longitude),
+                'day_id': day.id,
+                'index': d_idx,
+                'is_event': False
+            })
+            coords_for_routing.append([float(day.longitude), float(day.latitude)])
     
     context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
     
