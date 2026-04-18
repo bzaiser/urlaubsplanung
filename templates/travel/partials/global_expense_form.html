@@ -8,6 +8,7 @@
 
         <form hx-post="{{ request.path }}" 
               hx-target="#trip-overview" 
+              hx-encoding="multipart/form-data"
               hx-on::after-request="if(event.detail.successful) closeModal()">
             {% csrf_token %}
             

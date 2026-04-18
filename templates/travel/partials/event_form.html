@@ -22,8 +22,8 @@
         
         <form hx-post="{{ request.path }}" 
               hx-target="#trip-overview" 
-              hx-on::after-request="if(event.detail.successful && event.detail.xhr.status === 200) closeModal()"
-              hx-encoding="multipart/form-data">
+              hx-encoding="multipart/form-data"
+              hx-on::after-request="if(event.detail.successful && event.detail.xhr.status === 200) closeModal()">
             {% csrf_token %}
 
             <div class="modal-body">
