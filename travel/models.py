@@ -243,7 +243,18 @@ class Event(models.Model):
         return any(k in self.title.lower() for k in keywords)
 
     def save(self, *args, **kwargs):
-        """Overridden save to handle automatic Check-out creation/update."""
+        """Overridden save to handle automatic Geocoding reset and Check-out creation."""
+        # Reset geocoding if location has changed
+        if self.pk:
+            try:
+                old_instance = Event.objects.get(pk=self.pk)
+                if old_instance.location != self.location:
+                    self.latitude = None
+                    self.longitude = None
+                    self.is_geocoded = False
+            except Event.DoesNotExist:
+                pass
+
         # Recursion Guard
         if getattr(self, '_saving_internal', False):
             return super().save(*args, **kwargs)
