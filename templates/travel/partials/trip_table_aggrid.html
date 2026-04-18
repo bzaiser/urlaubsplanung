@@ -183,6 +183,11 @@
             cursor: pointer;
             accent-color: var(--accent-gold);
         }
+
+        /* Clickable column indicator */
+        .pointer-column {
+            cursor: pointer !important;
+        }
     </style>
     
     <!-- Data source for grid -->
@@ -450,6 +455,7 @@
                         minWidth: 200,
                         flex: 1,
                         editable: false,
+                        cellClass: 'pointer-column',
                         colSpan: params => {
                             if (params.data && params.data.is_global_expense) return 5;
                             return 1;
@@ -466,12 +472,12 @@
                             
                             const d = p.data;
                             if (d.is_global_expense) {
-                                let gHtml = `<div class="fw-bold" style="color: var(--accent-gold);">${d.title || ''}</div>`;
+                                let gHtml = `<div class="fw-normal" style="color: var(--accent-gold);">${d.title || ''}</div>`;
                                 gHtml += `<div class="small opacity-75" style="color: var(--text-secondary);">${d.units} x ${formatCurrency(d.unit_price)}</div>`;
                                 return gHtml;
                             }
 
-                            let html = `<div class="fw-normal lh-sm mb-1">${d.title || ''}</div>`;
+                            let html = `<div class="fw-normal lh-sm mb-1" style="color: var(--accent-teal);">${d.title || ''}</div>`;
                             if (d.nights && d.is_checkin) {
                                 const label = d.nights === 1 ? 'Nacht' : 'Nächte';
                                 html += `<div class="d-block lh-1 mb-1">
