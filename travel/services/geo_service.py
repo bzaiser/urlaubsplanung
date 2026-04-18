@@ -126,8 +126,8 @@ def update_trip_coordinates(trip, limit=2):
         
         events_to_geocode = searchable_missing_events[:remaining_limit]
         for event in events_to_geocode:
-            # Try Location, then Title, then Info
-            candidate_strings = [event.location, event.title, event.info]
+            # Try Location, then Title
+            candidate_strings = [event.location, event.title]
             lat, lon = None, None
             best_name = event.location or event.title
             for s in candidate_strings:
