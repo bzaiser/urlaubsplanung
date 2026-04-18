@@ -10,6 +10,7 @@
         </div>
 
         <form hx-post="{% url 'travel:day_edit' day.id %}" 
+              hx-target="#trip-overview" 
               hx-on::after-request="if(event.detail.successful) closeModal()">
             {% csrf_token %}
 

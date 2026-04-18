@@ -1053,20 +1053,6 @@
                 }
             }
 
-            // --- Silent Update Logic (Path A) ---
-            document.addEventListener('dayLocationUpdated', function(evt) {
-                const data = evt.detail;
-                if (window.agGridApi) {
-                    const rowNode = window.agGridApi.getRowNode(data.day_id);
-                    if (rowNode) {
-                        rowNode.data.location = data.location;
-                        // Refresh only this specific row to keep it silent
-                        window.agGridApi.refreshCells({ rowNodes: [rowNode], force: true });
-                        showToast(`✓ Ort aktualisiert: ${data.location}`);
-                    }
-                }
-            });
-
             // Simple initialization on load
             if (document.readyState === 'complete' || document.readyState === 'interactive') {
                 initGrid();

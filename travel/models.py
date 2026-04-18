@@ -79,15 +79,24 @@ class Day(models.Model):
 
     @property
     def hotel(self):
-        return self.events.filter(type='HOTEL').first()
+        """Returns the first hotel/stay event using cached data if available."""
+        events = list(self.events.all())
+        hotels = [e for e in events if e.type in ['HOTEL', 'CAMPING', 'PITCH', 'BUNGALOW']]
+        return hotels[0] if hotels else None
 
     @property
     def flight(self):
-        return self.events.filter(type='FLIGHT').first()
+        """Returns the first flight event using cached data if available."""
+        events = list(self.events.all())
+        flights = [e for e in events if e.type == 'FLIGHT']
+        return flights[0] if flights else None
 
     @property
     def transport(self):
-        return self.events.filter(type='TRANSPORT').first()
+        """Returns the first transport event using cached data if available."""
+        events = list(self.events.all())
+        transports = [e for e in events if e.type in ['TRANSPORT', 'CAR', 'CAMPER', 'BOAT', 'FERRY', 'TAXI', 'BUS', 'TRAIN', 'METRO', 'TRAM']]
+        return transports[0] if transports else None
 
     @property
     def first_image_url(self):
