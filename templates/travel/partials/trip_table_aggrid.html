@@ -593,17 +593,22 @@
                         const d = params.data;
                         if (d.station_key === 'global') {
                             const isCollapsed = window.collapsedStations.has('global');
-                            return `<div class="station-header-grid px-3 ${isCollapsed ? 'collapsed' : ''}" 
+                            return `<div class="station-header-grid ${isCollapsed ? 'collapsed' : ''}" 
                                          onclick="window.toggleStation('global')"
-                                         style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
-                                <div class="d-flex align-items-center">
-                                    <span class="caret-icon">▼</span>
-                                    <span>📦 Pauschale Posten / Budget</span>
+                                         style="padding: 0; background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal); height: 100%; display: flex; align-items: center; justify-content: flex-start; gap: 20px;">
+                                <div style="display: flex; align-items: center; height: 100%;">
+                                    <div style="width: 40px; display: flex; justify-content: center; align-items: center;">
+                                        <span class="caret-icon">▼</span>
+                                    </div>
+                                    <div style="padding-left: 0px; display: flex; align-items: center;">
+                                        <span style="font-weight: 600;">📦 Pauschale Posten / Budget</span>
+                                    </div>
                                 </div>
-                                <button onclick="event.stopPropagation(); htmx.ajax('GET', '/trip/{{ active_trip.id }}/expense/new/', { target: '#modal-container', swap: 'innerHTML' })" 
-                                        class="btn-grid-add">➕ BUDGET</button>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button onclick="event.stopPropagation(); htmx.ajax('GET', '/trip/{{ active_trip.id }}/expense/new/', { target: '#modal-container', swap: 'innerHTML' })" 
+                                            class="btn-grid-add" style="margin-right: 0;">➕ BUDGET</button>
+                                </div>
                             </div>`;
-                        }
                         } else if (d.is_station_header) {
                             const isCollapsed = window.collapsedStations.has(d.station_key);
                             return `<div class="station-header-grid px-3 ${isCollapsed ? 'collapsed' : ''}" 
