@@ -243,13 +243,11 @@ def get_dashboard_context(request, active_trip=None):
             )
             
             if geocoding_was_pending:
-                geo_service.update_trip_coordinates(active_trip, limit=3)
-
-            # Re-check status for the template (must be true for auto-refresh to work)
-            context['geocoding_pending'] = (
-                active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists() or
-                Event.objects.filter(day__trip=active_trip, is_geocoded=False, type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']).exclude(location='').exists()
-            )
+                geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=3)
+                context['last_geocoded'] = ", ".join(processed_locations)
+            
+            # Inform template if auto-refresh is needed (every 15s)
+            context['geocoding_pending'] = geocoding_was_pending
             
             # Fetch route geometry synchronously for now to restore visibility
             route_geometry = geo_service.get_route_geometry(coords_for_routing)

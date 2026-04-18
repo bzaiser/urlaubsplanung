@@ -10,13 +10,34 @@ def geocode_location(location_name):
     if not location_name or location_name == 'Planung läuft...':
         return None, None
     
-    # Smart extract: if string is "Frankfurt -> Prag" or "Frankfurt - Prag", take the first part
+    # 1. CLEANING: Remove common travel prefixes to get the pure location
     clean_location = location_name
+    
+    # Extract first part if "Start -> End"
     if '->' in clean_location:
          clean_location = clean_location.split('->')[0].strip()
     elif ' - ' in clean_location:
          clean_location = clean_location.split(' - ')[0].strip()
          
+    # Strip common prefixes (case insensitive)
+    prefixes_to_strip = [
+        'flug nach', 'flug von', 'anfahrt zum', 'anfahrt nach', 'anfahrt von',
+        'rückreise nach', 'fahrt nach', 'check-in:', 'check-out:', 'hotel:',
+        'besuch der', 'besuch des', 'wanderung zum', 'wanderung am', 'tour zum',
+        'roller-tour zur', 'taxi zum', 'privat-taxi zum', 'schnellfähre nach',
+        'fähre von', 'flug nach'
+    ]
+    import re
+    for prefix in prefixes_to_strip:
+        pattern = re.compile(re.escape(prefix), re.IGNORECASE)
+        clean_location = pattern.sub('', clean_location).strip()
+    
+    # Final cleanup (strip icons and special chars)
+    clean_location = re.sub(r'[^\w\s,\-]', '', clean_location).strip()
+
+    if not clean_location or len(clean_location) < 3:
+        return None, None
+
     url = "https://nominatim.openstreetmap.org/search"
     params = {
         'q': clean_location,
@@ -33,7 +54,6 @@ def geocode_location(location_name):
     try:
         response = requests.get(url, params=params, headers=headers, timeout=10)
         if response.status_code != 200:
-            print(f"Geocoding server returned error {response.status_code} for {clean_location}")
             return None, None
             
         data = response.json()
@@ -59,8 +79,10 @@ def geocode_location(location_name):
 def update_trip_coordinates(trip, limit=2):
     """
     Updates missing coordinates for both Days and relevant Events in a trip.
-    Returns True if more searchable items still need geocoding.
+    Returns (has_more_pending, processed_locations_list).
     """
+    processed_locations = []
+    
     # 1. Update Days first (highest priority for map)
     searchable_missing_days = trip.days.filter(
         is_geocoded=False
@@ -72,12 +94,23 @@ def update_trip_coordinates(trip, limit=2):
     
     days_to_geocode = searchable_missing_days[:limit]
     for day in days_to_geocode:
-        lat, lon = geocode_location(day.location)
+        # Try Location, then Info
+        candidate_strings = [day.location, day.info]
+        lat, lon = None, None
+        best_name = day.location
+        for s in candidate_strings:
+            if s and len(s) > 2:
+                lat, lon = geocode_location(s)
+                if lat and lon: 
+                    best_name = s
+                    break
+                
         if lat and lon:
             day.latitude = lat
             day.longitude = lon
         day.is_geocoded = True
         day.save()
+        processed_locations.append(best_name or "Unbekannter Ort")
         time.sleep(1.5)
             
     # 2. Update Events (Only travel types that affect the route)
@@ -88,24 +121,35 @@ def update_trip_coordinates(trip, limit=2):
             day__trip=trip,
             is_geocoded=False,
             type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']
-        ).exclude(location='')
+        )
         
         events_to_geocode = searchable_missing_events[:remaining_limit]
         for event in events_to_geocode:
-            lat, lon = geocode_location(event.location)
+            # Try Location, then Title, then Info
+            candidate_strings = [event.location, event.title, event.info]
+            lat, lon = None, None
+            best_name = event.location or event.title
+            for s in candidate_strings:
+                if s and len(s) > 2:
+                    lat, lon = geocode_location(s)
+                    if lat and lon: 
+                        best_name = s
+                        break
+
             if lat and lon:
                 event.latitude = lat
                 event.longitude = lon
             event.is_geocoded = True
             event.save()
+            processed_locations.append(best_name or "Unbekannter Eintrag")
             time.sleep(1.5)
 
     # Re-check if anything (Day or Event) is still pending
     days_pending = trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists()
     from ..models import Event
-    events_pending = Event.objects.filter(day__trip=trip, is_geocoded=False).exclude(location='').exists()
+    events_pending = Event.objects.filter(day__trip=trip, is_geocoded=False, type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']).exclude(location='').exists()
     
-    return days_pending or events_pending
+    return (days_pending or events_pending), processed_locations
 
 def get_route_geometry(coordinates):
     """

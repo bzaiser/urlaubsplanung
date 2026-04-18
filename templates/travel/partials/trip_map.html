@@ -33,8 +33,18 @@
     
     <!-- Legend / Overlay -->
     <div class="p-3 bg-dark border-top border-secondary shadow-sm" style="z-index: 1000;">
-        <h6 class="text-warning small mb-2 text-uppercase fw-bold"><i class="bi bi-info-circle me-1"></i>Trip-Info</h6>
-        <div id="map-stats" class="text-secondary small">Wird geladen...</div>
+        <h6 class="text-warning small mb-2 text-uppercase fw-bold">
+            <i class="bi bi-info-circle me-1"></i>Trip-Info
+            {% if geocoding_pending %}
+                <span class="ms-2 badge bg-warning text-dark animate-pulse">Syncing...</span>
+            {% endif %}
+        </h6>
+        <div id="map-stats" class="text-secondary small">
+            {% if last_geocoded %}
+                <div class="text-info mb-1"><i class="bi bi-check-circle-fill me-1"></i>Zuletzt gefunden: <strong>{{ last_geocoded }}</strong></div>
+            {% endif %}
+            <div id="map-stats-content">Wird geladen...</div>
+        </div>
     </div>
 </div>
 
@@ -293,12 +303,15 @@
 
             // Update Stats
             const totalDays = stations.reduce((a,b) => a + b.days_count, 0);
-            document.getElementById('map-stats').innerHTML = `
-                <div class="d-flex justify-content-between">
-                    <span><i class="bi bi-geo-alt me-1"></i> ${stations.length} Stationen</span>
-                    <span><i class="bi bi-calendar3 me-1"></i> ${totalDays} Tage</span>
-                </div>
-            `;
+            const statsContainer = document.getElementById('map-stats-content');
+            if (statsContainer) {
+                statsContainer.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <span><i class="bi bi-geo-alt me-1"></i> ${stations.length} Wegpunkte</span>
+                        <span><i class="bi bi-calendar3 me-1"></i> ${totalDays} Tage</span>
+                    </div>
+                `;
+            }
         };
 
         // Initialize properly
