@@ -9,6 +9,7 @@ from .views import (
     settings_modal, ai_wizard, template_create,
     template_edit, template_delete,
     add_adjustment_food, expense_upload_voucher, export_trip_ics,
+    voucher_delete,
     event_type_picker, edit_diary, delete_diary_image, set_diary_image_primary,
     trip_logic_check, global_expense_create, global_expense_edit,
     global_expense_delete, trip_checklist, checklist_item_toggle,
