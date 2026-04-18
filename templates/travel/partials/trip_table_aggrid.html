@@ -188,7 +188,7 @@
         .pointer-column {
             cursor: pointer !important;
             color: var(--accent-teal) !important;
-            font-weight: 600 !important;
+            font-weight: 500 !important;
         }
     </style>
     
@@ -625,7 +625,7 @@
                                         
                                         <!-- Editable Day Location -->
                                         <span onclick="htmx.ajax('GET', '/day/${d.day_id}/edit/', { target: '#modal-container', swap: 'innerHTML' })" 
-                                              style="color: var(--accent-teal); cursor: pointer; font-weight: 600; font-size: 14px; padding: 2px 8px; border-radius: 4px; transition: background 0.2s;"
+                                              style="color: var(--accent-teal); cursor: pointer; font-weight: 500; padding: 2px 8px; border-radius: 4px; transition: background 0.2s;"
                                               onmouseover="this.style.background='rgba(0,128,128,0.1)'"
                                               onmouseout="this.style.background='transparent'">
                                             ${d.location || '<span style="opacity:0.4; font-style:italic;">(Ort hinzufügen)</span>'}
