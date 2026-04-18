@@ -201,4 +201,5 @@ def get_route_geometry(coordinates):
     except Exception as e:
         print(f"Routing error: {e}")
         
-    return []
+    # FALLBACK: If OSRM fails, return simple straight lines (Leaflet needs [lat, lon])
+    return [[c[1], c[0]] for c in coordinates]

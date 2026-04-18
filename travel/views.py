@@ -246,6 +246,11 @@ def get_dashboard_context(request, active_trip=None):
     route_geometry = []
     processed_locations = []
     
+    # Routing: Calculate whenever we have coordinates (even on full page load)
+    route_geometry = []
+    if len(coords_for_routing) > 1:
+        route_geometry = geo_service.get_route_geometry(coords_for_routing)
+
     # Silent Background Processing (HTMX only)
     if request.htmx and geocoding_was_pending:
         geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=3)
@@ -254,7 +259,7 @@ def get_dashboard_context(request, active_trip=None):
         unique_locations = list(dict.fromkeys([loc for loc in processed_locations if loc and loc.strip()]))
         context['last_geocoded'] = ", ".join(unique_locations)
         
-        # Routing calculation
+        # Re-calculate routing if new pins were just found in this refresh
         if len(coords_for_routing) > 1:
             route_geometry = geo_service.get_route_geometry(coords_for_routing)
 
