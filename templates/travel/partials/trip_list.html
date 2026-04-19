@@ -35,11 +35,17 @@
             <h5 class="offcanvas-title text-warning fw-bold" id="offcanvasRouteMapLabel">
                 <i class="bi bi-map-fill me-2"></i>{% trans "Reiseroute" %}
             </h5>
-            <button class="btn btn-sm btn-outline-info rounded-pill px-3 ms-auto me-2 d-flex align-items-center gap-2" 
+            <button id="btn-start-story" class="btn btn-sm btn-outline-info rounded-pill px-3 d-flex align-items-center gap-2" 
                     onclick="startStoryMode()" 
                     title="{% trans 'Reise-Film abspielen' %}">
                 <i class="bi bi-play-circle-fill"></i>
                 <span class="small fw-bold text-uppercase">Story</span>
+            </button>
+            <button id="btn-stop-story" class="btn btn-sm btn-danger rounded-pill px-3 d-none align-items-center gap-2" 
+                    onclick="stopStoryMode()" 
+                    title="{% trans 'Reise-Film beenden' %}">
+                <i class="bi bi-stop-circle-fill"></i>
+                <span class="small fw-bold text-uppercase">Beenden</span>
             </button>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>

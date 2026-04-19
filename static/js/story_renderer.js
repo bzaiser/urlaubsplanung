@@ -106,18 +106,46 @@ window.startStoryMode = async function() {
         showToast("✅ Video gespeichert.");
     }
 
-    // Helper for gliding animations
-    async function glideMarker(marker, targetPath, durationPerSegment = 50) {
+    // Helper for gliding animations with parabolic zoom and rotation
+    async function glideMarker(marker, targetPath, stationInfo, durationPerSegment = 60) {
         if (!targetPath || targetPath.length === 0) return;
         
-        for (const point of targetPath) {
+        const startZoom = map.getZoom();
+        const minZoom = Math.max(startZoom - 3, 5); // Don't zoom out too far
+        const totalSteps = targetPath.length;
+
+        for (let i = 0; i < totalSteps; i++) {
             if (!window.isStoryPlaying) return;
-            // leaflet coordinates are [lng, lat] in my JSON, but marker needs [lat, lng]
+            
+            const point = targetPath[i];
+            const nextPoint = targetPath[i + 1] || point;
             const targetPos = [point[1], point[0]];
+            
+            // 1. Calculate Rotation (Heading)
+            const angle = Math.atan2(nextPoint[1] - point[1], nextPoint[0] - point[0]) * 180 / Math.PI;
+            // Emoji rotation correction (Eagle 🦅 is side-view, needs offset if desired, but 90deg is standard)
+            const rotation = angle; 
+
+            // 2. Parabolic Zoom (Zoom out in the middle)
+            const progress = i / totalSteps;
+            const dynamicZoom = startZoom - (startZoom - minZoom) * Math.sin(Math.PI * progress);
+            
+            // 3. Update Marker
             marker.setLatLng(targetPos);
-            map.panTo(targetPos, { animate: true, duration: 0.1 });
+            const iconEl = marker.getElement()?.querySelector('.story-marker-icon');
+            if (iconEl) {
+                iconEl.style.transform = `rotate(${rotation}deg)`;
+            }
+
+            // 4. Update Map (Only every few steps or for long segments to avoid stutter)
+            if (i % 5 === 0 || i === totalSteps - 1) {
+                map.setView(targetPos, dynamicZoom, { animate: true, duration: 0.1 });
+            }
+            
             await new Promise(r => setTimeout(r, durationPerSegment));
         }
+        // Ensure we land at the correct zoom
+        map.setZoom(startZoom);
     }
 
     // --- The Animation Loop ---
@@ -129,19 +157,28 @@ window.startStoryMode = async function() {
             return;
         }
 
+        // UI Sync
+        const btnStart = document.getElementById('btn-start-story');
+        const btnStop = document.getElementById('btn-stop-story');
+        if (btnStart) btnStart.classList.add('d-none');
+        if (btnStop) btnStop.classList.remove('d-none');
+        if (btnStop) btnStop.classList.add('d-flex');
+
         const s = stations[currentIndex];
         const nextS = stations[currentIndex + 1];
         
-        // 1. Move to this point (Instant if first, gliding if from previous)
+        // 1. Initial movement (instant for first)
         if (currentIndex === 0) {
             map.setView([s.lat, s.lon], 14);
             storyMarker.setLatLng([s.lat, s.lon]);
         }
         
-        // Update Icon with Flying Animation check
-        const isBird = (s.transport_icon === '🐦');
+        // Update Icon (Eagle from above)
+        const isBird = (s.transport_icon === '🐦' || s.transport_icon === '🦅');
+        const displayIcon = isBird ? '🦅' : (s.transport_icon || '🚗');
+        
         storyMarker.setIcon(L.divIcon({
-            html: `<div class="story-marker-icon ${isBird ? 'bird-flying' : ''}">${s.transport_icon || '🚗'}</div>`,
+            html: `<div class="story-marker-icon ${isBird ? 'bird-flying' : ''}">${displayIcon}</div>`,
             className: 'story-marker-container',
             iconSize: [40, 40]
         }));
@@ -176,21 +213,16 @@ window.startStoryMode = async function() {
         }
         await new Promise(r => setTimeout(r, 500));
 
-        // 5. Glide to next waypoint if it exists
-        if (nextS && routeGeometry.length > 0) {
-            // Find current and next positions in geometry
-            // Note: This is a simplified approach, we take segments between station indices
-            // For now, let's interpolate the direct path if geometry segmenting is too complex
-            // A better way: find points in routeGeometry closest to s and nextS
+        // 5. Glide to next waypoint
+        if (nextS) {
+            const steps = 30; // Base steps
             const pathPoints = []; 
-            // We just use a direct interpolation for smoothness if specific route segments are hard to slice
-            const steps = 40;
             for (let i = 0; i <= steps; i++) {
                 const lat = s.lat + (nextS.lat - s.lat) * (i / steps);
                 const lon = s.lon + (nextS.lon - s.lon) * (i / steps);
                 pathPoints.push([lon, lat]);
             }
-            await glideMarker(storyMarker, pathPoints, 40);
+            await glideMarker(storyMarker, pathPoints, nextS, 50);
         }
 
         currentIndex++;
@@ -208,5 +240,15 @@ window.stopStoryMode = function() {
     }
     const overlay = document.getElementById('story-overlay');
     if (overlay) overlay.remove();
+    
+    // UI RESTORE
+    const btnStart = document.getElementById('btn-start-story');
+    const btnStop = document.getElementById('btn-stop-story');
+    if (btnStart) btnStart.classList.remove('d-none');
+    if (btnStop) {
+        btnStop.classList.add('d-none');
+        btnStop.classList.remove('d-flex');
+    }
+
     showToast("🎬 Story beendet.");
 };
