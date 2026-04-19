@@ -47,7 +47,7 @@
                                         ✈️ Transport planen
                                     </button>
                                 {% elif finding.fix_type == 'FIX_TYPE' %}
-                                    <form hx-post="{% url 'travel:fix_event_type' finding.event_id %}" hx-target="none">
+                                    <form hx-post="{% url 'travel:fix_event_type' finding.event_id %}" hx-swap="none" hx-on::after-request="closeModal()">
                                         {% csrf_token %}
                                         <input type="hidden" name="new_type" value="{{ finding.suggested_type }}">
                                         <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill">

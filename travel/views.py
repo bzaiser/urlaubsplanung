@@ -1651,4 +1651,6 @@ def fix_event_type(request, pk):
     if new_type:
         event.type = new_type
         event.save()
-    return HttpResponse(headers={'HX-Refresh': 'true'})
+    response = HttpResponse("")
+    response['HX-Refresh'] = 'true'
+    return response
