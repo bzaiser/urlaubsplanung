@@ -106,6 +106,20 @@ window.startStoryMode = async function() {
         showToast("✅ Video gespeichert.");
     }
 
+    // Helper for gliding animations
+    async function glideMarker(marker, targetPath, durationPerSegment = 50) {
+        if (!targetPath || targetPath.length === 0) return;
+        
+        for (const point of targetPath) {
+            if (!window.isStoryPlaying) return;
+            // leaflet coordinates are [lng, lat] in my JSON, but marker needs [lat, lng]
+            const targetPos = [point[1], point[0]];
+            marker.setLatLng(targetPos);
+            map.panTo(targetPos, { animate: true, duration: 0.1 });
+            await new Promise(r => setTimeout(r, durationPerSegment));
+        }
+    }
+
     // --- The Animation Loop ---
     let currentIndex = 0;
 
@@ -118,13 +132,16 @@ window.startStoryMode = async function() {
         const s = stations[currentIndex];
         const nextS = stations[currentIndex + 1];
         
-        // 1. Move to this point
-        map.flyTo([s.lat, s.lon], 14, { duration: 1.5 });
-        storyMarker.setLatLng([s.lat, s.lon]);
+        // 1. Move to this point (Instant if first, gliding if from previous)
+        if (currentIndex === 0) {
+            map.setView([s.lat, s.lon], 14);
+            storyMarker.setLatLng([s.lat, s.lon]);
+        }
         
-        // Update Icon
+        // Update Icon with Flying Animation check
+        const isBird = (s.transport_icon === '🐦');
         storyMarker.setIcon(L.divIcon({
-            html: `<div class="story-marker-icon">${s.transport_icon || '🚗'}</div>`,
+            html: `<div class="story-marker-icon ${isBird ? 'bird-flying' : ''}">${s.transport_icon || '🚗'}</div>`,
             className: 'story-marker-container',
             iconSize: [40, 40]
         }));
@@ -148,8 +165,8 @@ window.startStoryMode = async function() {
         // Update Progress
         document.getElementById('story-progress-fill').style.width = `${((currentIndex + 1) / stations.length) * 100}%`;
 
-        // 3. Wait
-        await new Promise(r => setTimeout(r, 4500)); // 4.5s pause per stop
+        // 3. Wait at Station
+        await new Promise(r => setTimeout(r, 4000)); 
 
         // 4. Fade out card
         const card = cardAnchor.querySelector('.story-card');
@@ -159,16 +176,25 @@ window.startStoryMode = async function() {
         }
         await new Promise(r => setTimeout(r, 500));
 
-        currentIndex++;
-        
-        // 5. If there's a next point, animate the drive
-        if (nextS) {
-            // Find path segment if geometry exists
-            // For now, simplify with a direct flight
-            playNextWaypoint();
-        } else {
-            playNextWaypoint();
+        // 5. Glide to next waypoint if it exists
+        if (nextS && routeGeometry.length > 0) {
+            // Find current and next positions in geometry
+            // Note: This is a simplified approach, we take segments between station indices
+            // For now, let's interpolate the direct path if geometry segmenting is too complex
+            // A better way: find points in routeGeometry closest to s and nextS
+            const pathPoints = []; 
+            // We just use a direct interpolation for smoothness if specific route segments are hard to slice
+            const steps = 40;
+            for (let i = 0; i <= steps; i++) {
+                const lat = s.lat + (nextS.lat - s.lat) * (i / steps);
+                const lon = s.lon + (nextS.lon - s.lon) * (i / steps);
+                pathPoints.push([lon, lat]);
+            }
+            await glideMarker(storyMarker, pathPoints, 40);
         }
+
+        currentIndex++;
+        playNextWaypoint();
     }
 
     // Start!
