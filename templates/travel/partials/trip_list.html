@@ -31,7 +31,15 @@
             <h5 class="offcanvas-title text-warning fw-bold" id="offcanvasRouteMapLabel">
                 <i class="bi bi-map-fill me-2"></i>{% trans "Reiseroute" %}
             </h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-info rounded-pill px-3 d-flex align-items-center gap-2" 
+                        onclick="startStoryMode()" 
+                        title="{% trans 'Reise-Film abspielen' %}">
+                    <i class="bi bi-play-circle-fill"></i>
+                    <span class="small fw-bold text-uppercase">Story</span>
+                </button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
         </div>
         <div class="offcanvas-body p-0 d-flex flex-column" id="map-panel-body">
             {% include 'travel/partials/trip_map.html' %}
