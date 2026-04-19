@@ -374,7 +374,9 @@ def normalize_itinerary(data):
 
                     # New: Smart Keywords Check for Transport differentiation (International)
                     title_search = (str(event.get('title', '')) + " " + str(event.get('notes', '')) + " " + str(event.get('description', ''))).lower()
-                    if event['type'] in ['CAR', 'OTHER', 'TRANSPORT', 'TRAIN', 'METRO', 'TRAM']:
+                    if event['type'] in ['CAR', 'OTHER', 'TRANSPORT', 'TRAIN', 'METRO', 'TRAM', 'BUS']:
+                        flight_keywords = ['airport', 'flughafen', 'flight', 'flug', 'flieger', 'gate', 'terminal', 'abflug', 'ankunft flug']
+                        taxi_keywords = ['taxi', 'uber', 'grab', 'bolt', 'transfer', 'shuttle', 'livery', 'privat-transfer', 'hotel-shuttle']
                         train_keywords = [
                             'zug', 'bahn', 'train', 'treno', 'tren', 'comboio', 'trein', 'tog', 'tåg', 'juna', 
                             'pociąg', 'vlak', 'vonat', 'thalis', 'sncf', 'ice', 'tgv', 'eurostar', 'rail', 'stazione',
@@ -392,7 +394,15 @@ def normalize_itinerary(data):
                         bus_keywords = ['bus', 'shuttle', 'flixbus', 'autobus', 'autocar']
                         car_keywords = ['pkw', 'auto', 'anfahrt', 'anreise', 'fahrt', 'drive', 'roadtrip', 'pkw-fahrt']
                         
-                        if any(k in title_search for k in train_keywords):
+                        # 1. Patterns: Destination-based detection
+                        is_flight_pattern = '->' in title_search and any(k in title_search for k in ['airport', 'flughafen'])
+                        is_hotel_transfer = '->' in title_search and any(k in title_search for k in ['hotel', 'resort', 'stay', 'unterkunft'])
+                        
+                        if any(k in title_search for k in flight_keywords) and not is_hotel_transfer:
+                            event['type'] = 'FLIGHT'
+                        elif any(k in title_search for k in taxi_keywords) or (is_hotel_transfer and any(k in title_search for k in ['airport', 'flughafen'])):
+                            event['type'] = 'TAXI'
+                        elif any(k in title_search for k in train_keywords):
                             event['type'] = 'TRAIN'
                         elif any(k in title_search for k in metro_keywords):
                             event['type'] = 'METRO'
@@ -403,7 +413,6 @@ def normalize_itinerary(data):
                         elif any(k in title_search for k in car_keywords):
                             event['type'] = 'CAR'
                         elif event['type'] == 'OTHER' and etype_raw == 'TRANSPORT':
-                            # Falling back to CAR for generic TRANSPORT if nothing else matches
                             event['type'] = 'CAR'
 
                     # 5. Smart Title & Nights for Stays (NEW)
