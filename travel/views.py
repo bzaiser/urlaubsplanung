@@ -205,17 +205,42 @@ def get_dashboard_context(request, active_trip=None):
     map_data = []
     coords_for_routing = []
     
+    def get_transport_icon(type_code):
+        icon_map = {
+            'FLIGHT': '✈️', 'CAR': '🚗', 'RENTAL_CAR': '🚗', 'CAMPER': '🚐',
+            'CAMPING': '⛺', 'PITCH': '🚐📍', 'BOAT': '🛥️', 'FERRY': '⛴️',
+            'TRAIN': '🚆', 'METRO': '🚇', 'TRAM': '🚋', 'TAXI': '🚕', 'BUS': '🚌',
+            'SCOOTER': '🛵', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️'
+        }
+        return icon_map.get(type_code, '🐦')
+
     # Collect EVERY coordinate found, in sequence (Day then Projects/Events)
     for d_idx, day in enumerate(active_trip.days.all().order_by('date'), 1):
+        # Prefetch image and text context
+        d_image = ""
+        d_text = ""
+        if hasattr(day, 'diary'):
+            d_text = day.diary.text[:200]
+            primary_img = day.diary.images.filter(is_primary=True).first() or day.diary.images.first()
+            if primary_img:
+                d_image = primary_img.image.url
+
         # 1. Day Location (if exists)
         if day.latitude and day.longitude:
+            # Check for transport event of the day
+            trans_ev = day.events.filter(type__in=['FLIGHT', 'CAR', 'RENTAL_CAR', 'CAMPER', 'TRAIN', 'BUS', 'BOAT', 'FERRY']).first()
+            
             map_data.append({
                 'location': day.location,
                 'lat': float(day.latitude),
                 'lon': float(day.longitude),
                 'day_id': day.id,
                 'index': d_idx,
-                'is_event': False
+                'is_event': False,
+                'image_url': d_image,
+                'description': d_text,
+                'date_str': _date(day.date, "j. b Y"),
+                'transport_icon': get_transport_icon(trans_ev.type if trans_ev else 'NONE')
             })
             coords_for_routing.append([float(day.longitude), float(day.latitude)])
             
@@ -230,7 +255,11 @@ def get_dashboard_context(request, active_trip=None):
                     'event_type': ev.type,
                     'title': ev.title,
                     'day_id': day.id,
-                    'index': f"{d_idx}.{e_idx}"
+                    'index': f"{d_idx}.{e_idx}",
+                    'image_url': d_image,
+                    'description': ev.title,
+                    'date_str': _date(day.date, "j. b Y"),
+                    'transport_icon': get_transport_icon(ev.type)
                 })
                 coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
     

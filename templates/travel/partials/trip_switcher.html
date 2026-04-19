@@ -135,7 +135,9 @@
                     <li><a class="dropdown-item" href="{% url 'travel:export_trip_ics' active_trip.id %}">
                         <i class="bi bi-calendar-plus"></i>{% trans "ICS Export" %}
                     </a></li>
-                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="startStoryMode()">
+                        <i class="bi bi-film text-info"></i>{% trans "Reise-Film erstellen" %}
+                    </a></li>
                     <li><a class="dropdown-item" href="#" hx-get="{% url 'travel:trip_edit' active_trip.id %}" hx-target="#modal-container">
                         <i class="bi bi-pencil-square"></i>{% trans "Reise bearbeiten" %}
                     </a></li>
