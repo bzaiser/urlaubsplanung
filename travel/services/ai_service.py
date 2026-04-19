@@ -114,7 +114,7 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
     
     system_text += (
         "5. SICHERHEIT: Bei Flügen KEINE Zwischenlandungen in Krisengebieten!\n"
-        "6. LOGISTIK: Berücksichtige den Startort " + start_location + ". Wenn Flüge nötig sind, plane den Weg zum Flughafen ein.\n"
+        "6. LOGISTIK: Berücksichtige den Startort " + start_location + ". Plane zwingend sowohl den Weg zum Startflughafen (Hinfahrt) als auch den Weg vom Zielflughafen/Parkplatz zurück nach Hause (Rückfahrt) als eigene Events ein.\n"
         "7. FAHRZEUGE: Nutze ein " + v1_name + " (Reichweite " + v1_range + "km) NUR, wenn die Reise explizit als Wohnmobil-Tour bezeichnet wird oder das Ziel dafür bekannt ist (z.B. Neuseeland, Island, Roadtrip). In allen anderen Fällen (wie Strand-Bungalow-Urlaub) nutze " + v2_name + ", Roller (SCOOTER), TAXI oder Fähre für Teilstrecken.\n"
         "8. STIL: Bevorzuge Bungalows in Strandnähe, lokale Streetfood-Märkte (RESTAURANT) und Aktivitäten wie Wandern, Tauchen oder Roller-Touren.\n"
         "9. SICHERHEIT: KEINE Bilder, KEINE Google Maps Links, KEINE externen Medien in der Antwort.\n"
@@ -122,8 +122,8 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "11. LOGISTIK: Nutze für JEDES Event einen präzisen, geokodierbaren Standort (z.B. 'Flughafen Frankfurt', 'Hotel Adlon Berlin'). Ermittle für JEDEN Ort und JEDES Event zusätzlich die exakten Koordinaten (Breiten- und Längengrad), damit wir die Route schön auf einer Karte anzeigen können. Gib diese als 'lat' and 'lon' (Float-Zahlen) im JSON aus.\n"
         "12. LOGISTIK: Bei JEDEM Transport-Event MUSS ein Feld 'distance_km' (als Zahl) und 'end_time' (Ankunftszeit als HH:MM) vorhanden sein.\n"
         "13. LOGISTIK: Bei JEDER Aktivität MUSS ein Feld 'end_time' (Ende der Aktivität) vorhanden sein.\n"
-        "14. LOGISTIK: Bei Langstrecken mit Zwischenlandungen MUSS für JEDE Zwischenstation (Transit/Umstieg) ein eigens Event erstellt werden (z.B. 'Transit: Flughafen Hongkong'), damit die Route auf der Karte präzise dargestellt werden kann.\n"
-        "15. LOGISTIK: Bei Transporten MUSS die vollständige Kette im Location-Feld stehen (z.B. 'Oberstenfeld -> Frankfurt -> Hongkong -> Manila'), wenn es sich um eine zusammenhängende Reise handelt.\n"
+        "14. LOGISTIK: Bei Langstrecken mit Zwischenlandungen MUSS für JEDES einzelne Flugsegment (Leg) ein eigenes Event erstellt werden (z.B. Event 1: Manila -> Doha, Event 2: Doha -> Frankfurt). Jedes Segment benötigt eigene Zeiten und Koordinaten für die Karte.\n"
+        "15. LOGISTIK: Das Feld 'location' MUSS immer das KONKRETE ZIEL des jeweiligen Segments enthalten (z.B. 'Flughafen Frankfurt'). Die vollständige Reisekette darf NUR in den Notizen stehen.\n"
         "16. HIERARCHIE: Gruppiere die Reise in logische 'stations' (Stopps/Aufenthalte). Eine Station (z.B. 'Insel Palawan') kann mehrere Tage umfassen.\n"
         "17. UNTERKÜNFTE: Gruppiere ALLE festen Unterkünfte (Hotel, Bungalow, Airbnb, Ferienhaus) als 'HOTEL'. Nutze 'CAMPING' (Campingplatz) oder 'PITCH' (Stellplatz/Freies Stehen) NUR bei Wohnmobil-Touren.\n"
         "18. VERPFLEGUNG: Wenn Verpflegungswünsche (Selbstkochen vs. Restaurant) vorhanden sind, berechne KEINE Euro-Beträge. Gib stattdessen ein Objekt 'food_preferences' mit den Feldern 'cooking_ratio' (0.0-1.0), 'dining_out_ratio' (0.0-1.0) und 'price_level' ('low', 'med', 'high') aus.\n"
