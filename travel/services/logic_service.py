@@ -13,7 +13,67 @@ def check_trip_logic(trip):
     findings.extend(check_time_anomalies(trip))
     findings.extend(check_checkout_links(trip))
     findings.extend(check_checklist_deadlines(trip))
+    findings.extend(check_unknown_types(trip))
     
+    return findings
+
+def resolve_event_type(title, notes='', description=''):
+    """
+    Tries to guess the correct event type from text fields.
+    Returns (suggested_type, type_label) or (None, None).
+    """
+    search_text = f"{title or ''} {notes or ''} {description or ''}".lower()
+    
+    # Priority Keywords & Patterns
+    flight_keywords = ['airport', 'flughafen', 'flight', 'flug', 'flieger', 'gate', 'terminal', 'abflug', 'ankunft flug']
+    taxi_keywords = ['taxi', 'uber', 'grab', 'bolt', 'transfer', 'shuttle', 'livery', 'privat-transfer', 'hotel-shuttle']
+    train_keywords = ['zug', 'bahn', 'train', 'treno', 'tren', 'comboio', 'trein', 'tog', 'tåg', 'juna', 'vlak', 'thalis', 'sncf', 'ice', 'tgv', 'rail']
+    
+    # Patterns
+    is_flight_pattern = '->' in search_text and any(k in search_text for k in ['airport', 'flughafen'])
+    is_hotel_transfer = '->' in search_text and any(k in search_text for k in ['hotel', 'resort', 'stay', 'unterkunft'])
+
+    if any(k in search_text for k in flight_keywords) and not is_hotel_transfer:
+        return 'FLIGHT', 'Flug'
+    if any(k in search_text for k in taxi_keywords) or (is_hotel_transfer and any(k in search_text for k in ['airport', 'flughafen'])):
+        return 'TAXI', 'Taxi / Transfer'
+    if any(k in search_text for k in train_keywords):
+        return 'TRAIN', 'Zug / Bahn'
+    if any(k in search_text for k in ['bus', 'flixbus', 'autobus', 'autocar']):
+        return 'BUS', 'Bus'
+    if any(k in search_text for k in ['pkw', 'auto', 'fahrt', 'drive', 'roadtrip']):
+        return 'CAR', 'Auto / Fahrt'
+    
+    return None, None
+
+def check_unknown_types(trip):
+    """
+    Identifies events with type 'OTHER' (?) and suggests a fix if possible.
+    """
+    findings = []
+    other_events = Event.objects.filter(day__trip=trip, type='OTHER')
+    
+    for event in other_events:
+        suggested_type, type_label = resolve_event_type(event.title, event.notes)
+        
+        if suggested_type:
+            findings.append({
+                'id': 'TY_UNKNOWN_FIXABLE',
+                'level': 'info',
+                'event_id': event.id,
+                'message': f"Eintrag '{event.title}' hat keinen Typ (?). Vorschlag: {type_label}",
+                'suggested_type': suggested_type,
+                'type_label': type_label,
+                'fix_type': 'FIX_TYPE'
+            })
+        else:
+            findings.append({
+                'id': 'TY_UNKNOWN',
+                'level': 'info',
+                'event_id': event.id,
+                'message': f"Eintrag '{event.title}' hat keinen Typ (?).",
+                'fix_type': 'EDIT_EVENT' # Just open the edit modal
+            })
     return findings
 
 def check_checklist_deadlines(trip):

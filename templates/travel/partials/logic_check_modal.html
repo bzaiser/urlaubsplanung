@@ -46,6 +46,19 @@
                                             hx-get="{% url 'travel:event_create' finding.day_id %}" hx-target="#modal-container">
                                         ✈️ Transport planen
                                     </button>
+                                {% elif finding.fix_type == 'FIX_TYPE' %}
+                                    <form hx-post="{% url 'travel:fix_event_type' finding.event_id %}" hx-target="none">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="new_type" value="{{ finding.suggested_type }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill">
+                                            🪄 Als <strong>{{ finding.type_label }}</strong> korrigieren
+                                        </button>
+                                    </form>
+                                {% elif finding.fix_type == 'EDIT_EVENT' %}
+                                    <button class="btn btn-sm btn-outline-info rounded-pill"
+                                            hx-get="{% url 'travel:event_edit' finding.event_id %}" hx-target="#modal-container">
+                                        ✏️ Eintrag bearbeiten
+                                    </button>
                                 {% endif %}
                             </div>
                             {% endif %}

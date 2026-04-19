@@ -20,7 +20,8 @@ from .views import (
     checklist_item_date_edit, checklist_item_date_save,
     checklist_template_modal,
     checklist_template_manager, checklist_template_create_simple,
-    checklist_template_delete_simple
+    checklist_template_delete_simple,
+    fix_event_type
 )
 
 app_name = 'travel'
@@ -63,6 +64,7 @@ urlpatterns = [
     path('expense/<int:pk>/edit/', global_expense_edit, name='global_expense_edit'),
     path('expense/<int:pk>/delete/', global_expense_delete, name='global_expense_delete'),
     path('trip/<int:trip_id>/add-food-adjustment/', add_adjustment_food, name='add_adjustment_food'),
+    path('event/<int:pk>/fix-type/', fix_event_type, name='fix_event_type'),
     path('trip/<int:pk>/export-ics/', export_trip_ics, name='export_trip_ics'),
     
     # Diary & Gallery

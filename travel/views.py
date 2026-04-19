@@ -1643,3 +1643,12 @@ def force_geocode(request, trip_id):
 def offline_diary_fallback(request):
     """Simple view to serve the offline fallback template for PWA caching."""
     return render(request, 'travel/partials/diary_offline_fallback.html')
+@login_required
+def fix_event_type(request, pk):
+    """HTMX view to quickly fix an event type suggested by the Logic Check."""
+    event = get_object_or_404(Event, pk=pk)
+    new_type = request.POST.get('new_type')
+    if new_type:
+        event.type = new_type
+        event.save()
+    return HttpResponse(headers={'HX-Refresh': 'true'})
