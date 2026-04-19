@@ -111,43 +111,37 @@ window.startStoryMode = async function() {
         return Math.sqrt(Math.pow(p2.lat - p1.lat, 2) + Math.pow(p2.lon - p1.lon, 2));
     }
 
-    // Helper for gliding animations with parabolic zoom (if long distance)
-    async function glideMarker(marker, s1, s2, durationPerSegment = 40) {
+    // Helper for gliding animations across a static overview
+    async function glideMarkerAcrossOverview(marker, s1, s2, durationPerSegment = 45) {
         const dist = getCoordDistance(s1, s2);
-        const isLongDistance = dist > 1.2; // roughly > 100-150km depending on latitude
         
-        // Calculate steps based on distance to maintain a slow, majestic speed
-        // roughly: 1 degree distance = 100 steps
-        const steps = Math.max(40, Math.min(250, Math.floor(dist * 120)));
+        // 1. Prepare Overview: Fit bounds of Start and End
+        map.fitBounds([
+            [s1.lat, s1.lon],
+            [s2.lat, s2.lon]
+        ], { 
+            padding: [80, 80], 
+            animate: true, 
+            duration: 1.0 
+        });
         
-        const startZoom = map.getZoom();
-        const minZoom = Math.max(startZoom - 3, 6); 
+        // 2. Wait for map tiles to load (Overview state)
+        await new Promise(r => setTimeout(r, 1200));
 
+        // 3. Glide Marker (Map remains static)
+        const steps = Math.max(50, Math.min(300, Math.floor(dist * 150)));
         for (let i = 0; i <= steps; i++) {
             if (!window.isStoryPlaying) return;
-            
             const progress = i / steps;
             const lat = s1.lat + (s2.lat - s1.lat) * progress;
             const lon = s1.lon + (s2.lon - s1.lon) * progress;
-            const targetPos = [lat, lon];
-            
-            // 1. Position Marker (No rotation as per user)
-            marker.setLatLng(targetPos);
-
-            // 2. Dynamic Zoom (Only for long distances)
-            let dynamicZoom = startZoom;
-            if (isLongDistance) {
-                dynamicZoom = startZoom - (startZoom - minZoom) * Math.sin(Math.PI * progress);
-            }
-            
-            // 3. Update Map view periodically
-            if (i % 4 === 0 || i === steps) {
-                map.setView(targetPos, dynamicZoom, { animate: true, duration: 0.1 });
-            }
-            
+            marker.setLatLng([lat, lon]);
             await new Promise(r => setTimeout(r, durationPerSegment));
         }
-        if (isLongDistance) map.setZoom(startZoom);
+
+        // 4. Arrive: Zoom in to Destination
+        map.setView([s2.lat, s2.lon], 14, { animate: true, duration: 1.0 });
+        await new Promise(r => setTimeout(r, 1000));
     }
 
     // --- The Animation Loop ---
@@ -169,14 +163,14 @@ window.startStoryMode = async function() {
         const s = stations[currentIndex];
         const nextS = stations[currentIndex + 1];
         
-        // 1. Initial movement (instant for first)
+        // 1. Initial Position (Zoomed in)
         if (currentIndex === 0) {
             map.setView([s.lat, s.lon], 14);
             storyMarker.setLatLng([s.lat, s.lon]);
         }
         
-        // Force unified Albatross/Seagull Icon for the whole trip
-        const displayIcon = '🕊️'; // Generic bird/seagull look
+        // Force unified Albatross/Seagull Icon
+        const displayIcon = '🕊️'; 
         
         storyMarker.setIcon(L.divIcon({
             html: `<div class="story-marker-icon bird-flying">${displayIcon}</div>`,
@@ -216,7 +210,7 @@ window.startStoryMode = async function() {
 
         // 5. Glide to next waypoint
         if (nextS) {
-            await glideMarker(storyMarker, s, nextS, 50);
+            await glideMarkerAcrossOverview(storyMarker, s, nextS, 45);
         }
 
         currentIndex++;
