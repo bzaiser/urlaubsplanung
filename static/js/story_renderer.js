@@ -4,18 +4,34 @@
  */
 
 window.startStoryMode = async function() {
-    const map = window.currentTripMap;
+    console.log("🎬 Story Mode initiated...");
+    
+    let map = window.currentTripMap;
     if (!map) {
+        console.log("🗺️ Map not initialized. Trying to open offcanvas...");
+        const offcanvasEl = document.getElementById('offcanvasRouteMap');
+        if (offcanvasEl) {
+            const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+            bsOffcanvas.show();
+            showToast("⌛ Karte wird geladen...");
+            // Wait for map to be ready
+            setTimeout(() => window.startStoryMode(), 800);
+            return;
+        }
         showToast("⚠️ Karte konnte nicht gefunden werden.", true);
         return;
     }
 
-    const dataEl = document.getElementById('grid-data');
-    if (!dataEl) return;
+    const mapDataEl = document.getElementById('map-data-json');
+    if (!mapDataEl) {
+        console.error("❌ map-data-json not found in DOM");
+        return;
+    }
     
-    // Get the waypoints from the map data (this was enhanced in views.py)
-    const stations = JSON.parse(document.getElementById('map-data-json').textContent);
-    const routeGeometry = JSON.parse(document.getElementById('route-geometry-json').textContent);
+    // Get the waypoints from the map data
+    const stations = JSON.parse(mapDataEl.textContent);
+    const routeGeometryEl = document.getElementById('route-geometry-json');
+    const routeGeometry = routeGeometryEl ? JSON.parse(routeGeometryEl.textContent) : [];
 
     if (!stations || stations.length === 0) {
         showToast("⚠️ Keine Wegpunkte für die Story vorhanden.", true);
