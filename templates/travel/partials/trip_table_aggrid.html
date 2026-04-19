@@ -617,10 +617,9 @@
                             </div>`;
                         } else if (d.is_station_header) {
                             const isCollapsed = window.collapsedStations.has(d.station_key);
-                            return `<div class="station-header-grid px-3 ${isCollapsed ? 'collapsed' : ''}" 
+                            return `<div class="station-header-grid px-3 fw-semibold h-100 d-flex align-items-center fs-6 ${isCollapsed ? 'collapsed' : ''}" 
                                          onclick="window.toggleStation('${d.station_key}')"
-                                         style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal);"
-                                         class="fw-semibold h-100 d-flex align-items-center fs-6">
+                                         style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal);">
                                 <span class="caret-icon">▼</span>
                                 📍 ${d.station_location} (${d.days_count} Tage / ${d.nights_count} Nächte)
                             </div>`;

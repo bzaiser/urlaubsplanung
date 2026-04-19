@@ -218,7 +218,9 @@ def normalize_itinerary(data):
             
             for day in station.get('days', []):
                 if isinstance(day, dict):
-                    # Ensure day has the station's location/coordinates if missing
+                    # Set the new DB field 'station'
+                    day['station'] = station_name
+                    # Also ensure day has the station's location/coordinates if missing
                     if 'location' not in day or not day['location']:
                         day['location'] = station_loc
                     if 'lat' not in day: day['lat'] = station_lat
@@ -512,6 +514,7 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
             trip=trip,
             date=day_date,
             location=d_data.get('location', 'Unbekannt'),
+            station=d_data.get('station', ''),
             latitude=safe_float(d_data.get('lat')) if d_data.get('lat') else None,
             longitude=safe_float(d_data.get('lon')) if d_data.get('lon') else None,
             is_geocoded=True if d_data.get('lat') and d_data.get('lon') else False

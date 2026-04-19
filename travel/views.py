@@ -678,12 +678,22 @@ def event_quick_add(request, day_id):
 
 @login_required
 def day_bulk_edit(request):
-    """Updates multiple days (location, hotel) at once. Triggers full refresh."""
+    """Updates multiple days (location, station) at once. Triggers full refresh."""
     if request.method == 'POST':
         day_ids = request.POST.getlist('day_ids')
         location = request.POST.get('location')
+        station = request.POST.get('station')
+        
         if day_ids:
-            Day.objects.filter(id__in=day_ids).update(location=location)
+            updates = {}
+            if location is not None:
+                updates['location'] = location
+            if station is not None:
+                updates['station'] = station
+                
+            if updates:
+                Day.objects.filter(id__in=day_ids).update(**updates)
+                
             if request.htmx:
                 response = HttpResponse("")
                 response['HX-Refresh'] = 'true'

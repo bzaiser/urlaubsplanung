@@ -24,27 +24,33 @@ class Trip(models.Model):
 
     @property
     def grouped_stations(self):
-        """Groups consecutive days by location to form stations."""
+        """Groups consecutive days by their station field (or location as fallback)."""
         stations = []
         days = self.days.all().order_by('date')
         if not days:
             return []
         
+        # Helper to get the grouping key for a day
+        def get_day_group(day):
+            return (day.station or day.location).strip()
+
+        current_group_name = get_day_group(days[0])
         current_station = {
-            'location': days[0].location,
+            'location': current_group_name,
             'days': [days[0]],
-            'nights': 1
         }
         
         for day in days[1:]:
-            if day.location == current_station['location']:
+            day_group = get_day_group(day)
+            if day_group == current_group_name:
                 current_station['days'].append(day)
             else:
                 current_station['days_count'] = len(current_station['days'])
                 current_station['nights_count'] = max(0, current_station['days_count'] - 1)
                 stations.append(current_station)
+                current_group_name = day_group
                 current_station = {
-                    'location': day.location,
+                    'location': current_group_name,
                     'days': [day],
                 }
         current_station['days_count'] = len(current_station['days'])
@@ -55,6 +61,7 @@ class Trip(models.Model):
 class Day(models.Model):
     trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="days")
     date = models.DateField(_("Datum"))
+    station = models.CharField(_("Station"), max_length=200, blank=True, help_text=_("Gruppierungs-Name (z.B. 'Anreise' oder 'Palawan')"))
     location = models.CharField(_("Ort"), max_length=200)
     latitude = models.DecimalField(_("Breitengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(_("Längengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
