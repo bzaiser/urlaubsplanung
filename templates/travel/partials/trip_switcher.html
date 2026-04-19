@@ -153,6 +153,10 @@
                     <i class="bi bi-shield-lock"></i>Admin
                 </a></li>
                 <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" onclick="resetPWAData()">
+                    <i class="bi bi-arrow-clockwise"></i>{% trans "PWA & Cache zurücksetzen" %}
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
                 <li>
                     <form action="{% url 'logout' %}" method="post" class="m-0">
                         {% csrf_token %}

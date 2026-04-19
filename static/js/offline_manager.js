@@ -279,6 +279,57 @@ function getCSRFToken() {
     return document.querySelector('[name=csrfmiddlewaretoken]')?.value;
 }
 
+/**
+ * EMERGENCY RESET: Clears all local PWA data and reloads.
+ */
+async function resetPWAData() {
+    const msg = "⚠️ ACHTUNG: Dies löscht alle lokalen PWA-Daten, den Cache und Cache-Speicher.\n\n" +
+                "Nicht synchronisierte Tagebuch-Einträge gehen verloren!\n\n" +
+                "Fortfahren?";
+    
+    if (!confirm(msg)) return;
+
+    try {
+        if (window.showToast) showToast("⚙️ Reset wird durchgeführt...", false);
+
+        // 1. Unregister all Service Workers
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+                console.log("PWA Reset: SW unregistered");
+            }
+        }
+
+        // 2. Clear Caches
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+            console.log("PWA Reset: Caches deleted");
+        }
+
+        // 3. Delete IndexedDB
+        const deleteDBRequest = indexedDB.deleteDatabase(DB_NAME);
+        deleteDBRequest.onerror = () => console.warn("PWA Reset: Could not delete IndexedDB");
+        deleteDBRequest.onsuccess = () => console.log("PWA Reset: IndexedDB deleted");
+
+        // 4. Clear relevant LocalStorage/SessionStorage
+        localStorage.removeItem('pwa_version');
+        sessionStorage.removeItem('pwa_sync_finished_v28');
+        
+        if (window.showToast) showToast("✅ Reset abgeschlossen. Seite wird neu geladen...", false);
+        
+        // 5. Hard reload
+        setTimeout(() => {
+            window.location.reload(true);
+        }, 1500);
+
+    } catch (e) {
+        console.error("PWA Reset failed:", e);
+        alert("Fehler beim Reset: " + e.message);
+    }
+}
+
 // Global listeners
 window.addEventListener('online', () => {
     const autoSync = localStorage.getItem('auto_sync_mobile') === 'true';
