@@ -283,6 +283,8 @@ function getCSRFToken() {
  * EMERGENCY RESET: Clears all local PWA data and reloads.
  */
 async function resetPWAData() {
+    window.resetPWAData = resetPWAData; // Ensure global exposure
+
     const msg = "⚠️ ACHTUNG: Dies löscht alle lokalen PWA-Daten, den Cache und Cache-Speicher.\n\n" +
                 "Nicht synchronisierte Tagebuch-Einträge gehen verloren!\n\n" +
                 "Fortfahren?";
