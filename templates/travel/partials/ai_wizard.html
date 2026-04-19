@@ -62,11 +62,11 @@
                     </div>
 
                     <div class="d-grid mt-4">
-                        <button type="submit" name="action" value="manual_step" class="btn btn-warning btn-lg d-flex flex-column align-items-center py-3">
-                            <span class="fs-3 spinner-hide">📋</span>
-                            <span class="fw-bold spinner-hide">{% trans "Reise-Prompt erstellen" %}</span>
-                            <small class="text-dark opacity-75 fw-normal spinner-hide">{% trans "(Anschließend Ergebnis von KI hier einfügen)" %}</small>
-                            <div class="spinner-show d-none py-2">
+                        <button type="submit" name="action" value="manual_step" class="btn btn-warning btn-lg d-flex flex-column align-items-center py-3" hx-indicator="#loading-ai">
+                            <span class="fs-3 indicator-hide">📋</span>
+                            <span class="fw-bold indicator-hide">{% trans "Reise-Prompt erstellen" %}</span>
+                            <small class="text-dark opacity-75 fw-normal indicator-hide">{% trans "(Anschließend Ergebnis von KI hier einfügen)" %}</small>
+                            <div class="indicator-show py-2">
                                 <div class="spinner-border text-dark" role="status"></div>
                                 <div class="mt-2 fw-bold">{% trans "Erstelle Prompt..." %}</div>
                             </div>
@@ -143,9 +143,9 @@
                             </button>
                         </div>
                         <div class="col-6">
-                            <button type="submit" class="btn btn-warning w-100 py-2 fw-bold" id="ai-import-btn">
+                            <button type="submit" class="btn btn-warning w-100 py-2 fw-bold" id="ai-import-btn" hx-indicator="#ai-import-btn">
                                 <span class="indicator-hide"><i class="bi bi-check-circle me-1"></i>{% trans "Plan jetzt erstellen" %}</span>
-                                <span class="indicator-show d-none">
+                                <span class="indicator-show">
                                     <span class="spinner-border spinner-border-sm me-1" role="status"></span>
                                     {% trans "Verarbeite..." %}
                                 </span>
@@ -198,14 +198,14 @@
                                 </button>
                             </div>
                             <div class="col-6">
-                                <button type="submit" class="btn btn-warning w-100 py-2 fw-bold" hx-indicator="#loading-ai">
-                                    <span class="indicator-hide">🚀 {% trans "Reise einlesen" %}</span>
-                                    <span class="indicator-show d-none">
-                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                        {% trans "Lese ein..." %}
-                                    </span>
-                                </button>
-                            </div>
+                            <button type="submit" class="btn btn-warning w-100 py-2 fw-bold" hx-indicator="#loading-ai">
+                                <span class="indicator-hide">🚀 {% trans "Reise einlesen" %}</span>
+                                <span class="indicator-show">
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                    {% trans "Lese ein..." %}
+                                </span>
+                            </button>
+                        </div>
                         </div>
                     </form>
                 </div>
