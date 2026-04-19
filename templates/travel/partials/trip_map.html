@@ -267,14 +267,14 @@
 
             // 7. Global Handlers
             window.flyToLocation = (lat, lon, index) => {
+                const offcanvasEl = document.getElementById('offcanvasRouteMap');
+                const isVisible = offcanvasEl && offcanvasEl.classList.contains('show');
+                
+                if (!isVisible) return; // Silent return if map is closed
+
                 const activeMap = window.currentTripMap;
                 if (!activeMap || !lat || !lon) return;
                 
-                const offcanvasEl = document.getElementById('offcanvasRouteMap');
-                if (offcanvasEl && !offcanvasEl.classList.contains('show')) {
-                    bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl).show();
-                }
-
                 window.mapWasInteracted = true; // Manual jump counts as interaction
                 activeMap.flyTo([lat, lon], activeMap.getZoom(), { duration: 1.2 });
                 
