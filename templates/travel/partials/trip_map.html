@@ -149,15 +149,23 @@
         position: absolute;
         left: 0;
         top: 0;
-        width: 8px;
+        width: 12px;
         height: 100%;
         cursor: ew-resize;
         z-index: 1050;
         transition: background 0.2s;
+        border-left: 1px solid transparent;
+        pointer-events: auto; /* Ensure it captures mouse even if parent has pointer-events: none */
     }
-    .resize-handle:hover, .resize-handle.active {
-        background: rgba(255, 193, 7, 0.3);
+    .resize-handle:hover {
+        background: rgba(255, 193, 7, 0.1);
         border-left: 2px solid var(--accent-gold);
+    }
+    .resize-handle.active {
+        background: rgba(255, 193, 7, 0.2);
+        border-left: 2px solid var(--accent-gold);
+        width: 100vw; /* Create a large invisible target while dragging */
+        left: -50vw;
     }
 </style>
 
@@ -169,31 +177,42 @@
 
         let isResizing = false;
 
-        handle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            handle.classList.add('active');
-            document.body.style.cursor = 'ew-resize';
-            document.body.style.userSelect = 'none';
-        });
-
-        document.addEventListener('mousemove', (e) => {
+        const onMouseMove = (e) => {
             if (!isResizing) return;
             const newWidth = window.innerWidth - e.clientX;
-            if (newWidth > 320 && newWidth < window.innerWidth * 0.8) {
+            if (newWidth > 350 && newWidth < window.innerWidth * 0.9) {
                 offcanvas.style.width = newWidth + 'px';
+                // Trigger map internal resize
                 if (window.currentTripMap) {
-                    window.currentTripMap.invalidateSize();
+                    window.currentTripMap.invalidateSize({ animate: false });
                 }
             }
-        });
+        };
 
-        document.addEventListener('mouseup', () => {
+        const onMouseUp = () => {
             if (isResizing) {
                 isResizing = false;
                 handle.classList.remove('active');
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
+                
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                
+                if (window.currentTripMap) {
+                    window.currentTripMap.invalidateSize();
+                }
             }
+        };
+
+        handle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            handle.classList.add('active');
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
         });
     })();
 </script>
