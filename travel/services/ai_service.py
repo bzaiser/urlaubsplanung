@@ -118,14 +118,14 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "8. STIL: Bevorzuge Bungalows in Strandnähe, lokale Streetfood-Märkte (RESTAURANT) und Aktivitäten wie Wandern, Tauchen oder Roller-Touren.\n"
         "9. SICHERHEIT: KEINE Bilder, KEINE Google Maps Links, KEINE externen Medien in der Antwort.\n"
         "10. LOGISTIK: Jeder einzelne der " + str(days) + " Tage MUSS mindestens ein Event enthalten (KEINE leeren Tage).\n"
-        "11. LOGISTIK: Nutze für JEDES Event einen präzisen, geokodierbaren Standort (z.B. 'Flughafen Frankfurt', 'Hotel Adlon Berlin'). Ermittle für JEDEN Ort und JEDES Event zusätzlich die exakten Koordinaten (Breiten- und Längengrad), damit wir die Route schön auf einer Karte anzeigen können. Gib diese als 'lat' and 'lon' (Float-Zahlen) im JSON aus.\n"
-        "12. LOGISTIK: Bei JEDEM Transport-Event MUSS ein Feld 'distance_km' (als Zahl) und 'end_time' (Ankunftszeit als HH:MM) vorhanden sein.\n"
+        "11. LOGISTIK: Nutze für JEDES Event einen präzisen, geokodierbaren Standort (z.B. 'Flughafen Frankfurt', 'Hotel Adlon Berlin'). Ermittle für JEDEN Ort und JEDES Event zusätzlich die exakten Koordinaten (Breiten- und Längengrad), damit wir die Route schön auf einer Karte anzeigen können. Gib diese als 'lat' and 'lon' (        "12. LOGISTIK: Bei JEDEM Transport-Event MUSS ein Feld 'distance_km' (als Zahl) und 'end_time' (Ankunftszeit als HH:MM) vorhanden sein.\n"
         "13. LOGISTIK: Bei JEDER Aktivität MUSS ein Feld 'end_time' (Ende der Aktivität) vorhanden sein.\n"
-        "14. LOGISTIK: Bei Langstrecken mit Zwischenlandungen MUSS für JEDE Zwischenstation (Transit/Umstieg) ein eigenes Event erstellt werden (z.B. 'Transit: Flughafen Hongkong'), damit die Route auf der Karte präzise dargestellt werden kann.\n"
+        "14. LOGISTIK: Bei Langstrecken mit Zwischenlandungen MUSS für JEDE Zwischenstation (Transit/Umstieg) ein eigens Event erstellt werden (z.B. 'Transit: Flughafen Hongkong'), damit die Route auf der Karte präzise dargestellt werden kann.\n"
         "15. LOGISTIK: Bei Transporten MUSS die vollständige Kette im Location-Feld stehen (z.B. 'Oberstenfeld -> Frankfurt -> Hongkong -> Manila'), wenn es sich um eine zusammenhängende Reise handelt.\n"
-        "16. UNTERKÜNFTE: Gruppiere ALLE festen Unterkünfte (Hotel, Bungalow, Airbnb, Ferienhaus) als 'HOTEL'. Nutze 'CAMPING' (Campingplatz) oder 'PITCH' (Stellplatz/Freies Stehen) NUR bei Wohnmobil-Touren.\n"
-        "17. VERPFLEGUNG: Wenn Verpflegungswünsche (Selbstkochen vs. Restaurant) vorhanden sind, berechne KEINE Euro-Beträge. Gib stattdessen ein Objekt 'food_preferences' mit den Feldern 'cooking_ratio' (0.0-1.0), 'dining_out_ratio' (0.0-1.0) und 'price_level' ('low', 'med', 'high') aus.\n"
-        "18. GLOBAL_EXPENSES: Erfasse NUR zusätzliche Gebühren wie 'Maut', 'Vignette' oder 'Fähre-Pauschale' in der Liste 'global_expenses'. (KEINE Verpflegung hier eintragen!).\n"
+        "16. HIERARCHIE: Gruppiere die Reise in logische 'stations' (Stopps/Aufenthalte). Eine Station (z.B. 'Insel Palawan') kann mehrere Tage umfassen.\n"
+        "17. UNTERKÜNFTE: Gruppiere ALLE festen Unterkünfte (Hotel, Bungalow, Airbnb, Ferienhaus) als 'HOTEL'. Nutze 'CAMPING' (Campingplatz) oder 'PITCH' (Stellplatz/Freies Stehen) NUR bei Wohnmobil-Touren.\n"
+        "18. VERPFLEGUNG: Wenn Verpflegungswünsche (Selbstkochen vs. Restaurant) vorhanden sind, berechne KEINE Euro-Beträge. Gib stattdessen ein Objekt 'food_preferences' mit den Feldern 'cooking_ratio' (0.0-1.0), 'dining_out_ratio' (0.0-1.0) und 'price_level' ('low', 'med', 'high') aus.\n"
+        "19. GLOBAL_EXPENSES: Erfasse NUR zusätzliche Gebühren wie 'Maut', 'Vignette' oder 'Fähre-Pauschale' in der Liste 'global_expenses'. (KEINE Verpflegung hier eintragen!).\n"
         "20. REISEGRUPPE: Berücksichtige bei der Planung (Zimmerwahl, Restaurants, Aktivitäten) die Anzahl und das Alter der Personen.\n"
         "21. UNTERKUNFT-DAUER: Gib bei JEDEM Check-in (HOTEL, CAMPING, PITCH) das Feld 'nights' (Anzahl der Nächte) an. Die Summe der Nächte muss die gesamte Reisedauer abdecken.\n"
         "22. TRANSPORT-TYPEN: Nutze für die Klassifizierung (Feld 'type') folgende Tabelle für lokale Begriffe:\n"
@@ -139,12 +139,18 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "{\n"
         "  \"name\": \"Reise-Titel\",\n"
         "  \"assistant_reasoning\": \"...\",\n"
-        "  \"days\": [\n"
+        "  \"stations\": [\n"
         "    {\n"
-        "       \"location\": \"Ort\",\n"
+        "       \"name\": \"Name der Station (z.B. Insel Palawan)\",\n"
+        "       \"location\": \"Haupt-Ort/POI für die Karte\",\n"
         "       \"lat\": 1.23, \"lon\": 45.67,\n"
-        "       \"events\": [\n"
-        "         {\"title\": \"Check-in: Hotel Name\", \"type\": \"HOTEL\", \"nights\": 2, \"lat\": 1.23, \"lon\": 45.67, \"time\": \"14:00\", \"end_time\": \"15:00\"}\n"
+        "       \"days\": [\n"
+        "         {\n"
+        "            \"day_number\": 1,\n"
+        "            \"events\": [\n"
+        "              {\"title\": \"Check-in: Hotel Name\", \"type\": \"HOTEL\", \"nights\": 2, \"lat\": 1.23, \"lon\": 45.67, \"time\": \"14:00\", \"end_time\": \"15:00\"}\n"
+        "            ]\n"
+        "         }\n"
         "       ]\n"
         "    }\n"
         "  ],\n"
@@ -199,6 +205,25 @@ def normalize_itinerary(data):
     for old_key, new_key in mapping.items():
         if old_key in data and new_key not in data:
             data[new_key] = data[old_key]
+
+    # 2.5 Handle NEW 'stations' hierarchy (Station -> Day -> Event)
+    if 'stations' in data and isinstance(data['stations'], list) and 'days' not in data:
+        flattened_days = []
+        for station in data['stations']:
+            station_name = station.get('name', station.get('location', 'Station'))
+            station_loc = station.get('location', station_name)
+            station_lat = station.get('lat')
+            station_lon = station.get('lon')
+            
+            for day in station.get('days', []):
+                if isinstance(day, dict):
+                    # Ensure day has the station's location/coordinates if missing
+                    if 'location' not in day or not day['location']:
+                        day['location'] = station_loc
+                    if 'lat' not in day: day['lat'] = station_lat
+                    if 'lon' not in day: day['lon'] = station_lon
+                    flattened_days.append(day)
+        data['days'] = flattened_days
             
     # 3. Ensure 'days' is present (and check nested keys again)
     if 'days' not in data:
