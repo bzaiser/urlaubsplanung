@@ -283,7 +283,7 @@ def get_dashboard_context(request, active_trip=None):
 
     # Silent Background Processing (HTMX only)
     if request.htmx and geocoding_was_pending:
-        geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=3)
+        geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=10)
         
         # Deduplicate and clean for UI
         unique_locations = list(dict.fromkeys([loc for loc in processed_locations if loc and loc.strip()]))

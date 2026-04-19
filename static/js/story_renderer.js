@@ -74,7 +74,7 @@ window.startStoryMode = async function() {
     
     // Initialize Path Layer
     if (window.storyPath) window.storyPath.remove();
-    window.storyPath = L.polyline([], {
+    window.storyPath = L.polyline([[stations[0].lat, stations[0].lon]], {
         color: 'var(--accent-gold)',
         weight: 3,
         opacity: 0.6,
@@ -236,8 +236,10 @@ window.startStoryMode = async function() {
         // Update Progress
         document.getElementById('story-progress-fill').style.width = `${((currentIndex + 1) / stations.length) * 100}%`;
 
-        // 3. Wait at Station
-        await new Promise(r => setTimeout(r, 4000)); 
+        // 3. Wait at Station (Slideshow logic: faster if next point is the same location)
+        const isSameLocation = nextS && Math.sqrt(Math.pow(nextS.lat - s.lat, 2) + Math.pow(nextS.lon - s.lon, 2)) < 0.0001;
+        const waitTime = isSameLocation ? 1800 : 4000;
+        await new Promise(r => setTimeout(r, waitTime)); 
 
         // 4. Fade out card
         const card = cardAnchor.querySelector('.story-card');
