@@ -9,7 +9,6 @@ def check_trip_logic(trip):
     findings.extend(check_accommodation_gaps(trip))
     findings.extend(check_transport_gaps(trip))
     findings.extend(check_meal_coverage(trip))
-    findings.extend(check_vouchers(trip))
     findings.extend(check_storno_deadlines(trip))
     findings.extend(check_time_anomalies(trip))
     findings.extend(check_checkout_links(trip))
@@ -118,19 +117,6 @@ def check_meal_coverage(trip):
             'message': f"An {len(missing_days)} Tagen ist keine Verpflegung (Restaurant/Frühstück) geplant.",
             'fix_type': 'ADD_FOOD_PAUSCHAL',
             'missing_day_ids': [d.id for d in missing_days]
-        })
-    return findings
-
-def check_vouchers(trip):
-    findings = []
-    events = Event.objects.filter(day__trip=trip, cost_booked__gt=50, voucher='')
-    for event in events:
-        findings.append({
-            'id': 'VO_MISSING',
-            'level': 'warning',
-            'event_id': event.id,
-            'message': f"Beleg fehlt für '{event.title}' ({event.cost_booked}€).",
-            'fix_type': 'UPLOAD_VOUCHER'
         })
     return findings
 
