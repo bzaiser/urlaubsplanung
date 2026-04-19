@@ -580,7 +580,7 @@
                     rowData: rowData,
                     columnDefs: columnDefs,
                     defaultColDef: { 
-                        sortable: true, 
+                        sortable: false, // Prevents breaking the hierarchy/grouping
                         filter: true, 
                         resizable: true,
                         editable: params => !params.data.is_global_expense,

@@ -515,7 +515,7 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
                 day=day,
                 title=e_data.get('title', 'Event'),
                 type=e_data.get('type', 'OTHER'),
-                location=e_data.get('location', ''),
+                location=str(e_data.get('location', '')).strip(),
                 cost_estimated=safe_float(e_data.get('cost_estimated', 0)),
                 distance_km=dist_final,
                 nights=safe_int(e_data.get('nights')),
@@ -527,6 +527,7 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
                 longitude=safe_float(e_data.get('lon')) if e_data.get('lon') else None,
                 is_geocoded=True if e_data.get('lat') and e_data.get('lon') else False
             )
+            e_obj._skip_automation = True # [FAST LANE] bypass slow side effects
             
             def clean_time(t):
                 if not t: return None

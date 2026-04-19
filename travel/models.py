@@ -61,6 +61,9 @@ class Day(models.Model):
     is_geocoded = models.BooleanField(_("Geokodierung versucht"), default=False)
     
     def save(self, *args, **kwargs):
+        if self.location:
+            self.location = self.location.strip()
+            
         if self.pk:
             old_day = Day.objects.get(pk=self.pk)
             if old_day.location != self.location:
@@ -210,6 +213,9 @@ class Event(models.Model):
     cost_base = models.DecimalField(_("Kosten Basis EUR (legacy)"), max_digits=12, decimal_places=2, default=0)
     
     is_paid = models.BooleanField(_("Bezahlt"), default=False)
+
+    # Internal flag [NEW]
+    _skip_automation = False
     
     class Meta:
         ordering = ['time', 'id']
@@ -244,19 +250,21 @@ class Event(models.Model):
 
     def save(self, *args, **kwargs):
         """Overridden save to handle automatic Geocoding reset and Check-out creation."""
-        # Reset geocoding if location has changed
-        if self.pk:
+        if self.location:
+            self.location = self.location.strip()
+
+        # Optimize: Only check for changes if it's an update AND we're not skipping
+        if self.pk and not self._skip_automation:
             try:
                 old_instance = Event.objects.get(pk=self.pk)
                 if old_instance.location != self.location:
                     self.latitude = None
                     self.longitude = None
                     self.is_geocoded = False
-            except Event.DoesNotExist:
-                pass
+            except Event.DoesNotExist: pass
 
-        # Recursion Guard
-        if getattr(self, '_saving_internal', False):
+        # Recursion and Automation Guard
+        if getattr(self, '_saving_internal', False) or self._skip_automation:
             return super().save(*args, **kwargs)
 
         # Auto-complete/Format titles for better logic recognition
