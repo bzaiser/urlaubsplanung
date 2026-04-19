@@ -71,6 +71,17 @@ window.startStoryMode = async function() {
     window.isRecording = false;
     window.mediaRecorder = null;
     window.recordedChunks = [];
+    
+    // Initialize Path Layer
+    if (window.storyPath) window.storyPath.remove();
+    window.storyPath = L.polyline([], {
+        color: 'var(--accent-gold)',
+        weight: 3,
+        opacity: 0.6,
+        dashArray: '5, 10',
+        lineCap: 'round',
+        lineJoin: 'round'
+    }).addTo(map);
 
     // Recording Logic
     const recordBtn = document.getElementById('record-btn');
@@ -114,7 +125,30 @@ window.startStoryMode = async function() {
     // Helper for gliding animations across a static overview
     async function glideMarkerAcrossOverview(marker, s1, s2, durationPerSegment = 45) {
         const dist = getCoordDistance(s1, s2);
+        const threshold = 0.005; // ~500m threshold for "local" jumps
         
+        if (dist < 0.0001) {
+            // Effectively same point: skip animation
+            marker.setLatLng([s2.lat, s2.lon]);
+            if (window.storyPath) window.storyPath.addLatLng([s2.lat, s2.lon]);
+            return;
+        }
+
+        if (dist < threshold) {
+            // Local jump: glide without zooming out
+            const steps = 15;
+            for (let i = 0; i <= steps; i++) {
+                if (!window.isStoryPlaying) return;
+                const progress = i / steps;
+                const lat = s1.lat + (s2.lat - s1.lat) * progress;
+                const lon = s1.lon + (s2.lon - s1.lon) * progress;
+                marker.setLatLng([lat, lon]);
+                if (window.storyPath) window.storyPath.addLatLng([lat, lon]);
+                await new Promise(r => setTimeout(r, 20));
+            }
+            return;
+        }
+
         // 1. Prepare Overview: Fit bounds of Start and End
         map.fitBounds([
             [s1.lat, s1.lon],
@@ -129,15 +163,20 @@ window.startStoryMode = async function() {
         await new Promise(r => setTimeout(r, 1200));
 
         // 3. Glide Marker (Map remains static)
-        const steps = Math.max(50, Math.min(300, Math.floor(dist * 150)));
+        const steps = Math.max(30, Math.min(300, Math.floor(dist * 150)));
         for (let i = 0; i <= steps; i++) {
             if (!window.isStoryPlaying) return;
             const progress = i / steps;
             const lat = s1.lat + (s2.lat - s1.lat) * progress;
             const lon = s1.lon + (s2.lon - s1.lon) * progress;
             marker.setLatLng([lat, lon]);
+            
+            // Add to path every few steps for performance
+            if (window.storyPath && i % 2 === 0) window.storyPath.addLatLng([lat, lon]);
+            
             await new Promise(r => setTimeout(r, durationPerSegment));
         }
+        if (window.storyPath) window.storyPath.addLatLng([s2.lat, s2.lon]);
 
         // 4. Arrive: Zoom in to Destination
         map.setView([s2.lat, s2.lon], 14, { animate: true, duration: 1.0 });
@@ -225,6 +264,10 @@ window.stopStoryMode = function() {
     window.isStoryPlaying = false;
     if (window.activeStoryMarker) {
         window.activeStoryMarker.remove();
+    }
+    if (window.storyPath) {
+        window.storyPath.remove();
+        window.storyPath = null;
     }
     const overlay = document.getElementById('story-overlay');
     if (overlay) overlay.remove();
