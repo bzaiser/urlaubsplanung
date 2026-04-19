@@ -106,46 +106,48 @@ window.startStoryMode = async function() {
         showToast("✅ Video gespeichert.");
     }
 
-    // Helper for gliding animations with parabolic zoom and rotation
-    async function glideMarker(marker, targetPath, stationInfo, durationPerSegment = 60) {
-        if (!targetPath || targetPath.length === 0) return;
+    // Helper to calculate coordinate distance (rough approximation for thresholding)
+    function getCoordDistance(p1, p2) {
+        return Math.sqrt(Math.pow(p2.lat - p1.lat, 2) + Math.pow(p2.lon - p1.lon, 2));
+    }
+
+    // Helper for gliding animations with parabolic zoom (if long distance)
+    async function glideMarker(marker, s1, s2, durationPerSegment = 40) {
+        const dist = getCoordDistance(s1, s2);
+        const isLongDistance = dist > 1.2; // roughly > 100-150km depending on latitude
+        
+        // Calculate steps based on distance to maintain a slow, majestic speed
+        // roughly: 1 degree distance = 100 steps
+        const steps = Math.max(40, Math.min(250, Math.floor(dist * 120)));
         
         const startZoom = map.getZoom();
-        const minZoom = Math.max(startZoom - 3, 5); // Don't zoom out too far
-        const totalSteps = targetPath.length;
+        const minZoom = Math.max(startZoom - 3, 6); 
 
-        for (let i = 0; i < totalSteps; i++) {
+        for (let i = 0; i <= steps; i++) {
             if (!window.isStoryPlaying) return;
             
-            const point = targetPath[i];
-            const nextPoint = targetPath[i + 1] || point;
-            const targetPos = [point[1], point[0]];
+            const progress = i / steps;
+            const lat = s1.lat + (s2.lat - s1.lat) * progress;
+            const lon = s1.lon + (s2.lon - s1.lon) * progress;
+            const targetPos = [lat, lon];
             
-            // 1. Calculate Rotation (Heading)
-            const angle = Math.atan2(nextPoint[1] - point[1], nextPoint[0] - point[0]) * 180 / Math.PI;
-            // Emoji rotation correction (Eagle 🦅 is side-view, needs offset if desired, but 90deg is standard)
-            const rotation = angle; 
-
-            // 2. Parabolic Zoom (Zoom out in the middle)
-            const progress = i / totalSteps;
-            const dynamicZoom = startZoom - (startZoom - minZoom) * Math.sin(Math.PI * progress);
-            
-            // 3. Update Marker
+            // 1. Position Marker (No rotation as per user)
             marker.setLatLng(targetPos);
-            const iconEl = marker.getElement()?.querySelector('.story-marker-icon');
-            if (iconEl) {
-                iconEl.style.transform = `rotate(${rotation}deg)`;
-            }
 
-            // 4. Update Map (Only every few steps or for long segments to avoid stutter)
-            if (i % 5 === 0 || i === totalSteps - 1) {
+            // 2. Dynamic Zoom (Only for long distances)
+            let dynamicZoom = startZoom;
+            if (isLongDistance) {
+                dynamicZoom = startZoom - (startZoom - minZoom) * Math.sin(Math.PI * progress);
+            }
+            
+            // 3. Update Map view periodically
+            if (i % 4 === 0 || i === steps) {
                 map.setView(targetPos, dynamicZoom, { animate: true, duration: 0.1 });
             }
             
             await new Promise(r => setTimeout(r, durationPerSegment));
         }
-        // Ensure we land at the correct zoom
-        map.setZoom(startZoom);
+        if (isLongDistance) map.setZoom(startZoom);
     }
 
     // --- The Animation Loop ---
@@ -173,14 +175,13 @@ window.startStoryMode = async function() {
             storyMarker.setLatLng([s.lat, s.lon]);
         }
         
-        // Update Icon (Eagle from above)
-        const isBird = (s.transport_icon === '🐦' || s.transport_icon === '🦅');
-        const displayIcon = isBird ? '🦅' : (s.transport_icon || '🚗');
+        // Force unified Albatross/Seagull Icon for the whole trip
+        const displayIcon = '🕊️'; // Generic bird/seagull look
         
         storyMarker.setIcon(L.divIcon({
-            html: `<div class="story-marker-icon ${isBird ? 'bird-flying' : ''}">${displayIcon}</div>`,
+            html: `<div class="story-marker-icon bird-flying">${displayIcon}</div>`,
             className: 'story-marker-container',
-            iconSize: [40, 40]
+            iconSize: [45, 45]
         }));
 
         // 2. Show Card
@@ -215,14 +216,7 @@ window.startStoryMode = async function() {
 
         // 5. Glide to next waypoint
         if (nextS) {
-            const steps = 30; // Base steps
-            const pathPoints = []; 
-            for (let i = 0; i <= steps; i++) {
-                const lat = s.lat + (nextS.lat - s.lat) * (i / steps);
-                const lon = s.lon + (nextS.lon - s.lon) * (i / steps);
-                pathPoints.push([lon, lat]);
-            }
-            await glideMarker(storyMarker, pathPoints, nextS, 50);
+            await glideMarker(storyMarker, s, nextS, 50);
         }
 
         currentIndex++;
