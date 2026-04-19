@@ -894,8 +894,10 @@
                 // Clear existing hidden inputs for batch IDs
                 toolbar.querySelectorAll('input[type="hidden"][data-batch-id]').forEach(i => i.remove());
                 
-                // Add new hidden inputs into the common container so they can be included via hx-include
+                // Add new hidden inputs into the actions container so they can be included via hx-include
                 const actionsContainer = toolbar.querySelector('.toolbar-actions');
+                if (!actionsContainer) return;
+                
                 ids.forEach(id => {
                     if (id === undefined || id === null) return;
                     const input = document.createElement('input');

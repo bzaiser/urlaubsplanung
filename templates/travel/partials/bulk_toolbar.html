@@ -13,53 +13,40 @@
         <!-- Contextual Toolsets -->
         <div class="toolbar-actions">
             <!-- Day Action Set -->
-            <div id="day-toolset" class="toolset" style="display: flex; align-items: center; gap: 10px;">
+            <div id="day-toolset" class="toolset" style="display: flex; align-items: center; gap: 15px;">
                 <div class="tool-group">
                     <form id="bulk-edit-form" hx-post="{% url 'travel:day_bulk_edit' %}" 
-                          hx-target="body" hx-on::after-request="clearSelection();"
-                          style="display: flex; align-items: center; gap: 5px;">
-                        <input type="text" name="location" placeholder="Station setzen..." class="premium-input-sm">
-                        <button type="submit" class="premium-icon-btn" title="Station für alle markierten Tage setzen">
-                            <i class="bi bi-geo-alt-fill"></i>
+                          hx-target="#trip-overview" hx-include="[name='day_ids']"
+                          hx-on::after-request="clearSelection();"
+                          style="display: flex; align-items: center; gap: 8px;">
+                        <input type="text" name="location" placeholder="Station / Ort setzen..." class="premium-input-sm" required>
+                        <button type="submit" class="premium-pill-btn info" title="Station für alle markierten Tage setzen">
+                            <i class="bi bi-check-circle-fill me-1"></i> Speichern
                         </button>
                     </form>
-                </div>
-                
-                <div class="tool-group ms-2" style="display: flex; align-items: center; gap: 8px;">
-                    <button class="premium-pill-btn success" 
-                            hx-post="{% url 'travel:day_insert' %}" 
-                            hx-target="body" hx-include="[name='day_ids']"
-                            hx-on::after-request="clearSelection();">
-                        <i class="bi bi-plus-lg me-1"></i><span>Tag davor einfügen</span>
-                    </button>
-                    <button class="premium-pill-btn danger" 
-                            hx-post="{% url 'travel:day_delete_and_shift' %}" 
-                            hx-target="body" hx-include="[name='day_ids']"
-                            hx-confirm="Markierte Tage löschen? Nachfolgende Tage rücken automatisch nach."
-                            hx-on::after-request="clearSelection();">
-                        <i class="bi bi-trash3 me-1"></i><span>Löschen & Rücken</span>
-                    </button>
                 </div>
             </div>
 
             <!-- Event Action Set (hidden by default) -->
-            <div id="event-toolset" class="toolset" style="display: none; align-items: center; gap: 10px;">
+            <div id="event-toolset" class="toolset" style="display: none; align-items: center; gap: 15px;">
                 <div class="tool-group">
                     <form id="event-move-form" hx-post="{% url 'travel:event_bulk_move' %}" 
-                          hx-target="body" hx-on::after-request="clearSelection();"
-                          style="display: flex; align-items: center; gap: 5px;">
-                        <input type="date" name="target_date" class="premium-input-sm">
-                        <button type="submit" class="premium-pill-btn" title="Verschieben">
-                            <i class="bi bi-arrow-right-short"></i> Schieben
+                          hx-target="#trip-overview" hx-include="[name='event_ids']"
+                          hx-on::after-request="clearSelection();"
+                          style="display: flex; align-items: center; gap: 8px;">
+                        <input type="date" name="target_date" class="premium-input-sm" required>
+                        <button type="submit" class="premium-pill-btn info" title="Verschieben">
+                            <i class="bi bi-arrow-right-short me-1"></i> Schieben
                         </button>
                     </form>
                 </div>
-                <button class="premium-pill-btn danger ms-2" 
+                <div class="toolbar-divider mini"></div>
+                <button class="premium-pill-btn danger" 
                         hx-post="{% url 'travel:event_bulk_delete' %}" 
-                        hx-target="body" hx-include="[name='event_ids']"
-                        hx-confirm="Einträge wirklich löschen?"
+                        hx-target="#trip-overview" hx-include="[name='event_ids']"
+                        hx-confirm="Alle markierten Einträge wirklich löschen?"
                         hx-on::after-request="clearSelection();">
-                    <i class="bi bi-trash3"></i> Alle löschen
+                    <i class="bi bi-trash3 me-1"></i> Löschen
                 </button>
             </div>
         </div>
