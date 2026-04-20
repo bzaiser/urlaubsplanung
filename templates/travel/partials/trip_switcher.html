@@ -145,7 +145,7 @@
                 {% endif %}
                 
                 <li class="px-3 py-2 text-secondary small fw-bold text-uppercase opacity-75">{% trans "Global" %}</li>
-                <li><a class="dropdown-item" href="#" hx-post="{% url 'travel:import_polarsteps' %}" hx-confirm="{% trans 'Polarsteps-Export importieren?' %}" hx-swap="none">
+                <li><a class="dropdown-item" href="#" hx-get="{% url 'travel:import_polarsteps' %}" hx-target="#modal-container">
                     <i class="bi bi-cloud-download text-info"></i>{% trans "Polarsteps Import" %}
                 </a></li>
                 <li><a class="dropdown-item" href="#" hx-get="{% url 'travel:settings_modal' %}" hx-target="#modal-container">

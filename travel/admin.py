@@ -3,7 +3,8 @@ from .models import Trip, Day, Event, GlobalExpense, DiaryEntry, DiaryImage, Tri
 
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
-    list_display = ('name', 'start_date', 'end_date', 'persons_count')
+    list_display = ('name', 'user', 'start_date', 'end_date', 'persons_count')
+    list_filter = ('user', 'start_date')
     search_fields = ('name',)
 
 @admin.register(Day)

@@ -48,7 +48,7 @@ def get_dashboard_context(request, active_trip=None):
     if not active_trip:
         trip_id = request.GET.get('trip_id') or request.session.get('active_trip_id')
         if trip_id:
-            active_trip = Trip.objects.filter(id=trip_id).prefetch_related(
+            active_trip = Trip.objects.filter(id=trip_id, user=request.user).prefetch_related(
                 'days__diary__images', 'days__events'
             ).first()
             
@@ -56,25 +56,23 @@ def get_dashboard_context(request, active_trip=None):
             if not active_trip:
                 if 'active_trip_id' in request.session:
                     del request.session['active_trip_id']
-                # Also clear from URL params conceptually for the next logic step
                 trip_id = None
             
-        # Fallback to the latest trip if the specific ID wasn't found or no ID was provided
+        # Fallback to the latest trip for THIS user
         if not active_trip:
-            active_trip = Trip.objects.prefetch_related(
+            active_trip = Trip.objects.filter(user=request.user).prefetch_related(
                 'days__diary__images', 'days__events'
             ).order_by('-id').first()
             
     if active_trip:
         request.session['active_trip_id'] = active_trip.id
-        # Safety: set the view to timeline if not already specified to avoid arriving at an empty table
         if 'view_type' not in request.session:
             request.session['view_type'] = 'timeline'
 
     context = {
         'view_type': view_type,
         'active_trip': active_trip,
-        'trips': Trip.objects.all().order_by('name'),
+        'trips': Trip.objects.filter(user=request.user).order_by('name'),
     }
     
     # Checklist Context
@@ -346,7 +344,9 @@ def trip_create(request):
     if request.method == 'POST':
         form = TripForm(request.POST)
         if form.is_valid():
-            trip = form.save()
+            trip = form.save(commit=False)
+            trip.user = request.user
+            trip.save()
             _generate_days(trip)
             # Set as active trip
             request.session['active_trip_id'] = trip.id
@@ -365,7 +365,7 @@ def trip_create(request):
 
 @login_required
 def trip_edit(request, pk):
-    trip = get_object_or_404(Trip, pk=pk)
+    trip = get_object_or_404(Trip, pk=pk, user=request.user)
     if request.method == 'POST':
         original_start_date = trip.start_date
         form = TripForm(request.POST, instance=trip)
@@ -401,7 +401,7 @@ def trip_edit(request, pk):
 
 @login_required
 def trip_delete(request, pk):
-    trip = get_object_or_404(Trip, pk=pk)
+    trip = get_object_or_404(Trip, pk=pk, user=request.user)
     if request.method == 'DELETE' or request.method == 'POST':
         trip.delete()
         if request.session.get('active_trip_id') == pk:
@@ -1658,40 +1658,48 @@ def fix_event_type(request, pk):
 @login_required
 def import_polarsteps(request):
     """
-    Triggers the autonomous Polarsteps import from the hardcoded path.
-    Returns an HTMX toast notification upon completion.
+    Handles the interactive Polarsteps import.
+    GET: Returns the import modal.
+    POST: Processes trip.json and returns mapping {step_id: diary_id}.
     """
     from .services.polarsteps_service import PolarstepsImporter
-    from django.contrib import messages
     
-    # Path provided by user
-    export_path = "/home/bernd/Documents/dev/einmal-um-italien_17844350/"
+    if request.method == 'GET':
+        return render(request, 'travel/partials/polarsteps_import_modal.html')
     
+    # POST: Expects trip.json content
     try:
-        importer = PolarstepsImporter(export_path)
-        trip, steps_count, images_count = importer.run()
+        json_data = json.loads(request.POST.get('json_data'))
+        importer = PolarstepsImporter()
+        trip, steps_mapping = importer.create_trip_from_json(json_data, user=request.user)
         
-        success_msg = f"Reise '{trip.name}' erfolgreich importiert! {steps_count} Stopps und {images_count} Bilder verarbeitet."
-        
-        if request.htmx:
-            # We use a custom header or just return a small snippet with an OOB toast
-            # Assuming there is a toast system in templates/base.html or similar
-            response = HttpResponse("")
-            response['HX-Redirect'] = f"/?trip_id={trip.id}"
-            messages.success(request, success_msg)
-            return response
-            
-        messages.success(request, success_msg)
-        return redirect('travel:dashboard')
-        
+        return JsonResponse({
+            'status': 'success',
+            'trip_id': trip.id,
+            'mapping': steps_mapping
+        })
     except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        error_msg = f"Fehler beim Polarsteps-Import: {str(e)}"
-        if request.htmx:
-            # In a real app we might return a toast partial
-            messages.error(request, error_msg)
-            return HttpResponse(f"<script>alert('{error_msg}');</script>")
-            
-        messages.error(request, error_msg)
-        return redirect('travel:dashboard')
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+@login_required
+def import_polarsteps_photo(request):
+    """
+    Handles sequential photo uploads for the Polarsteps import.
+    Expects: diary_id, step_id, file.
+    """
+    from .services.polarsteps_service import PolarstepsImporter
+    
+    diary_id = request.POST.get('diary_id')
+    step_id = request.POST.get('step_id')
+    photo_file = request.FILES.get('file')
+    filename = request.POST.get('filename')
+    
+    if not (diary_id and photo_file):
+        return JsonResponse({'status': 'error', 'message': 'Missing data'}, status=400)
+        
+    try:
+        importer = PolarstepsImporter()
+        importer.save_photo(diary_id, photo_file, step_id, filename)
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(exc)}, status=400)

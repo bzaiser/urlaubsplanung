@@ -1,0 +1,180 @@
+{% load i18n %}
+<div class="modal-header bg-dark text-warning border-secondary">
+    <h5 class="modal-title font-outfit fw-bold">
+        <i class="bi bi-cloud-download me-2"></i>{% trans "Polarsteps Ordner-Import" %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
+</div>
+
+<div class="modal-body bg-dark text-white p-4">
+    <div id="import-initiator">
+        <p class="text-secondary small">
+            {% trans "Wähle den entpackten Polarsteps-Ordner auf deinem Computer aus. Wir importieren automatisch die Reisedaten, Tagebucheinträge und Fotos." %}
+        </p>
+        
+        <div class="upload-zone p-5 border border-2 border-dashed border-secondary rounded-4 text-center cursor-pointer mb-4" 
+             onclick="document.getElementById('polarsteps-folder').click()">
+            <i class="bi bi-folder2-open display-4 text-warning mb-3 d-block"></i>
+            <span class="fw-bold">{% trans "Ordner auswählen" %}</span>
+            <p class="text-secondary small mb-0 mt-2">{% trans "PC/Laptop erforderlich" %}</p>
+        </div>
+
+        <input type="file" id="polarsteps-folder" webkitdirectory directory multiple class="d-none" onchange="startImport(this.files)">
+        
+        <div class="alert alert-info border-0 bg-opacity-10 bg-info small">
+            <i class="bi bi-info-circle me-2"></i>
+            {% trans "Hinweis: Es wird nur eine Reise aus dem Ordner importiert. Deine bestehenden Daten bleiben unberührt." %}
+        </div>
+    </div>
+
+    <!-- Progress UI (Hidden initially) -->
+    <div id="import-progress" class="d-none">
+        <div class="text-center mb-4">
+            <div class="spinner-border text-warning mb-2" role="status"></div>
+            <h6 id="progress-status" class="font-outfit fw-bold mt-2">{% trans "Analysiere Ordner..." %}</h6>
+        </div>
+
+        <div class="progress bg-secondary bg-opacity-25 mb-2" style="height: 10px;">
+            <div id="progress-bar-trip" class="progress-bar bg-info" style="width: 0%"></div>
+        </div>
+        <div class="d-flex justify-content-between small text-secondary mb-4">
+            <span>{% trans "Reise-Struktur" %}</span>
+            <span id="trip-status-label">{% trans "Warten..." %}</span>
+        </div>
+
+        <div class="progress bg-secondary bg-opacity-25 mb-2" style="height: 10px;">
+            <div id="progress-bar-photos" class="progress-bar bg-warning" style="width: 0%"></div>
+        </div>
+        <div class="d-flex justify-content-between small text-secondary">
+            <span>{% trans "Fotos" %}</span>
+            <span id="photo-status-label">0 / 0</span>
+        </div>
+    </div>
+</div>
+
+<style>
+    .upload-zone:hover {
+        background-color: rgba(255, 193, 7, 0.05);
+        border-color: var(--accent-gold) !important;
+    }
+    .upload-zone i { transition: transform 0.3s ease; }
+    .upload-zone:hover i { transform: scale(1.1); }
+</style>
+
+<script>
+    async function startImport(files) {
+        if (!files || files.length === 0) return;
+
+        const initiator = document.getElementById('import-initiator');
+        const progressUI = document.getElementById('import-progress');
+        const statusLabel = document.getElementById('progress-status');
+        const tripBar = document.getElementById('progress-bar-trip');
+        const photoBar = document.getElementById('progress-bar-photos');
+        const tripLabel = document.getElementById('trip-status-label');
+        const photoLabel = document.getElementById('photo-status-label');
+
+        initiator.classList.add('d-none');
+        progressUI.classList.remove('d-none');
+
+        // 1. Find trip.json
+        let tripFile = null;
+        const photoFiles = [];
+        
+        for (const file of files) {
+            if (file.name === 'trip.json') {
+                tripFile = file;
+            } else if (file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/)) {
+                // Polarsteps structure: folder_name/photos/image.jpg
+                // WebkitRelativePath is e.g. "export_folder/monteciccardo_158244482/photos/image.jpg"
+                const pathParts = file.webkitRelativePath.split('/');
+                if (pathParts.length >= 3 && pathParts[pathParts.length - 2] === 'photos') {
+                    // Extract step_id from "monteciccardo_158244482"
+                    const stepFolder = pathParts[pathParts.length - 3];
+                    const stepIdMatch = stepFolder.match(/_(\d+)$/);
+                    if (stepIdMatch) {
+                        photoFiles.push({
+                            file: file,
+                            stepId: stepIdMatch[1],
+                            filename: file.name
+                        });
+                    }
+                }
+            }
+        }
+
+        if (!tripFile) {
+            alert("{% trans 'Keine trip.json im Ordner gefunden. Bist du sicher, dass dies ein Polarsteps-Export ist?' %}");
+            closeModal();
+            return;
+        }
+
+        try {
+            // 2. Upload trip.json
+            statusLabel.innerText = "{% trans 'Erstelle Reise-Struktur...' %}";
+            const reader = new FileReader();
+            const jsonData = await new Promise((resolve) => {
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsText(tripFile);
+            });
+
+            const formData = new FormData();
+            formData.append('json_data', jsonData);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            const tripResponse = await fetch("{% url 'travel:import_polarsteps' %}", {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            });
+
+            const tripResult = await tripResponse.json();
+            if (tripResult.status !== 'success') throw new Error(tripResult.message);
+
+            tripBar.style.width = "100%";
+            tripLabel.innerText = "{% trans 'Fertig' %}";
+            const mapping = tripResult.mapping;
+
+            // 3. Upload Photos sequentially
+            statusLabel.innerText = "{% trans 'Importiere Fotos...' %}";
+            let uploadedPhotos = 0;
+            const totalPhotos = photoFiles.length;
+
+            for (const photoInfo of photoFiles) {
+                const diaryId = mapping[photoInfo.stepId];
+                if (!diaryId) {
+                    uploadedPhotos++; // Skip if no mapping (e.g. unknown step)
+                    continue;
+                }
+
+                const photoData = new FormData();
+                photoData.append('diary_id', diaryId);
+                photoData.append('step_id', photoInfo.stepId);
+                photoData.append('file', photoInfo.file);
+                photoData.append('filename', photoInfo.filename);
+
+                const photoResponse = await fetch("{% url 'travel:import_polarsteps_photo' %}", {
+                    method: 'POST',
+                    body: photoData,
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                });
+
+                if (photoResponse.ok) {
+                    uploadedPhotos++;
+                    const percent = Math.round((uploadedPhotos / totalPhotos) * 100);
+                    photoBar.style.width = `${percent}%`;
+                    photoLabel.innerText = `${uploadedPhotos} / ${totalPhotos}`;
+                }
+            }
+
+            statusLabel.innerText = "{% trans 'Import abgeschlossen!' %}";
+            setTimeout(() => {
+                window.location.href = `/?trip_id=${tripResult.trip_id}`;
+            }, 1000);
+
+        } catch (err) {
+            console.error(err);
+            alert("{% trans 'Fehler beim Import:' %} " + err.message);
+            closeModal();
+        }
+    }
+</script>
