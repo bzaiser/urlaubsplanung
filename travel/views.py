@@ -303,6 +303,9 @@ class TripDashboardView(LoginRequiredMixin, ListView):
     template_name = 'travel/trip_dashboard.html'
     context_object_name = 'trips'
 
+    def get_queryset(self):
+        return Trip.objects.filter(user=self.request.user).order_by('name')
+
     def get_template_names(self):
         if self.request.htmx:
             # If map view is requested alone, return only the map partial
@@ -897,44 +900,44 @@ def event_bulk_move(request):
 
 # --- AI & SETTINGS VIEWS ---
 
-def get_setting(key, default=''):
+def get_setting(key, default='', user=None):
     try:
-        return GlobalSetting.objects.get(key=key).value
+        return GlobalSetting.objects.get(key=key, user=user).value
     except GlobalSetting.DoesNotExist:
         return default
 
 @login_required
 def settings_modal(request):
     """View to manage API Keys, Provider and Trip Templates."""
-    templates = TripTemplate.objects.all().order_by('-created_at')
-    gemini_key = GlobalSetting.objects.filter(key='gemini_api_key').first()
-    groq_key = GlobalSetting.objects.filter(key='groq_api_key').first()
-    active_provider = GlobalSetting.objects.filter(key='active_ai_provider').first()
-    ollama_model = get_setting('ollama_model_name', 'llama3')
-    ollama_url = get_setting('ollama_url', 'http://192.168.123.107:11434')
+    templates = TripTemplate.objects.filter(user=request.user).order_by('-created_at')
+    gemini_key = GlobalSetting.objects.filter(key='gemini_api_key', user=request.user).first()
+    groq_key = GlobalSetting.objects.filter(key='groq_api_key', user=request.user).first()
+    active_provider = GlobalSetting.objects.filter(key='active_ai_provider', user=request.user).first()
+    ollama_model = get_setting('ollama_model_name', 'llama3', user=request.user)
+    ollama_url = get_setting('ollama_url', 'http://192.168.123.107:11434', user=request.user)
     
     # Vehicle Profiles
-    v1_name = get_setting('vehicle1_name', 'Wohnmobil')
-    v1_consump = get_setting('vehicle1_consumption', '12')
-    v1_fuel = get_setting('vehicle1_fuel_type', 'Diesel')
-    v1_weight = get_setting('vehicle1_weight', '3.5t')
-    v1_range = get_setting('vehicle1_range', '600')
+    v1_name = get_setting('vehicle1_name', 'Wohnmobil', user=request.user)
+    v1_consump = get_setting('vehicle1_consumption', '12', user=request.user)
+    v1_fuel = get_setting('vehicle1_fuel_type', 'Diesel', user=request.user)
+    v1_weight = get_setting('vehicle1_weight', '3.5t', user=request.user)
+    v1_range = get_setting('vehicle1_range', '600', user=request.user)
 
-    v2_name = get_setting('vehicle2_name', 'Privat-PKW')
-    v2_consump = get_setting('vehicle2_consumption', '8')
-    v2_fuel = get_setting('vehicle2_fuel_type', 'Benzin')
-    v2_range = get_setting('vehicle2_range', '500')
+    v2_name = get_setting('vehicle2_name', 'Privat-PKW', user=request.user)
+    v2_consump = get_setting('vehicle2_consumption', '8', user=request.user)
+    v2_fuel = get_setting('vehicle2_fuel_type', 'Benzin', user=request.user)
+    v2_range = get_setting('vehicle2_range', '500', user=request.user)
 
     # Fuel Prices
-    diesel_price = get_setting('diesel_price', '1.60')
-    petrol_price = get_setting('petrol_price', '1.70')
+    diesel_price = get_setting('diesel_price', '1.60', user=request.user)
+    petrol_price = get_setting('petrol_price', '1.70', user=request.user)
 
     
     # User Profile & Participants
-    home_city = get_setting('user_home_city', 'München')
-    home_addr = get_setting('user_home_address', '')
-    def_p_count = get_setting('default_persons_count', '2')
-    def_p_ages = get_setting('default_persons_ages', '40, 38')
+    home_city = get_setting('user_home_city', 'München', user=request.user)
+    home_addr = get_setting('user_home_address', '', user=request.user)
+    def_p_count = get_setting('default_persons_count', '2', user=request.user)
+    def_p_ages = get_setting('default_persons_ages', '40, 38', user=request.user)
 
     # Food Budgets
     food_self_l = get_setting('food_self_low', '10')
@@ -956,7 +959,7 @@ def settings_modal(request):
             'food_out_low', 'food_out_med', 'food_out_high'
         ]:
             val = request.POST.get(k, '').strip()
-            GlobalSetting.objects.update_or_create(key=k, defaults={'value': val})
+            GlobalSetting.objects.update_or_create(key=k, user=request.user, defaults={'value': val})
 
         return render(request, 'travel/partials/settings_modal.html', {
             'templates': templates,
@@ -985,14 +988,14 @@ def template_create(request):
         name = request.POST.get('name')
         prefs = request.POST.get('preferences')
         if name and prefs:
-            TripTemplate.objects.create(name=name, preferences=prefs)
+            TripTemplate.objects.create(user=request.user, name=name, preferences=prefs)
             return settings_modal(request) # Return refreshed settings list
     return render(request, 'travel/partials/template_form.html')
 
 @login_required
 def template_edit(request, pk):
     """View to edit an existing trip template."""
-    template = get_object_or_404(TripTemplate, pk=pk)
+    template = get_object_or_404(TripTemplate, pk=pk, user=request.user)
     if request.method == 'POST':
         template.name = request.POST.get('name')
         template.preferences = request.POST.get('preferences')
@@ -1046,7 +1049,7 @@ def ai_wizard(request):
             user_prefs = request.POST.get('user_preferences', '').strip()
 
             try:
-                template = get_object_or_404(TripTemplate, pk=template_id)
+                template = get_object_or_404(TripTemplate, pk=template_id, user=request.user)
                 # Combine template + user wishes
                 final_preferences = template.preferences
                 if user_prefs:
@@ -1054,7 +1057,8 @@ def ai_wizard(request):
                 
                 # Generate the prompt for the user to copy
                 prompt = ai_service.get_itinerary_prompt(
-                    final_preferences, start_date, days, start_location, persons_count, persons_ages
+                    final_preferences, start_date, days, start_location, persons_count, persons_ages,
+                    user=request.user
                 )
                 
                 context.update({
@@ -1079,7 +1083,7 @@ def ai_wizard(request):
             try:
                 pasted_text = ai_service.repair_json(pasted_text)
                 trip_data = json.loads(pasted_text)
-                trip = ai_service.save_itinerary_to_db(trip_data, start_date, persons_count, persons_ages)
+                trip = ai_service.save_itinerary_to_db(trip_data, start_date, persons_count, persons_ages, user=request.user)
                 
                 request.session['active_trip_id'] = trip.id
                 
@@ -1104,7 +1108,7 @@ def ai_wizard(request):
                 trip_data['name'] = user_trip_name
                 
             try:
-                trip = ai_service.save_itinerary_to_db(trip_data, start_date, persons_count, persons_ages)
+                trip = ai_service.save_itinerary_to_db(trip_data, start_date, persons_count, persons_ages, user=request.user)
                 request.session['active_trip_id'] = trip.id
 
                 if request.htmx:
@@ -1117,10 +1121,10 @@ def ai_wizard(request):
                 return render(request, 'travel/partials/ai_wizard.html', context)
 
     if step == 'select':
-        templates = TripTemplate.objects.all().order_by('-created_at')
-        home_city = get_setting('user_home_city', 'München')
-        p_count = get_setting('default_persons_count', '2')
-        p_ages = get_setting('default_persons_ages', '40, 38')
+        templates = TripTemplate.objects.filter(user=request.user).order_by('-created_at')
+        home_city = get_setting('user_home_city', 'München', user=request.user)
+        p_count = get_setting('default_persons_count', '2', user=request.user)
+        p_ages = get_setting('default_persons_ages', '40, 38', user=request.user)
         
         return render(request, 'travel/partials/ai_wizard.html', {
             'step': 'select', 
@@ -1139,7 +1143,7 @@ def ai_wizard(request):
 @login_required
 def trip_logic_check(request, pk):
     """Runs consistency checks and returns the results modal."""
-    trip = get_object_or_404(Trip, pk=pk)
+    trip = get_object_or_404(Trip, pk=pk, user=request.user)
     findings = logic_service.check_trip_logic(trip)
     return render(request, 'travel/partials/logic_check_modal.html', {
         'trip': trip,
@@ -1401,7 +1405,7 @@ def trip_checklist(request, trip_id):
         switcher_html = render_to_string('travel/partials/trip_switcher.html', {
             'active_trip': trip,
             'view_type': 'checklist',
-            'trips': Trip.objects.all(),
+            'trips': Trip.objects.filter(user=request.user),
             'is_oob': True
         }, request=request)
         return HttpResponse(response_html + "\n" + switcher_html)
@@ -1547,8 +1551,8 @@ def checklist_template_modal(request, trip_id):
 @login_required
 def checklist_template_manager(request, trip_id):
     """Returns a modal to manage (create/delete) global checklist templates."""
-    trip = get_object_or_404(Trip, pk=trip_id)
-    templates = ChecklistTemplate.objects.all().order_by('name')
+    trip = get_object_or_404(Trip, pk=trip_id, user=request.user)
+    templates = ChecklistTemplate.objects.filter(user=request.user).order_by('name')
     
     context = {
         'templates': templates,
@@ -1561,7 +1565,7 @@ def checklist_template_create_simple(request, trip_id):
     """Creates a new empty checklist template."""
     name = request.POST.get('name')
     if name:
-        ChecklistTemplate.objects.create(name=name)
+        ChecklistTemplate.objects.create(name=name, user=request.user)
         
     # Return to the manager modal to show updated list
     return checklist_template_manager(request, trip_id)
@@ -1571,7 +1575,7 @@ def checklist_template_create_simple(request, trip_id):
 @never_cache
 def checklist_template_delete_simple(request, trip_id, template_id):
     """Deletes a checklist template."""
-    template = get_object_or_404(ChecklistTemplate, pk=template_id)
+    template = get_object_or_404(ChecklistTemplate, pk=template_id, user=request.user)
     template.delete()
     return checklist_template_manager(request, trip_id)
 

@@ -10,12 +10,18 @@ from ..models import GlobalSetting
 logger = logging.getLogger(__name__)
 from . import logic_service
 
-def get_setting(key, default=''):
-    """Helper to fetch settings from the GlobalSetting model."""
+def get_setting(key, default='', user=None):
+    """Helper to fetch settings from the GlobalSetting model, filtered by user."""
     try:
-        return GlobalSetting.objects.get(key=key).value
+        return GlobalSetting.objects.get(key=key, user=user).value
     except:
-        return default
+        # Fallback for old calls without user context - try to find admin default
+        try:
+            if not user:
+                return GlobalSetting.objects.filter(key=key, user__isnull=True).first().value
+            return default
+        except:
+            return default
 
 def safe_float(val, default=0.0):
     """Safely converts a value to float, handling None, empty strings, and malformed text."""
@@ -91,11 +97,11 @@ def repair_json(json_str):
         logger.error(f"Professional repair failed context: {json_str[:200]}...")
         return json_str
 
-def get_itinerary_prompt(preferences, start_date, days, start_location, persons_count, persons_ages):
+def get_itinerary_prompt(preferences, start_date, days, start_location, persons_count, persons_ages, user=None):
     """Returns the raw prompt text for manual copy-pasting into external LLMs."""
-    v1_name = get_setting('vehicle1_name', 'Camper')
-    v1_range = get_setting('vehicle1_range', '400')
-    v2_name = get_setting('vehicle2_name', 'PKW')
+    v1_name = get_setting('vehicle1_name', 'Camper', user=user)
+    v1_range = get_setting('vehicle1_range', '400', user=user)
+    v2_name = get_setting('vehicle2_name', 'PKW', user=user)
     
     system_text = (
         "Du bist ein Weltklasse-Reiseplaner. Erstelle einen detaillierten Reiseplan auf DEUTSCH.\n"
@@ -455,7 +461,7 @@ def normalize_itinerary(data):
                     
     return data
 
-def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""):
+def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages="", user=None):
     """
     Takes a JSON itinerary and creates Trip, Day, and Event objects.
     """
@@ -476,6 +482,7 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
     trip_name = strip_duration_from_name(trip_data.get('name', 'Neue KI Reise'))
 
     trip = Trip.objects.create(
+        user=user,
         name=trip_name,
         start_date=start_date,
         persons_count=safe_int(persons_count, 2),
@@ -500,10 +507,10 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
         )
         
         # Load settings for automated cost calculation
-        v1_cons = safe_float(get_setting('vehicle1_consumption', '12'))
-        v2_cons = safe_float(get_setting('vehicle2_consumption', '8'))
-        diesel_p = safe_float(get_setting('diesel_price', '1.60'))
-        petrol_p = safe_float(get_setting('petrol_price', '1.70'))
+        v1_cons = safe_float(get_setting('vehicle1_consumption', '12', user=user))
+        v2_cons = safe_float(get_setting('vehicle2_consumption', '8', user=user))
+        diesel_p = safe_float(get_setting('diesel_price', '1.60', user=user))
+        petrol_p = safe_float(get_setting('petrol_price', '1.70', user=user))
         
         for e_data in d_data.get('events', []):
             time_v = e_data.get('time')
@@ -609,8 +616,8 @@ def save_itinerary_to_db(trip_data, start_date, persons_count=2, persons_ages=""
         # Mapping level to setting keys
         suffix = 'low' if level == 'low' else ('high' if level == 'high' else 'med')
         
-        rate_self = safe_float(get_setting(f'food_self_{suffix}', '15'))
-        rate_out = safe_float(get_setting(f'food_out_{suffix}', '35'))
+        rate_self = safe_float(get_setting(f'food_self_{suffix}', '15', user=user))
+        rate_out = safe_float(get_setting(f'food_out_{suffix}', '35', user=user))
         
         persons = safe_int(trip.persons_count, 2)
         

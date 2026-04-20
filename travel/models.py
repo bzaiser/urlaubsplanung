@@ -428,6 +428,7 @@ class DiaryImage(models.Model):
         verbose_name_plural = _("Tagebuch Bilder")
 
 class TripTemplate(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="trip_templates", null=True, blank=True)
     name = models.CharField(_("Name der Vorlage"), max_length=100)
     preferences = models.TextField(_("Reise-Präferenzen"), help_text=_("Beschreibe hier deine Standard-Wünsche für diese Art von Reise."))
     created_at = models.DateTimeField(auto_now_add=True)
@@ -440,12 +441,14 @@ class TripTemplate(models.Model):
         return self.name
 
 class GlobalSetting(models.Model):
-    key = models.CharField(max_length=50, unique=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="settings", null=True, blank=True)
+    key = models.CharField(max_length=50)
     value = models.TextField(blank=True)
     
     class Meta:
-        verbose_name = _("Globale Einstellung")
-        verbose_name_plural = _("Globale Einstellungen")
+        verbose_name = _("Einstellung")
+        verbose_name_plural = _("Einstellungen")
+        unique_together = ('user', 'key')
 
     def __str__(self):
         return self.key
@@ -504,6 +507,7 @@ class ChecklistCategory(models.Model):
         return self.name
 
 class ChecklistTemplate(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="checklist_templates", null=True, blank=True)
     name = models.CharField(_("Vorlagen-Name"), max_length=100)
     description = models.TextField(_("Beschreibung"), blank=True)
 
@@ -558,3 +562,57 @@ class TripVoucher(models.Model):
 
     def __str__(self):
         return self.original_filename or os.path.basename(self.file.name)
+
+
+# --- Signals for Multi-User Initial Setup ---
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.contrib.auth import get_user_model
+
+@receiver(post_save, sender=get_user_model())
+def ensure_user_defaults(sender, instance, created, **kwargs):
+    """
+    When a new user is created, copy settings and templates from the admin 
+    (first superuser) to give them a starting point.
+    """
+    if not created:
+        return
+
+    User = get_user_model()
+    admin = User.objects.filter(is_superuser=True).order_by('id').first()
+    if not admin or admin == instance:
+        return
+
+    # 1. Copy GlobalSettings
+    admin_settings = GlobalSetting.objects.filter(user=admin)
+    for s in admin_settings:
+        GlobalSetting.objects.get_or_create(
+            user=instance,
+            key=s.key,
+            defaults={'value': s.value}
+        )
+
+    # 2. Copy TripTemplates
+    admin_trip_templates = TripTemplate.objects.filter(user=admin)
+    for t in admin_trip_templates:
+        TripTemplate.objects.create(
+            user=instance,
+            name=t.name,
+            preferences=t.preferences
+        )
+
+    # 3. Copy ChecklistTemplates (and items)
+    admin_check_templates = ChecklistTemplate.objects.filter(user=admin)
+    for ct in admin_check_templates:
+        new_ct = ChecklistTemplate.objects.create(
+            user=instance,
+            name=ct.name,
+            description=ct.description
+        )
+        for item in ct.items.all():
+            ChecklistItemTemplate.objects.create(
+                template=new_ct,
+                category=item.category,
+                text=item.text,
+                due_days_before=item.due_days_before
+            )
