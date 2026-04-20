@@ -92,6 +92,26 @@
     <link rel="apple-touch-icon" href="/static/img/icon-160.png">
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <!-- Global Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-status-text" id="loading-status">{% trans "Synchronisierung läuft..." %}</div>
+        <div class="loading-sub-text" id="loading-sub">{% trans "Daten werden von Polarsteps abgerufen" %}</div>
+    </div>
+
+    <script>
+        function showLoadingOverlay(status, sub) {
+            const overlay = document.getElementById('loading-overlay');
+            const statusEl = document.getElementById('loading-status');
+            const subEl = document.getElementById('loading-sub');
+            
+            if (status) statusEl.innerText = status;
+            if (sub) subEl.innerText = sub;
+            
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    </script>
     <nav class="navbar navbar-dark bg-dark sticky-top border-bottom border-secondary py-1 py-md-2">
         <div class="container-fluid">
             <div id="trip-switcher-container-wrapper" class="w-100 d-flex align-items-center">

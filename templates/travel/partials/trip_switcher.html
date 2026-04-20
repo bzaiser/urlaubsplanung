@@ -214,9 +214,10 @@ function startLiveSync(tripId, url = null) {
     if (url) data.append('polarsteps_url', url);
     data.append('csrfmiddlewaretoken', '{{ csrf_token }}');
     
-    // Global loader
-    const loader = document.querySelector('.loading-overlay');
-    if (loader) loader.classList.add('active');
+    // Global loader with specific text
+    if (typeof showLoadingOverlay === 'function') {
+        showLoadingOverlay("{% trans 'Schnell-Sync läuft...' %}", "{% trans 'Daten werden von Polarsteps geladen und Stopps verknüpft' %}");
+    }
     
     fetch(`/trip/${tripId}/sync-polarsteps/`, {
         method: 'POST',
@@ -229,13 +230,16 @@ function startLiveSync(tripId, url = null) {
             window.location.reload();
         } else {
             alert(data.message || "{% trans 'Fehler beim Synchronisieren.' %}");
-            if (loader) loader.classList.remove('active');
+            // Reset overlay is done by page reload on success, but manually on error
+            document.getElementById('loading-overlay').style.display = 'none';
+            document.body.style.overflow = 'auto';
         }
     })
     .catch(error => {
         console.error('Error:', error);
         alert("{% trans 'Ein technischer Fehler ist aufgetreten.' %}");
-        if (loader) loader.classList.remove('active');
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.body.style.overflow = 'auto';
     });
 }
 
@@ -244,8 +248,10 @@ function startPhotoArchive(tripId) {
         return;
     }
     
-    const loader = document.querySelector('.loading-overlay');
-    if (loader) loader.classList.add('active');
+    // Global loader with specific text
+    if (typeof showLoadingOverlay === 'function') {
+        showLoadingOverlay("{% trans 'Fotos werden archiviert...' %}", "{% trans 'Bilder werden auf das NAS heruntergeladen. Bitte die Seite nicht schließen.' %}");
+    }
     
     fetch(`/trip/${tripId}/archive-photos/`, {
         method: 'POST',
@@ -260,13 +266,15 @@ function startPhotoArchive(tripId) {
             window.location.reload();
         } else {
             alert(data.message || "{% trans 'Fehler beim Archivieren.' %}");
-            if (loader) loader.classList.remove('active');
+            document.getElementById('loading-overlay').style.display = 'none';
+            document.body.style.overflow = 'auto';
         }
     })
     .catch(error => {
         console.error('Error:', error);
         alert("{% trans 'Ein technischer Fehler ist aufgetreten.' %}");
-        if (loader) loader.classList.remove('active');
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.body.style.overflow = 'auto';
     });
 }
 </script>
