@@ -16,6 +16,7 @@ class Trip(models.Model):
     persons_count = models.PositiveIntegerField(_("Anzahl Personen"), default=2)
     persons_ages = models.CharField(_("Alter der Personen"), max_length=100, blank=True, help_text=_("Komma-separiert, z.B. '40, 38, 12'"))
     ui_settings = models.JSONField(_("UI Einstellungen"), default=dict, blank=True)
+    polarsteps_id = models.CharField(max_length=50, null=True, blank=True, unique=True, verbose_name=_("Polarsteps Trip ID"))
     
     class Meta:
         verbose_name = _("Reise")
@@ -388,6 +389,7 @@ class Event(models.Model):
 class DiaryEntry(models.Model):
     day = models.OneToOneField(Day, on_delete=models.CASCADE, related_name="diary")
     text = models.TextField(_("Tagebuch Text"), blank=True)
+    polarsteps_step_id = models.CharField(max_length=50, null=True, blank=True, verbose_name=_("Polarsteps Step ID"))
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

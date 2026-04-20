@@ -18,6 +18,9 @@ from .services import ai_service, logic_service, checklist_service, geo_service
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.cache import never_cache
+import logging
+
+logger = logging.getLogger(__name__)
 
 def _generate_days(trip):
     """Utility to generate Day objects for the trip duration."""
@@ -1713,4 +1716,6 @@ def import_polarsteps_photo(request):
         importer.save_photo(diary_id, photo_file, step_id, filename)
         return JsonResponse({'status': 'success'})
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(exc)}, status=400)
+        import traceback
+        logger.error(f"Polarsteps Photo Error: {str(e)}\n{traceback.format_exc()}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
