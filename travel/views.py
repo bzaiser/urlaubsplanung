@@ -202,94 +202,93 @@ def get_dashboard_context(request, active_trip=None):
     # 3. Prepare Map Data (Step-by-Step Transparency: Show everything with coords)
     map_data = []
     coords_for_routing = []
-    
-    def get_transport_icon(type_code):
-        icon_map = {
-            'FLIGHT': '✈️', 'CAR': '🚗', 'RENTAL_CAR': '🚗', 'CAMPER': '🚐',
-            'CAMPING': '⛺', 'PITCH': '🚐📍', 'BOAT': '🛥️', 'FERRY': '⛴️',
-            'TRAIN': '🚆', 'METRO': '🚇', 'TRAM': '🚋', 'TAXI': '🚕', 'BUS': '🚌',
-            'SCOOTER': '🛵', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️'
-        }
-        return icon_map.get(type_code, '🐦')
-
-    # Collect EVERY coordinate found, in sequence (Day then Projects/Events)
-    for d_idx, day in enumerate(active_trip.days.all().order_by('date'), 1):
-        # Prefetch image and text context
-        d_image = ""
-        d_text = ""
-        if hasattr(day, 'diary'):
-            d_text = day.diary.text[:200]
-            primary_img = day.diary.images.filter(is_primary=True).first() or day.diary.images.first()
-            if primary_img:
-                d_image = primary_img.image.url
-
-        # 1. Day Location (if exists)
-        if day.latitude and day.longitude:
-            # Check for transport event of the day
-            trans_ev = day.events.filter(type__in=['FLIGHT', 'CAR', 'RENTAL_CAR', 'CAMPER', 'TRAIN', 'BUS', 'BOAT', 'FERRY']).first()
-            
-            map_data.append({
-                'location': day.location,
-                'lat': float(day.latitude),
-                'lon': float(day.longitude),
-                'day_id': day.id,
-                'index': d_idx,
-                'is_event': False,
-                'image_url': d_image,
-                'description': d_text,
-                'date_str': _date(day.date, "j. b Y"),
-                'transport_icon': get_transport_icon(trans_ev.type if trans_ev else 'NONE')
-            })
-            coords_for_routing.append([float(day.longitude), float(day.latitude)])
-            
-        # 2. All Events for that day (if they have coordinates)
-        for e_idx, ev in enumerate(day.events.all().order_by('time', 'id'), 1):
-            if ev.latitude and ev.longitude:
-                map_data.append({
-                    'location': ev.location,
-                    'lat': float(ev.latitude),
-                    'lon': float(ev.longitude),
-                    'is_event': True,
-                    'event_type': ev.type,
-                    'title': ev.title,
-                    'day_id': day.id,
-                    'index': f"{d_idx}.{e_idx}",
-                    'image_url': d_image,
-                    'description': ev.title,
-                    'date_str': _date(day.date, "j. b Y"),
-                    'transport_icon': get_transport_icon(ev.type)
-                })
-                coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
-    
-    context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
-    
-    # Trigger background geocoding for missing items
-    from .models import Event
-    geocoding_was_pending = (
-        active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists() or
-        Event.objects.filter(day__trip=active_trip, is_geocoded=False, type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']).exclude(location='').exists()
-    )
-    
-    # Defaults
+    geocoding_was_pending = False
     route_geometry = []
     processed_locations = []
     
-    # Routing: Calculate whenever we have coordinates (even on full page load)
-    route_geometry = []
-    if len(coords_for_routing) > 1:
-        route_geometry = geo_service.get_route_geometry(coords_for_routing)
+    if active_trip:
+        def get_transport_icon(type_code):
+            icon_map = {
+                'FLIGHT': '✈️', 'CAR': '🚗', 'RENTAL_CAR': '🚗', 'CAMPER': '🚐',
+                'CAMPING': '⛺', 'PITCH': '🚐📍', 'BOAT': '🛥️', 'FERRY': '⛴️',
+                'TRAIN': '🚆', 'METRO': '🚇', 'TRAM': '🚋', 'TAXI': '🚕', 'BUS': '🚌',
+                'SCOOTER': '🛵', 'ACTIVITY': '🎒', 'RESTAURANT': '🍽️'
+            }
+            return icon_map.get(type_code, '🐦')
 
-    # Silent Background Processing (HTMX only)
-    if request.htmx and geocoding_was_pending:
-        geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=10)
+        # Collect EVERY coordinate found, in sequence (Day then Projects/Events)
+        for d_idx, day in enumerate(active_trip.days.all().order_by('date'), 1):
+            # Prefetch image and text context
+            d_image = ""
+            d_text = ""
+            if hasattr(day, 'diary'):
+                d_text = day.diary.text[:200]
+                primary_img = day.diary.images.filter(is_primary=True).first() or day.diary.images.first()
+                if primary_img:
+                    d_image = primary_img.image.url
+
+            # 1. Day Location (if exists)
+            if day.latitude and day.longitude:
+                # Check for transport event of the day
+                trans_ev = day.events.filter(type__in=['FLIGHT', 'CAR', 'RENTAL_CAR', 'CAMPER', 'TRAIN', 'BUS', 'BOAT', 'FERRY']).first()
+                
+                map_data.append({
+                    'location': day.location,
+                    'lat': float(day.latitude),
+                    'lon': float(day.longitude),
+                    'day_id': day.id,
+                    'index': d_idx,
+                    'is_event': False,
+                    'image_url': d_image,
+                    'description': d_text,
+                    'date_str': _date(day.date, "j. b Y"),
+                    'transport_icon': get_transport_icon(trans_ev.type if trans_ev else 'NONE')
+                })
+                coords_for_routing.append([float(day.longitude), float(day.latitude)])
+                
+            # 2. All Events for that day (if they have coordinates)
+            for e_idx, ev in enumerate(day.events.all().order_by('time', 'id'), 1):
+                if ev.latitude and ev.longitude:
+                    map_data.append({
+                        'location': ev.location,
+                        'lat': float(ev.latitude),
+                        'lon': float(ev.longitude),
+                        'is_event': True,
+                        'event_type': ev.type,
+                        'title': ev.title,
+                        'day_id': day.id,
+                        'index': f"{d_idx}.{e_idx}",
+                        'image_url': d_image,
+                        'description': ev.title,
+                        'date_str': _date(day.date, "j. b Y"),
+                        'transport_icon': get_transport_icon(ev.type)
+                    })
+                    coords_for_routing.append([float(ev.longitude), float(ev.latitude)])
         
-        # Deduplicate and clean for UI
-        unique_locations = list(dict.fromkeys([loc for loc in processed_locations if loc and loc.strip()]))
-        context['last_geocoded'] = ", ".join(unique_locations)
+        context['map_data_json'] = json.dumps(map_data, cls=DjangoJSONEncoder)
         
-        # Re-calculate routing if new pins were just found in this refresh
+        # Trigger background geocoding for missing items
+        from .models import Event
+        geocoding_was_pending = (
+            active_trip.days.filter(is_geocoded=False).exclude(location='').exclude(location='Planung läuft...').exists() or
+            Event.objects.filter(day__trip=active_trip, is_geocoded=False, type__in=['FLIGHT', 'TRAIN', 'FERRY', 'BUS', 'CAR']).exclude(location='').exists()
+        )
+        
+        # Routing: Calculate whenever we have coordinates (even on full page load)
         if len(coords_for_routing) > 1:
             route_geometry = geo_service.get_route_geometry(coords_for_routing)
+
+        # Silent Background Processing (HTMX only)
+        if request.htmx and geocoding_was_pending:
+            geocoding_was_pending, processed_locations = geo_service.update_trip_coordinates(active_trip, limit=10)
+            
+            # Deduplicate and clean for UI
+            unique_locations = list(dict.fromkeys([loc for loc in processed_locations if loc and loc.strip()]))
+            context['last_geocoded'] = ", ".join(unique_locations)
+            
+            # Re-calculate routing if new pins were just found in this refresh
+            if len(coords_for_routing) > 1:
+                route_geometry = geo_service.get_route_geometry(coords_for_routing)
 
     context['geocoding_pending'] = geocoding_was_pending
     context['route_geometry_json'] = json.dumps(route_geometry)
