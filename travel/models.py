@@ -19,6 +19,7 @@ class Trip(models.Model):
     persons_ages = models.CharField(_("Alter der Personen"), max_length=100, blank=True, help_text=_("Komma-separiert, z.B. '40, 38, 12'"))
     ui_settings = models.JSONField(_("UI Einstellungen"), default=dict, blank=True)
     polarsteps_id = models.CharField(max_length=50, null=True, blank=True, verbose_name=_("Polarsteps Trip ID"))
+    polarsteps_url = models.URLField(max_length=500, null=True, blank=True, verbose_name=_("Polarsteps URL"))
     
     class Meta:
         verbose_name = _("Reise")
@@ -403,7 +404,8 @@ class DiaryEntry(models.Model):
 
 class DiaryImage(models.Model):
     diary_entry = models.ForeignKey(DiaryEntry, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField(upload_to="diary/")
+    image = models.ImageField(upload_to="diary/", null=True, blank=True)
+    remote_url = models.URLField(max_length=1000, null=True, blank=True, verbose_name=_("Remote Photo URL"))
     caption = models.CharField(max_length=200, blank=True)
     is_primary = models.BooleanField(default=False)
 

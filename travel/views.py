@@ -1751,3 +1751,52 @@ def import_polarsteps_photo(request):
         import traceback
         logger.error(f"Polarsteps Photo Error: {str(e)}\n{traceback.format_exc()}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@login_required
+def sync_polarsteps_live(request, trip_id):
+    from .services.polarsteps_service import PolarstepsImporter
+    import re
+    
+    trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+    
+    # Get URL from POST or from Trip model
+    url = request.POST.get('polarsteps_url') or trip.polarsteps_url
+    
+    if not url:
+        return JsonResponse({'status': 'error', 'message': _('Keine Polarsteps-URL hinterlegt.')}, status=400)
+
+    # Extract ID from URL (e.g., .../24200863-thailand)
+    match = re.search(r'/(\d+)', url)
+    if not match:
+        return JsonResponse({'status': 'error', 'message': _('Ungültige Polarsteps-URL. Die ID konnte nicht gefunden werden.')}, status=400)
+    
+    ps_id = match.group(1)
+    
+    # Save URL to trip if it's new
+    if url != trip.polarsteps_url:
+        trip.polarsteps_url = url
+        trip.polarsteps_id = ps_id
+        trip.save()
+        
+    try:
+        PolarstepsImporter.sync_from_id(ps_id, user=request.user)
+        messages.success(request, _("Erfolgreich mit Polarsteps synchronisiert!"))
+        return JsonResponse({'status': 'ok', 'redirect': reverse('trip_dashboard', args=[trip.id])})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+def archive_polarsteps_images(request, trip_id):
+    from .services.polarsteps_service import PolarstepsImporter
+    
+    trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+    
+    try:
+        # Show global loader
+        count = PolarstepsImporter.archive_all_remote_images(trip)
+        messages.success(request, _(f"{count} Bilder erfolgreich lokal archiviert!"))
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

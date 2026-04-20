@@ -50,6 +50,7 @@
                 </li>
             </ul>
         </div>
+        {% endif %}
     </div>
 
     <div class="d-flex align-items-center justify-content-center gap-1 gap-md-2 flex-grow-1 order-3 order-md-2 switcher-full-width-mobile">
@@ -148,6 +149,22 @@
                     <li><a class="dropdown-item" href="{% url 'travel:export_trip_ics' active_trip.id %}">
                         <i class="bi bi-calendar-plus"></i>{% trans "ICS Export" %}
                     </a></li>
+                    
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="px-3 py-1 text-info small fw-bold text-uppercase opacity-75">Polarsteps Sync</li>
+                    {% if active_trip.polarsteps_url %}
+                        <li><button class="dropdown-item" onclick="startLiveSync({{ active_trip.id }})">
+                            <i class="bi bi-lightning-charge-fill text-warning"></i>{% trans "Schnell-Sync (Unterwegs)" %}
+                        </button></li>
+                        <li><button class="dropdown-item" onclick="startPhotoArchive({{ active_trip.id }})">
+                            <i class="bi bi-hdd-fill text-info"></i>{% trans "Fotos archivieren (WLAN)" %}
+                        </button></li>
+                    {% endif %}
+                    <li><button class="dropdown-item" onclick="promptPolarstepsUrl({{ active_trip.id }}, '{{ active_trip.polarsteps_url|default:'' }}')">
+                        <i class="bi bi-link-45deg"></i>{% if active_trip.polarsteps_url %}{% trans "Polarsteps Link ändern" %}{% else %}{% trans "Mit Polarsteps verknüpfen" %}{% endif %}
+                    </button></li>
+                    <li><hr class="dropdown-divider"></li>
+
                     <li><a class="dropdown-item" href="#" hx-get="{% url 'travel:trip_edit' active_trip.id %}" hx-target="#modal-container">
                         <i class="bi bi-pencil-square"></i>{% trans "Reise bearbeiten" %}
                     </a></li>
@@ -184,3 +201,73 @@
         </div>
     </div>
 </div>
+
+<script>
+function promptPolarstepsUrl(tripId, currentUrl) {
+    const url = prompt("{% trans 'Bitte gib die Polarsteps Trip URL ein (z.B. https://www.polarsteps.com/Benutzer/12345-titel):' %}", currentUrl);
+    if (url !== null && url.trim() !== "") {
+        startLiveSync(tripId, url);
+    }
+}
+
+function startLiveSync(tripId, url = null) {
+    const data = new FormData();
+    if (url) data.append('polarsteps_url', url);
+    data.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    // Global loader
+    const loader = document.querySelector('.loading-overlay');
+    if (loader) loader.classList.add('active');
+    
+    fetch(`/trip/${tripId}/sync-polarsteps/`, {
+        method: 'POST',
+        body: data,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            window.location.reload();
+        } else {
+            alert(data.message || "{% trans 'Fehler beim Synchronisieren.' %}");
+            if (loader) loader.classList.remove('active');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("{% trans 'Ein technischer Fehler ist aufgetreten.' %}");
+        if (loader) loader.classList.remove('active');
+    });
+}
+
+function startPhotoArchive(tripId) {
+    if (!confirm("{% trans 'Möchtest du jetzt alle verlinkten Bilder herunterladen und lokal auf dem NAS speichern? Das kann je nach Menge einen Moment dauern.' %}")) {
+        return;
+    }
+    
+    const loader = document.querySelector('.loading-overlay');
+    if (loader) loader.classList.add('active');
+    
+    fetch(`/trip/${tripId}/archive-photos/`, {
+        method: 'POST',
+        headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            window.location.reload();
+        } else {
+            alert(data.message || "{% trans 'Fehler beim Archivieren.' %}");
+            if (loader) loader.classList.remove('active');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("{% trans 'Ein technischer Fehler ist aufgetreten.' %}");
+        if (loader) loader.classList.remove('active');
+    });
+}
+</script>

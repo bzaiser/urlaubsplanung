@@ -1,10 +1,24 @@
-import os
-import shutil
+import re
+import json
+import requests
 from datetime import datetime
 from django.conf import settings
 from ..models import Trip, Day, Event, DiaryEntry, DiaryImage
 
 class PolarstepsImporter:
+    @staticmethod
+    def sync_from_id(ps_id, user=None):
+        """
+        Fetches trip data directly from Polarsteps API and syncs it.
+        """
+        api_url = f"https://www.polarsteps.com/api/trips/{ps_id}"
+        response = requests.get(api_url, timeout=30)
+        if response.status_code != 200:
+            raise Exception(f"Polarsteps API returned status {response.status_code}")
+        
+        data = response.json()
+        return PolarstepsImporter.create_trip_from_json(data, user=user)
+
     @staticmethod
     def create_trip_from_json(data, user=None):
         """
@@ -79,8 +93,23 @@ class PolarstepsImporter:
                 else:
                     # If entry already existed for that day but wasn't marked as this step, append
                     if desc and desc not in diary.text:
-                        diary.text += f"\n\n--- {step['name']} ---\n{desc}"
+                        separator = f"\n\n--- {step['name'] or loc_name} ---\n"
+                        diary.text += separator + desc
                 diary.save()
+            
+            # 4. Media (Links only for sync)
+            media_items = step.get('media', [])
+            for media in media_items:
+                cdn_url = media.get('cdn_path') or media.get('path')
+                if cdn_url:
+                    # Check if this image link already exists for this entry
+                    exists = DiaryImage.objects.filter(diary_entry=diary, remote_url=cdn_url).exists()
+                    if not exists:
+                        DiaryImage.objects.create(
+                            diary_entry=diary,
+                            remote_url=cdn_url,
+                            caption=media.get('description', '') or ""
+                        )
             
             steps_mapping[step_id] = diary.id
             
@@ -116,3 +145,31 @@ class PolarstepsImporter:
             image=relative_dest_path,
             caption=original_filename
         )
+
+    @staticmethod
+    def archive_all_remote_images(trip):
+        """
+        Downloads all remote photos into local storage for archiving.
+        Useful when back home in WLAN.
+        """
+        import os
+        import requests
+        from django.core.files.base import ContentFile
+        
+        images = DiaryImage.objects.filter(diary_entry__day__trip=trip, image='', remote_url__isnull=False).exclude(remote_url='')
+        
+        count = 0
+        for img in images:
+            try:
+                response = requests.get(img.remote_url, timeout=30)
+                if response.status_code == 200:
+                    ext = img.remote_url.split('.')[-1][:4] # simple extension guess
+                    if '?' in ext: ext = ext.split('?')[0]
+                    filename = f"ps_archive_{img.id}.{ext}"
+                    
+                    img.image.save(filename, ContentFile(response.content), save=True)
+                    count += 1
+            except Exception as e:
+                print(f"Error archiving image {img.id}: {e}")
+                
+        return count
