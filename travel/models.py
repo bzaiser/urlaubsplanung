@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 import json
@@ -618,3 +620,22 @@ def ensure_user_defaults(sender, instance, created, **kwargs):
                 text=item.text,
                 due_days_before=item.due_days_before
             )
+
+
+@receiver(post_delete, sender=DiaryImage)
+def auto_delete_file_on_delete(sender, instance, **kwargs):
+    """
+    Deletes photo from NAS when the record is deleted,
+    but ONLY if no other record is using the same file (Deduplication).
+    """
+    if instance.image:
+        storage = instance.image.storage
+        # Check if any OTHER DiaryImage still uses this path
+        # (instance is already deleted from DB but exists in memory)
+        if not DiaryImage.objects.filter(image=instance.image.name).exists():
+            if storage.exists(instance.image.name):
+                try:
+                    storage.delete(instance.image.name)
+                except Exception as e:
+                    import logging
+                    logger.error(f"Error deleting file {instance.image.name}: {e}")
