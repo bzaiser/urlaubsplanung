@@ -1777,7 +1777,7 @@ def sync_polarsteps_live(request, trip_id):
         from .services.polarsteps_service import PolarstepsImporter
         PolarstepsImporter.sync_from_url(trip.polarsteps_url, user=request.user, existing_trip=trip)
         messages.success(request, _("Erfolgreich mit Polarsteps synchronisiert!"))
-        return JsonResponse({'status': 'ok', 'redirect': reverse('trip_dashboard', args=[trip.id])})
+        return JsonResponse({'status': 'ok', 'redirect': reverse('travel:dashboard') + f'?trip_id={trip.id}'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
