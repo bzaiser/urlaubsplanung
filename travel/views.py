@@ -1685,10 +1685,20 @@ def import_polarsteps(request):
         importer = PolarstepsImporter()
         trip, steps_mapping = importer.create_trip_from_json(json_data, user=request.user)
         
+        # Get list of already existing photo filenames for this trip
+        existing_photos = list(DiaryImage.objects.filter(
+            diary_entry__day__trip=trip
+        ).values_list('image', flat=True))
+        
+        # We only need the basenames (e.g. ps_step_123_img.jpg)
+        import os
+        existing_filenames = [os.path.basename(f) for f in existing_photos]
+        
         return JsonResponse({
             'status': 'success',
             'trip_id': trip.id,
-            'mapping': steps_mapping
+            'mapping': steps_mapping,
+            'existing_photos': existing_filenames
         })
     except Exception as e:
         import traceback

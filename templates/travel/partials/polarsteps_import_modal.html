@@ -133,6 +133,7 @@
             tripBar.style.width = "100%";
             tripLabel.innerText = "{% trans 'Fertig' %}";
             const mapping = tripResult.mapping;
+            const existingPhotos = tripResult.existing_photos || [];
 
             // 3. Upload Photos sequentially
             statusLabel.innerText = "{% trans 'Importiere Fotos...' %}";
@@ -142,8 +143,18 @@
             for (const photoInfo of photoFiles) {
                 const diaryId = mapping[photoInfo.stepId];
                 if (!diaryId) {
-                    uploadedPhotos++; // Skip if no mapping (e.g. unknown step)
+                    uploadedPhotos++; // Skip if no mapping
                     continue;
+                }
+
+                // SMART SKIP: Check if file already exists on server
+                const stableName = `ps_step_${photoInfo.stepId}_${photoInfo.filename}`;
+                if (existingPhotos.includes(stableName)) {
+                    uploadedPhotos++;
+                    const percent = Math.round((uploadedPhotos / totalPhotos) * 100);
+                    photoBar.style.width = `${percent}%`;
+                    photoLabel.innerText = `${uploadedPhotos} / ${totalPhotos}`;
+                    continue; // Skip the fetch call!
                 }
 
                 const photoData = new FormData();
