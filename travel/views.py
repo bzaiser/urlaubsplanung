@@ -1672,7 +1672,13 @@ def import_polarsteps(request):
     
     # POST: Expects trip.json content
     try:
-        json_data = json.loads(request.POST.get('json_data'))
+        raw_json = request.POST.get('json_data')
+        if not raw_json:
+            return JsonResponse({'status': 'error', 'message': 'Keine Daten empfangen.'}, status=400)
+            
+        json_str = ai_service.repair_json(raw_json)
+        json_data = json.loads(json_str)
+        
         importer = PolarstepsImporter()
         trip, steps_mapping = importer.create_trip_from_json(json_data, user=request.user)
         
@@ -1682,7 +1688,9 @@ def import_polarsteps(request):
             'mapping': steps_mapping
         })
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        import traceback
+        logger.error(f"Polarsteps Import Error: {str(e)}\n{traceback.format_exc()}")
+        return JsonResponse({'status': 'error', 'message': f'Fehler beim Einlesen: {str(e)}'}, status=400)
 
 @login_required
 def import_polarsteps_photo(request):
