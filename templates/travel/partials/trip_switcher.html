@@ -47,6 +47,7 @@
             <div class="segmented-control">
                 <button hx-get="{% url 'travel:dashboard' %}?view=timeline" 
                         hx-target="#dashboard-refresh"
+                        hx-push-url="true"
                         class="segmented-item {% if view_type == 'timeline' %}active{% endif %}"
                         title="{% trans 'Tagebuch' %}">
                     <i class="bi bi-journal-bookmark"></i>
@@ -54,6 +55,7 @@
                 </button>
                 <button hx-get="{% url 'travel:dashboard' %}?view=table" 
                         hx-target="#dashboard-refresh"
+                        hx-push-url="true"
                         class="segmented-item {% if view_type == 'table' %}active{% endif %}"
                         title="{% trans 'Planer' %}">
                     <i class="bi bi-grid-3x3-gap"></i>
@@ -61,6 +63,7 @@
                 </button>
                 <button hx-get="{% url 'travel:dashboard' %}?view=checklist" 
                         hx-target="#dashboard-refresh"
+                        hx-push-url="true"
                         class="segmented-item {% if view_type == 'checklist' %}active{% endif %}"
                         title="{% trans 'Checkliste' %}">
                     <i class="bi bi-list-check"></i>

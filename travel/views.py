@@ -324,7 +324,7 @@ class TripDashboardView(LoginRequiredMixin, ListView):
             primary_html = render_to_string(template_name, context, request=self.request)
             
             # Prepare OOB switcher
-            view_type = self.request.GET.get('view', 'timeline')
+            view_type = context.get('view_type', 'timeline')
             active_trip = context.get('active_trip')
             
             switcher_html = render_to_string('travel/partials/trip_switcher.html', {
