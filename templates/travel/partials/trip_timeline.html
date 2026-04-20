@@ -32,16 +32,17 @@
                            id="timeline-input-{{ forloop.counter }}"
                            onkeyup="if(event.key==='Enter') document.getElementById('timeline-save-{{ forloop.counter }}').click();">
                     <input type="hidden" name="old_name" value="{{ station.location }}">
-                    <button class="btn btn-success" id="timeline-save-{{ forloop.counter }}"
+                    <button class="btn btn-success px-2 py-0 fw-bold" id="timeline-save-{{ forloop.counter }}"
                             hx-post="{% url 'travel:station_rename' active_trip.id %}"
                             hx-include="#timeline-station-edit-{{ forloop.counter }} input"
                             hx-target="#dashboard-refresh"
-                            hx-indicator=".loading-overlay">
-                        <i class="bi bi-check-lg"></i>
+                            style="font-size: 0.75rem;">
+                        OK
                     </button>
-                    <button class="btn btn-outline-secondary" 
+                    <button class="btn btn-outline-secondary px-2 py-0" 
+                            style="font-size: 0.75rem;"
                             onclick="document.getElementById('timeline-station-display-{{ forloop.counter }}').classList.remove('d-none'); document.getElementById('timeline-station-edit-{{ forloop.counter }}').classList.add('d-none');">
-                        <i class="bi bi-x-lg"></i>
+                        X
                     </button>
                 </div>
             </div>

@@ -1433,7 +1433,7 @@ def station_rename(request, trip_id):
 
     # Re-render the dashboard (context includes grouped_stations)
     context = get_dashboard_context(request, active_trip=trip)
-    return render(request, 'travel/partials/trip_dashboard.html', context)
+    return render(request, 'travel/partials/trip_list.html', context)
 
 @login_required
 @require_POST
