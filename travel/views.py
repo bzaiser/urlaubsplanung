@@ -1766,21 +1766,14 @@ def sync_polarsteps_live(request, trip_id):
     if not url:
         return JsonResponse({'status': 'error', 'message': _('Keine Polarsteps-URL hinterlegt.')}, status=400)
 
-    # Extract ID from URL (e.g., .../24200863-thailand)
-    match = re.search(r'/(\d+)', url)
-    if not match:
-        return JsonResponse({'status': 'error', 'message': _('Ungültige Polarsteps-URL. Die ID konnte nicht gefunden werden.')}, status=400)
-    
-    ps_id = match.group(1)
-    
     # Save URL to trip if it's new
     if url != trip.polarsteps_url:
         trip.polarsteps_url = url
-        trip.polarsteps_id = ps_id
+        # ID extraction handled in service, but we can store it here too if needed
         trip.save()
         
     try:
-        PolarstepsImporter.sync_from_id(ps_id, user=request.user)
+        PolarstepsImporter.sync_from_url(url, user=request.user)
         messages.success(request, _("Erfolgreich mit Polarsteps synchronisiert!"))
         return JsonResponse({'status': 'ok', 'redirect': reverse('trip_dashboard', args=[trip.id])})
     except Exception as e:

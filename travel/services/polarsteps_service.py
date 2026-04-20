@@ -7,14 +7,49 @@ from ..models import Trip, Day, Event, DiaryEntry, DiaryImage
 
 class PolarstepsImporter:
     @staticmethod
-    def sync_from_id(ps_id, user=None):
+    def sync_from_url(url, user=None):
         """
-        Fetches trip data directly from Polarsteps API and syncs it.
+        Parses a Polarsteps URL, identifies the correct API endpoint, and syncs data.
+        Supports public trips and private trips with an invite token (s=...).
         """
-        api_url = f"https://www.polarsteps.com/api/trips/{ps_id}"
-        response = requests.get(api_url, timeout=30)
+        import re
+        import requests
+        
+        # 1. Parse URL components
+        # Pattern samples: 
+        # - https://www.polarsteps.com/BirgitZaiser/24200863-thailand?s=...
+        # - https://www.polarsteps.com/BirgitZaiser/24200863-thailand
+        match = re.search(r'polarsteps\.com/([^/]+)/(\d+-[^?&]+)', url)
+        token_match = re.search(r'[?&]s=([^&]+)', url)
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        }
+        
+        if match:
+            username = match.group(1)
+            trip_slug = match.group(2)
+            token = token_match.group(1) if token_match else None
+            
+            # Use the robust slug-based endpoint which supports invite tokens
+            api_url = f"https://www.polarsteps.com/api/users/by_username/{username}/trips/{trip_slug}"
+            params = {'invite_token': token} if token else {}
+            
+            response = requests.get(api_url, params=params, headers=headers, timeout=30)
+        else:
+            # Fallback to ID-based if it's just a number
+            ps_id_match = re.search(r'/(\d+)', url)
+            if ps_id_match:
+                ps_id = ps_id_match.group(1)
+                api_url = f"https://www.polarsteps.com/api/trips/{ps_id}"
+                response = requests.get(api_url, headers=headers, timeout=30)
+            else:
+                raise Exception("Konnte keine Reise-ID oder Slug aus der URL extrahieren.")
+
         if response.status_code != 200:
-            raise Exception(f"Polarsteps API returned status {response.status_code}")
+            if response.status_code == 401:
+                raise Exception("Zugriff verweigert (401). Ist die Reise privat? Bitte den vollständigen 'Teilen'-Link nutzen.")
+            raise Exception(f"Polarsteps API Fehler ({response.status_code}): {response.text[:100]}")
         
         data = response.json()
         return PolarstepsImporter.create_trip_from_json(data, user=user)
