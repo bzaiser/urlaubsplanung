@@ -153,9 +153,13 @@ class PolarstepsImporter:
         steps_mapping = {}
         
         for step in all_steps:
-            step_id = str(step['id'])
-            step_date = datetime.fromtimestamp(step['start_time']).date()
-            loc_name = step['location'].get('name', 'Unbekannter Ort')
+            step_id = str(step.get('id', 'unknown'))
+            start_ts = step.get('start_time', time.time())
+            step_date = datetime.fromtimestamp(start_ts).date()
+            
+            # Safe location access
+            location_data = step.get('location') or {}
+            loc_name = location_data.get('name', 'Unbekannter Ort')
             
             # 1. Day
             day, created = Day.objects.get_or_create(
@@ -164,15 +168,15 @@ class PolarstepsImporter:
                 defaults={
                     'location': loc_name,
                     'station': loc_name,
-                    'latitude': step['location'].get('lat'),
-                    'longitude': step['location'].get('lon'),
+                    'latitude': location_data.get('lat'),
+                    'longitude': location_data.get('lon'),
                     'is_geocoded': True
                 }
             )
             
             # 2. Event (Deduplicate based on title and time if possible)
-            ev_title = step['name'] or loc_name
-            ev_time = datetime.fromtimestamp(step['start_time']).time()
+            ev_title = step.get('name') or loc_name
+            ev_time = datetime.fromtimestamp(start_ts).time()
             event, ev_created = Event.objects.get_or_create(
                 day=day,
                 title=ev_title,
@@ -181,8 +185,8 @@ class PolarstepsImporter:
                     'type': 'ACTIVITY',
                     'notes': step.get('description', ''),
                     'location': loc_name,
-                    'latitude': step['location'].get('lat'),
-                    'longitude': step['location'].get('lon'),
+                    'latitude': location_data.get('lat'),
+                    'longitude': location_data.get('lon'),
                     'is_geocoded': True
                 }
             )
