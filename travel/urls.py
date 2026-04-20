@@ -24,6 +24,8 @@ from .views import (
     fix_event_type,
     import_polarsteps,
     import_polarsteps_photo,
+    sync_polarsteps_live,
+    archive_polarsteps_images,
     station_rename
 )
 
