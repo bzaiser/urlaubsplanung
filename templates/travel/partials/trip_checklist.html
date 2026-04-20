@@ -31,13 +31,16 @@
                     <button hx-post="{% url 'travel:checklist_reset' active_trip.id %}" 
                             hx-confirm="{% trans 'Möchtest du die gesamte Checkliste wirklich zurücksetzen? Alle Einträge werden gelöscht.' %}"
                             hx-target="#checklist-container"
+                            hx-indicator="#loading-overlay"
                             class="btn btn-outline-danger btn-sm">
                         <i class="bi bi-trash me-1"></i>{% trans "Zurücksetzen" %}
                     </button>
                 {% endif %}
             </div>
                 {% if not checklist.items.exists %}
-                    <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" hx-target="#checklist-container" 
+                    <form hx-post="{% url 'travel:checklist_apply_template' active_trip.id %}" 
+                          hx-target="#checklist-container" 
+                          hx-indicator="#loading-overlay"
                           class="d-flex gap-2 w-100" style="max-width: 400px;">
                         {% csrf_token %}
                         <select name="template_id" class="form-select form-select-sm bg-dark text-light border-secondary flex-grow-1">
@@ -66,7 +69,10 @@
     <div class="card bg-dark border-secondary border-opacity-25 mb-4 mb-md-5">
         <div class="card-body p-3">
             <h6 class="text-secondary small text-uppercase mb-3 fw-bold">{% trans "Hinzufügen" %}</h6>
-            <form hx-post="{% url 'travel:checklist_item_add' active_trip.id %}" hx-target="#dashboard-refresh" class="row g-2 align-items-end">
+            <form hx-post="{% url 'travel:checklist_item_add' active_trip.id %}" 
+                  hx-target="#dashboard-refresh" 
+                  hx-indicator="#loading-overlay"
+                  class="row g-2 align-items-end">
                 {% csrf_token %}
                 <div class="col-12 col-md-5">
                     <input type="text" name="text" class="form-control bg-dark border-secondary text-light" placeholder="{% trans 'Was fehlt noch?' %}" required>
@@ -113,6 +119,7 @@
                                                        {% if item.is_checked %}checked{% endif %}
                                                        hx-post="{% url 'travel:checklist_item_toggle' item.id %}"
                                                        hx-swap="none"
+                                                       hx-indicator="#loading-overlay"
                                                        id="item_{{ item.id }}">
                                                 <label class="form-check-label text-light {% if item.is_checked %}text-decoration-line-through text-opacity-50{% endif %}" 
                                                        for="item_{{ item.id }}">
@@ -133,6 +140,7 @@
                                         <button hx-delete="{% url 'travel:checklist_item_delete' item.id %}"
                                                 hx-confirm="{% trans 'Wirklich löschen?' %}"
                                                 hx-target="#checklist-container"
+                                                hx-indicator="#loading-overlay"
                                                 class="btn btn-link btn-sm text-danger p-0 opacity-0 transition-opacity">
                                             <i class="bi bi-trash"></i>
                                         </button>
