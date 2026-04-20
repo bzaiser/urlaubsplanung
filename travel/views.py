@@ -1770,11 +1770,11 @@ def sync_polarsteps_live(request, trip_id):
     # Save URL to trip if it's new
     if url != trip.polarsteps_url:
         trip.polarsteps_url = url
-        # ID extraction handled in service, but we can store it here too if needed
         trip.save()
         
     try:
-        PolarstepsImporter.sync_from_url(url, user=request.user)
+        from .services.polarsteps_service import PolarstepsImporter
+        PolarstepsImporter.sync_from_url(trip.polarsteps_url, user=request.user, existing_trip=trip)
         messages.success(request, _("Erfolgreich mit Polarsteps synchronisiert!"))
         return JsonResponse({'status': 'ok', 'redirect': reverse('trip_dashboard', args=[trip.id])})
     except Exception as e:

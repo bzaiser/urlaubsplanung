@@ -230,6 +230,9 @@ class Event(models.Model):
     
     is_paid = models.BooleanField(_("Bezahlt"), default=False)
 
+    # Link to Polarsteps for noise identification
+    polarsteps_step_id = models.CharField(max_length=50, null=True, blank=True)
+
     # Internal flag [NEW]
     _skip_automation = False
     

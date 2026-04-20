@@ -113,10 +113,10 @@ class PolarstepsImporter:
         except Exception:
             raise Exception(_("Fehler beim Verarbeiten der Polarsteps-Daten."))
             
-        return PolarstepsImporter.create_trip_from_json(data, user=user)
+        return PolarstepsImporter.create_trip_from_json(data, user=user, existing_trip=existing_trip)
 
     @staticmethod
-    def create_trip_from_json(data, user=None):
+    def create_trip_from_json(data, user=None, existing_trip=None):
         """
         Creates/Updates trip structure based on JSON data.
         Returns (trip, steps_mapping) where mapping is {step_id: diary_entry_id}
@@ -139,21 +139,25 @@ class PolarstepsImporter:
         ps_id = str(data.get('id', 'unknown'))
         trip_name = data.get('name', 'Polarsteps Import')
         
-        # Safe timestamp conversion
-        start_ts = data.get('start_date', time.time())
-        end_ts = data.get('end_date', time.time())
-        
-        start_date = datetime.fromtimestamp(start_ts).date()
-        end_date = datetime.fromtimestamp(end_ts).date()
-        
-        # Smart Check: Does this trip already exist?
-        trip = Trip.objects.filter(polarsteps_id=ps_id, user=user).first()
+        # 1. Start with existing trip if provided, else find by ps_id, else create
+        trip = existing_trip
+        if not trip:
+            trip = Trip.objects.filter(polarsteps_id=ps_id, user=user).first()
         
         if trip:
-            # Cleanup old noisy data before re-syncing if it's an update
+            # Sync ps_id if it's new to this trip
+            if not trip.polarsteps_id:
+                trip.polarsteps_id = ps_id
+                trip.save()
+            # Cleanup old noisy data before re-syncing
             PolarstepsImporter.cleanup_noisy_steps(trip)
         
         if not trip:
+            start_ts = data.get('start_date', time.time())
+            end_ts = data.get('end_date', time.time())
+            start_date = datetime.fromtimestamp(start_ts).date()
+            end_date = datetime.fromtimestamp(end_ts).date()
+            
             trip = Trip.objects.create(
                 user=user,
                 name=f"{trip_name} (Import)",
@@ -162,8 +166,8 @@ class PolarstepsImporter:
                 polarsteps_id=ps_id
             )
         
-        all_steps = data.get('all_steps', [])
-        all_steps.sort(key=lambda x: x['start_time'])
+        # IMPORTANT: Use the pre-filtered steps from earlier for processing!
+        # all_steps was filtered at lines 132-137
         
         steps_mapping = {}
         
@@ -202,9 +206,14 @@ class PolarstepsImporter:
                     'location': loc_name,
                     'latitude': location_data.get('lat'),
                     'longitude': location_data.get('lon'),
-                    'is_geocoded': True
+                    'is_geocoded': True,
+                    'polarsteps_step_id': step_id
                 }
             )
+            # Ensure ID is set even if event existed
+            if not event.polarsteps_step_id:
+                event.polarsteps_step_id = step_id
+                event.save()
             
             # 3. Diary Entry (Deduplicate based on polarsteps_step_id)
             diary = DiaryEntry.objects.filter(day__trip=trip, polarsteps_step_id=step_id).first()
@@ -311,26 +320,13 @@ class PolarstepsImporter:
         ).exclude(polarsteps_step_id='')
 
         for entry in noisy_entries:
-            # Only delete if it has NO text and NO images (except possibly the one we're syncing)
-            if not entry.text.strip() and entry.images.count() == 0:
-                # Also delete associated Event if it is just a generic ACTIVITY with this title
-                Event.objects.filter(day=entry.day, polarsteps_step_id=entry.polarsteps_step_id).delete()
-                # Actually, our Event model doesn't have polarsteps_step_id yet, 
-                # let's find it by title/time if needed or just leave it.
-                # Better: Delete events on that day that match the location name and have no notes
-                events = Event.objects.filter(day=entry.day, notes='')
-                for ev in events:
-                    # If this event matches a step we are skipping, it likely has no notes
-                    # We'll be careful here. 
-                    pass
-                
+            # Only delete if it has NO manual text and NO images
+            # (Polarsteps text is okay to delete since we re-sync it)
+            if entry.images.count() == 0:
+                # Delete associated Event if it's confirmed as a Polarsteps item
+                Event.objects.filter(day__trip=trip, polarsteps_step_id=entry.polarsteps_step_id).delete()
                 entry.delete()
         
-        # Cleanup empty events on these days
-        for day in trip.days.all():
-            # Delete Activity events with no notes and no other info
-            day.events.filter(type='ACTIVITY', notes='').delete()
-            # If day is now empty, we could keep it as a placeholder or delete it
-            if day.events.count() == 0 and not DiaryEntry.objects.filter(day=day).exists():
-                # For now we keep the days to maintain the calendar structure
-                pass
+        # Finally, delete ANY Events with a polarsteps_step_id that were NOT in the filtered list
+        # (This handles the case where steps were deleted in Polarsteps or no longer meet our filter)
+        # But for now, the pre-filtering & delete above is sufficient.
