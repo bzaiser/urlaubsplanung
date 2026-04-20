@@ -35,7 +35,7 @@ class PolarstepsImporter:
             pass
 
     @staticmethod
-    def sync_from_url(url, user=None):
+    def sync_from_url(url, user=None, existing_trip=None):
         """
         Parses a Polarsteps URL, identifies the correct API endpoint, and syncs data.
         Supports public trips and private trips with an invite token (s=...).
