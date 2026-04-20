@@ -30,8 +30,40 @@
                 <tbody>
                     {% for station in active_trip.grouped_stations %}
                         <tr style="background: rgba(197, 160, 89, 0.05);">
-                            <td colspan="18" style="padding: 12px 15px; font-weight: 600; color: var(--accent-gold); border-bottom: 1px solid var(--glass-border); position: sticky; left: 0;">
-                               📍 {{ station.location }} ({{ station.nights }} {% if station.nights > 1 %}{% trans "LABEL_NIGHTS" %}{% else %}{% trans "LABEL_NIGHT" %}{% endif %})
+                            <td colspan="18" style="padding: 10px 15px; font-weight: 600; color: var(--accent-gold); border-bottom: 1px solid var(--glass-border); position: sticky; left: 0;">
+                                <div id="station-display-{{ forloop.counter }}" class="d-flex align-items-center gap-2">
+                                    <span class="fs-6">📍 {{ station.location }}</span>
+                                    <button class="btn btn-link text-warning p-0 ms-1 opacity-50-hover" 
+                                            onclick="document.getElementById('station-display-{{ forloop.counter }}').classList.add('d-none'); document.getElementById('station-edit-{{ forloop.counter }}').classList.remove('d-none'); document.getElementById('input-{{ forloop.counter }}').focus();"
+                                            title="Station umbenennen">
+                                        <i class="bi bi-pencil-fill" style="font-size: 0.75rem;"></i>
+                                    </button>
+                                    <span class="text-secondary fw-normal opacity-75 ms-2" style="font-size: 0.75rem;">
+                                        ({{ station.nights }} {% if station.nights > 1 %}{% trans "LABEL_NIGHTS" %}{% else %}{% trans "LABEL_NIGHT" %}{% endif %})
+                                    </span>
+                                </div>
+
+                                <div id="station-edit-{{ forloop.counter }}" class="d-none">
+                                    <div class="input-group input-group-sm" style="max-width: 350px;">
+                                        <span class="input-group-text bg-dark border-secondary text-warning">📍</span>
+                                        <input type="text" class="form-control bg-dark text-warning border-secondary fw-bold" 
+                                               name="new_name" value="{{ station.location }}"
+                                               id="input-{{ forloop.counter }}"
+                                               onkeyup="if(event.key==='Enter') document.getElementById('save-{{ forloop.counter }}').click();">
+                                        <input type="hidden" name="old_name" value="{{ station.location }}">
+                                        <button class="btn btn-success" id="save-{{ forloop.counter }}"
+                                                hx-post="{% url 'travel:station_rename' active_trip.id %}"
+                                                hx-include="#station-edit-{{ forloop.counter }} input"
+                                                hx-target="#dashboard-refresh"
+                                                hx-indicator=".loading-overlay">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" 
+                                                onclick="document.getElementById('station-display-{{ forloop.counter }}').classList.remove('d-none'); document.getElementById('station-edit-{{ forloop.counter }}').classList.add('d-none');">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                         {% for day in station.days %}

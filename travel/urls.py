@@ -35,6 +35,7 @@ urlpatterns = [
     path('trip/new/', trip_create, name='trip_create'),
     path('trip/<int:pk>/edit/', trip_edit, name='trip_edit'),
     path('trip/<int:pk>/delete/', trip_delete, name='trip_delete'),
+    path('trip/<int:trip_id>/station/rename/', station_rename, name='station_rename'),
     path('trip/<int:trip_id>/force-geocode/', force_geocode, name='force_geocode'),
     path('day/<int:day_id>/event/new/', event_create, name='event_create'),
     path('day/<int:day_id>/event/type-picker/', event_type_picker, name='event_type_picker'),

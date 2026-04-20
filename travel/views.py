@@ -16,6 +16,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 import json
 from .services import ai_service, logic_service, checklist_service, geo_service
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.cache import never_cache
 import logging
@@ -1415,6 +1416,26 @@ def trip_checklist(request, trip_id):
     return HttpResponse(response_html)
 
 @login_required
+@require_POST
+def station_rename(request, trip_id):
+    """
+    Renames a station grouping (Day.station) for all days in a trip
+    that currently share the old name.
+    """
+    trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+    old_name = request.POST.get('old_name')
+    new_name = request.POST.get('new_name', '').strip()
+
+    if old_name and new_name:
+        # Update all days in this trip that match the old station name
+        Day.objects.filter(trip=trip, station=old_name).update(station=new_name)
+
+    # Re-render the dashboard (context includes grouped_stations)
+    context = get_dashboard_context(request, active_trip=trip)
+    return render(request, 'travel/partials/trip_dashboard.html', context)
+
+@login_required
+@require_POST
 def checklist_item_toggle(request, item_id):
     """HTMX view to toggle an item's completion status."""
     item = get_object_or_404(TripChecklistItem, pk=item_id)
