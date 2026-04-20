@@ -23,7 +23,8 @@ from .views import (
     checklist_template_delete_simple,
     fix_event_type,
     import_polarsteps,
-    import_polarsteps_photo
+    import_polarsteps_photo,
+    station_rename
 )
 
 app_name = 'travel'
