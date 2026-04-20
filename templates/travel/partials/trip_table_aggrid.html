@@ -617,12 +617,49 @@
                             </div>`;
                         } else if (d.is_station_header) {
                             const isCollapsed = window.collapsedStations.has(d.station_key);
-                            return `<div class="station-header-grid px-3 fw-semibold h-100 d-flex align-items-center fs-6 ${isCollapsed ? 'collapsed' : ''}" 
-                                         onclick="window.toggleStation('${d.station_key}')"
-                                         style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal);">
-                                <span class="caret-icon">▼</span>
-                                📍 ${d.station_location} (${d.days_count} Tage / ${d.nights_count} Nächte)
-                            </div>`;
+                            const uniqueId = `ag-station-${d.station_key}`;
+                            
+                            return `
+                                <div class="station-header-grid px-3 fw-semibold h-100 d-flex align-items-center fs-6 ${isCollapsed ? 'collapsed' : ''}" 
+                                     style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-teal); color: var(--accent-teal);">
+                                    
+                                    <!-- Display Mode -->
+                                    <div id="${uniqueId}-display" class="d-flex align-items-center gap-2 w-100" onclick="window.toggleStation('${d.station_key}')">
+                                        <span class="caret-icon">▼</span>
+                                        <span class="fs-6">📍 ${d.station_location}</span>
+                                        <button class="btn btn-link text-warning p-0 ms-1 opacity-50-hover" 
+                                                onclick="event.stopPropagation(); document.getElementById('${uniqueId}-display').classList.add('d-none'); document.getElementById('${uniqueId}-edit').classList.remove('d-none'); document.getElementById('${uniqueId}-input').focus();"
+                                                title="Station umbenennen">
+                                            <i class="bi bi-pencil-fill" style="font-size: 0.75rem;"></i>
+                                        </button>
+                                        <span class="text-secondary fw-normal opacity-75 ms-2" style="font-size: 0.75rem;">
+                                            (${d.days_count} Tage / ${d.nights_count} Nächte)
+                                        </span>
+                                    </div>
+
+                                    <!-- Edit Mode -->
+                                    <div id="${uniqueId}-edit" class="d-none w-100">
+                                        <div class="input-group input-group-sm" style="max-width: 350px;" onclick="event.stopPropagation()">
+                                            <span class="input-group-text bg-dark border-secondary text-warning">📍</span>
+                                            <input type="text" class="form-control bg-dark text-warning border-secondary fw-bold" 
+                                                   name="new_name" value="${d.station_location}"
+                                                   id="${uniqueId}-input"
+                                                   onkeyup="if(event.key==='Enter') document.getElementById('${uniqueId}-save').click();">
+                                            <input type="hidden" name="old_name" value="${d.station_location}">
+                                            <button class="btn btn-success" id="${uniqueId}-save"
+                                                    hx-post="/trip/{{ active_trip.id }}/station/rename/"
+                                                    hx-include="#${uniqueId}-edit input"
+                                                    hx-target="#dashboard-refresh"
+                                                    hx-indicator=".loading-overlay">
+                                                <i class="bi bi-check-lg"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" 
+                                                    onclick="document.getElementById('${uniqueId}-display').classList.remove('d-none'); document.getElementById('${uniqueId}-edit').classList.add('d-none');">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>`;
                         } else if (d.is_day_header) {
                             const isSelected = params.node.isSelected();
                             
