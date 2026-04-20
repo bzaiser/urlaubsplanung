@@ -1,9 +1,9 @@
-const CACHE_NAME = 'travel-hub-v30';
-const STATIC_CACHE = 'travel-hub-static-v30';
-const MEDIA_CACHE = 'travel-hub-media-v30';
-const DYNAMIC_CACHE = 'travel-hub-dynamic-v30';
+const CACHE_NAME = 'travel-hub-v31';
+const STATIC_CACHE = 'travel-hub-static-v31';
+const MEDIA_CACHE = 'travel-hub-media-v31';
+const DYNAMIC_CACHE = 'travel-hub-dynamic-v31';
 
-const log = (msg, data = '') => console.log(`[SW v30] ${msg}`, data);
+const log = (msg, data = '') => console.log(`[SW v31] ${msg}`, data);
 
 const EMERGENCY_STYLES = `
     body { background: #0a192f; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
@@ -24,7 +24,7 @@ const EMERGENCY_SHELL_HTML = `
 </head>
 <body>
     <div class="container">
-        <div class="indicator">OFFLINE-MODUS (v30)</div>
+        <div class="indicator">OFFLINE-MODUS (v31)</div>
         <h1>Inhalt nicht im Cache</h1>
         <p>Dieses Element ist aktuell nicht offline verfügbar. Bitte stellen Sie eine Verbindung her.</p>
         <a href="/" class="btn">Zurück zur Übersicht</a>
@@ -44,7 +44,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-    log('Installing Software v30 (Extension-Fix)...');
+    log('Installing Software v31 (Import-Fix)...');
     self.skipWaiting();
     event.waitUntil(caches.open(STATIC_CACHE).then((cache) => {
         return Promise.allSettled(ASSETS.map(url => cache.add(url)));
@@ -52,7 +52,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-    log('v30 Activated. Clearing old caches...');
+    log('v31 Activated. Clearing old caches...');
     event.waitUntil(Promise.all([
         self.clients.claim(),
         caches.keys().then((keys) => {
@@ -64,7 +64,7 @@ self.addEventListener('activate', (event) => {
 });
 
 const isBypassed = (url) => {
-    return url.includes('/edit/') || url.includes('/delete/') || url.includes('/create/') || url.includes('?t=');
+    return url.includes('/edit/') || url.includes('/delete/') || url.includes('/create/') || url.includes('/import/') || url.includes('?t=');
 };
 
 self.addEventListener('fetch', (event) => {
