@@ -36,6 +36,7 @@
                             hx-post="{% url 'travel:station_rename' active_trip.id %}"
                             hx-include="#timeline-station-edit-{{ forloop.counter }} input"
                             hx-target="#dashboard-refresh"
+                            hx-indicator="#loading-overlay"
                             style="font-size: 0.75rem;">
                         OK
                     </button>

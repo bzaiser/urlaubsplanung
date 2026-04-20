@@ -245,11 +245,16 @@
                 formData.append('new_name', newName);
                 
                 try {
+                    const overlay = document.getElementById('loading-overlay');
+                    if (overlay) overlay.style.display = 'flex';
+                    
                     const response = await fetch(`/trip/${tripId}/station/rename/`, {
                         method: 'POST',
                         body: formData,
                         headers: { 'X-CSRFToken': '{{ csrf_token }}' }
                     });
+                    
+                    if (overlay) overlay.style.display = 'none';
                     
                     if (response.ok) {
                         // Refresh the entire grid data via HTMX target as usual
