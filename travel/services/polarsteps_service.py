@@ -22,45 +22,70 @@ class PolarstepsImporter:
         match = re.search(r'polarsteps\.com/([^/]+)/(\d+-[^?&]+)', url)
         token_match = re.search(r'[?&]s=([^&]+)', url)
         
+        # Advanced Stealth Headers
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
-            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br',
             'Referer': 'https://www.polarsteps.com/',
+            'Origin': 'https://www.polarsteps.com',
+            'DNT': '1',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
         }
+        
+        session = requests.Session()
+        session.headers.update(headers)
+        
+        # 1. Parse URL components
+        match = re.search(r'polarsteps\.com/([^/]+)/(\d+-[^?&]+)', url)
+        token_match = re.search(r'[?&]s=([^&]+)', url)
         
         if match:
             username = match.group(1)
             trip_slug = match.group(2)
             token = token_match.group(1) if token_match else None
             
-            # Use the robust slug-based endpoint which supports invite tokens
+            # The most robust path for shared/private trips
             api_url = f"https://www.polarsteps.com/api/users/by_username/{username}/trips/{trip_slug}"
             params = {'invite_token': token} if token else {}
             
-            response = requests.get(api_url, params=params, headers=headers, timeout=30)
+            # Set invite_token as cookie as well (extra stealth)
+            if token:
+                session.cookies.set('invite_token', token, domain='www.polarsteps.com')
+            
+            try:
+                response = session.get(api_url, params=params, timeout=30)
+            except Exception as e:
+                raise Exception(f"Verbindungsfehler zu Polarsteps: {str(e)}")
         else:
-            # Fallback to ID-based if it's just a number
+            # Fallback to ID-based
             ps_id_match = re.search(r'/(\d+)', url)
             if ps_id_match:
                 ps_id = ps_id_match.group(1)
                 api_url = f"https://www.polarsteps.com/api/trips/{ps_id}"
-                response = requests.get(api_url, headers=headers, timeout=30)
+                response = session.get(api_url, timeout=30)
             else:
-                raise Exception("Konnte keine Reise-ID oder Slug aus der URL extrahieren.")
+                raise Exception(_("Konnte keine Reise-ID oder Slug aus der URL extrahieren."))
+
+        # Handle Polarsteps Bot-Wall / Redirection
+        if response.status_code == 200 and 'text/html' in response.headers.get('Content-Type', ''):
+            # This is the "Bot Challenge" shell. 
+            raise Exception(_("Polarsteps blockiert gerade den Zugriff (Sicherheitsprüfung). Bitte versuchen Sie es in 1-2 Stunden erneut, wenn die Sperre abgelaufen ist."))
 
         if response.status_code != 200:
             if response.status_code == 401:
-                raise Exception("Zugriff verweigert (401). Ist die Reise privat? Bitte den vollständigen 'Teilen'-Link nutzen.")
-            raise Exception(f"Polarsteps API Fehler ({response.status_code}): {response.text[:100]}")
+                raise Exception(_("Zugriff verweigert (401). Bitte prüfen Sie den 'Teilen'-Link."))
+            if response.status_code == 404:
+                raise Exception(_("Reise nicht gefunden (404). Bitte Link prüfen."))
+            raise Exception(f"Polarsteps API Fehler ({response.status_code})")
         
-        # Diagnostics before parsing
-        if 'text/html' in response.headers.get('Content-Type', ''):
-            raise Exception("Unerwartete Antwort von Polarsteps: Die API hat eine Webseite statt Daten geschickt. Bitte versuchen Sie es in ein paar Minuten erneut.")
-
         try:
             data = response.json()
         except Exception:
-            raise Exception(f"Fehler beim Verarbeiten der Polarsteps-Daten (Kein gültiges JSON). Empfangen: {response.text[:50]}...")
+            raise Exception(_("Fehler beim Verarbeiten der Polarsteps-Daten. (Ungültiges Format)"))
             
         return PolarstepsImporter.create_trip_from_json(data, user=user)
 
