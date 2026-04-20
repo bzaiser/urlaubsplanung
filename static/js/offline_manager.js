@@ -283,18 +283,25 @@ function getCSRFToken() {
  * EMERGENCY RESET: Clears all local PWA data and reloads.
  */
 async function resetPWAData() {
-    window.resetPWAData = resetPWAData; // Ensure global exposure
-
-    const msg = "⚠️ ACHTUNG: Dies löscht alle lokalen PWA-Daten, den Cache und Cache-Speicher.\n\n" +
+    const msg = "⚠️ ACHTUNG: Dies löscht alle lokalen PWA-Daten und den Cache.\n\n" +
                 "Nicht synchronisierte Tagebuch-Einträge gehen verloren!\n\n" +
                 "Fortfahren?";
     
     if (!confirm(msg)) return;
 
     try {
-        if (window.showToast) showToast("⚙️ Reset wird durchgeführt...", false);
+        console.log("⚙️ PWA: Starting full reset...");
+        
+        // 1. Clear Caches first (crucial)
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            for (const key of keys) {
+                await caches.delete(key);
+                console.log(`PWA Reset: Cache '${key}' deleted`);
+            }
+        }
 
-        // 1. Unregister all Service Workers
+        // 2. Unregister all Service Workers
         if ('serviceWorker' in navigator) {
             const registrations = await navigator.serviceWorker.getRegistrations();
             for (let registration of registrations) {
@@ -303,34 +310,24 @@ async function resetPWAData() {
             }
         }
 
-        // 2. Clear Caches
-        if ('caches' in window) {
-            const keys = await caches.keys();
-            await Promise.all(keys.map(k => caches.delete(k)));
-            console.log("PWA Reset: Caches deleted");
-        }
-
         // 3. Delete IndexedDB
         const deleteDBRequest = indexedDB.deleteDatabase(DB_NAME);
-        deleteDBRequest.onerror = () => console.warn("PWA Reset: Could not delete IndexedDB");
-        deleteDBRequest.onsuccess = () => console.log("PWA Reset: IndexedDB deleted");
-
-        // 4. Clear relevant LocalStorage/SessionStorage
-        localStorage.removeItem('pwa_version');
-        sessionStorage.removeItem('pwa_sync_finished_v28');
         
-        if (window.showToast) showToast("✅ Reset abgeschlossen. Seite wird neu geladen...", false);
+        // 4. Clear Storage
+        localStorage.clear();
+        sessionStorage.clear();
         
-        // 5. Hard reload
-        setTimeout(() => {
-            window.location.reload(true);
-        }, 1500);
+        console.log("✅ PWA Reset complete. Reloading...");
+        
+        // 5. Force hard reload from server
+        window.location.href = window.location.origin + '/?reset=' + Date.now();
 
     } catch (e) {
         console.error("PWA Reset failed:", e);
         alert("Fehler beim Reset: " + e.message);
     }
 }
+window.resetPWAData = resetPWAData;
 
 // Global listeners
 window.addEventListener('online', () => {
