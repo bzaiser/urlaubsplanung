@@ -12,6 +12,7 @@ from .models import (
 )
 from .forms import TripForm, EventForm, DiaryEntryForm, DiaryImageFormSet
 from django.template.defaultfilters import date as _date
+from django.utils.translation import gettext_lazy as _
 from django.db.models import Prefetch
 from django.core.serializers.json import DjangoJSONEncoder
 import json
