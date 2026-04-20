@@ -93,10 +93,10 @@
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <!-- Global Loading Overlay -->
-    <div id="loading-overlay">
+    <div id="loading-overlay" style="display: flex;">
         <div class="loading-spinner"></div>
-        <div class="loading-status-text" id="loading-status">{% trans "Synchronisierung läuft..." %}</div>
-        <div class="loading-sub-text" id="loading-sub">{% trans "Daten werden von Polarsteps abgerufen" %}</div>
+        <div class="loading-status-text" id="loading-status">{% trans "Dashboard wird geladen..." %}</div>
+        <div class="loading-sub-text" id="loading-sub">{% trans "Bitte einen kurzen Moment Geduld" %}</div>
     </div>
 
     <script>
@@ -111,6 +111,20 @@
             overlay.style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
+
+        // --- Pre-loader Logic ---
+        window.addEventListener('load', function() {
+            const overlay = document.getElementById('loading-overlay');
+            // Slight delay for a smoother transition
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    overlay.style.opacity = '1'; // Reset for next JS call
+                    document.body.style.overflow = 'auto';
+                }, 300);
+            }, 200);
+        });
     </script>
     <nav class="navbar navbar-dark bg-dark sticky-top border-bottom border-secondary py-1 py-md-2">
         <div class="container-fluid">
