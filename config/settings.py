@@ -74,6 +74,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': env.db('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 }
+DATABASES['default']['OPTIONS'] = {'timeout': 20}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -154,4 +155,19 @@ if not DEBUG:
     MYDS_DOMAIN = 'https://urlaub.zaisers.myds.me'
     if MYDS_DOMAIN not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(MYDS_DOMAIN)
+
+
+# -----------------------------------------------------------------------------
+# SQLite Performance Tuning (WAL Mode & Concurrency)
+# -----------------------------------------------------------------------------
+from django.db.backends.signals import connection_created
+from django.dispatch import receiver
+
+@receiver(connection_created)
+def set_sqlite_pragma(sender, connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        cursor = connection.cursor()
+        cursor.execute('PRAGMA journal_mode=WAL;')
+        cursor.execute('PRAGMA synchronous=NORMAL;')
+        cursor.execute('PRAGMA busy_timeout=20000;')  # redundant to OPTIONS but safe
 
