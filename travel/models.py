@@ -18,11 +18,14 @@ class Trip(models.Model):
     persons_count = models.PositiveIntegerField(_("Anzahl Personen"), default=2)
     persons_ages = models.CharField(_("Alter der Personen"), max_length=100, blank=True, help_text=_("Komma-separiert, z.B. '40, 38, 12'"))
     ui_settings = models.JSONField(_("UI Einstellungen"), default=dict, blank=True)
-    polarsteps_id = models.CharField(max_length=50, null=True, blank=True, unique=True, verbose_name=_("Polarsteps Trip ID"))
+    polarsteps_id = models.CharField(max_length=50, null=True, blank=True, verbose_name=_("Polarsteps Trip ID"))
     
     class Meta:
         verbose_name = _("Reise")
         verbose_name_plural = _("Reisen")
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'polarsteps_id'], name='unique_user_polarsteps_trip', condition=models.Q(polarsteps_id__isnull=False))
+        ]
 
     def __str__(self):
         return self.name

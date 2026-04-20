@@ -127,6 +127,14 @@
                 headers: { 'X-CSRFToken': '{{ csrf_token }}' }
             });
 
+            if (!tripResponse.ok) {
+                const text = await tripResponse.text();
+                // Try to find error message in the HTML from Django
+                const errorMatch = text.match(/<pre class="exception_value">([\s\S]*?)<\/pre>/);
+                const msg = errorMatch ? errorMatch[1] : text.substring(0, 100);
+                throw new Error(`Server Error (${tripResponse.status}): ${msg}`);
+            }
+
             const tripResult = await tripResponse.json();
             if (tripResult.status !== 'success') throw new Error(tripResult.message);
 
@@ -169,12 +177,18 @@
                     headers: { 'X-CSRFToken': '{{ csrf_token }}' }
                 });
 
-                if (photoResponse.ok) {
+                if (!photoResponse.ok) {
+                    const text = await photoResponse.text();
+                    console.error("Photo upload failed", text);
+                    // Continue with next photo despite error
                     uploadedPhotos++;
-                    const percent = Math.round((uploadedPhotos / totalPhotos) * 100);
-                    photoBar.style.width = `${percent}%`;
-                    photoLabel.innerText = `${uploadedPhotos} / ${totalPhotos}`;
+                } else {
+                    uploadedPhotos++;
                 }
+
+                const percent = Math.round((uploadedPhotos / totalPhotos) * 100);
+                photoBar.style.width = `${percent}%`;
+                photoLabel.innerText = `${uploadedPhotos} / ${totalPhotos}`;
             }
 
             statusLabel.innerText = "{% trans 'Import abgeschlossen!' %}";
