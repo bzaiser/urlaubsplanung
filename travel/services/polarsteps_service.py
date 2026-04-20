@@ -121,18 +121,27 @@ class PolarstepsImporter:
         Creates/Updates trip structure based on JSON data.
         Returns (trip, steps_mapping) where mapping is {step_id: diary_entry_id}
         """
-        ps_id = str(data.get('id'))
+        # Ensure we are looking at the trip data (sometimes it's wrapped in a 'trip' key)
+        if 'trip' in data:
+            data = data['trip']
+            
+        ps_id = str(data.get('id', 'unknown'))
+        trip_name = data.get('name', 'Polarsteps Import')
+        
+        # Safe timestamp conversion
+        start_ts = data.get('start_date', time.time())
+        end_ts = data.get('end_date', time.time())
+        
+        start_date = datetime.fromtimestamp(start_ts).date()
+        end_date = datetime.fromtimestamp(end_ts).date()
         
         # Smart Check: Does this trip already exist?
         trip = Trip.objects.filter(polarsteps_id=ps_id, user=user).first()
         
-        start_date = datetime.fromtimestamp(data['start_date']).date()
-        end_date = datetime.fromtimestamp(data['end_date']).date()
-        
         if not trip:
             trip = Trip.objects.create(
                 user=user,
-                name=f"{data['name']} (Import)",
+                name=f"{trip_name} (Import)",
                 start_date=start_date,
                 end_date=end_date,
                 polarsteps_id=ps_id
