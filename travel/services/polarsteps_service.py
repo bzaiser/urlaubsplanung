@@ -1,3 +1,7 @@
+import os
+import pickle
+import time
+import random
 import re
 import json
 import requests
@@ -7,6 +11,29 @@ from django.utils.translation import gettext_lazy as _
 from ..models import Trip, Day, Event, DiaryEntry, DiaryImage
 
 class PolarstepsImporter:
+    COOKIE_FILE = os.path.join(settings.BASE_DIR, '.polarsteps_session.pkl')
+
+    @staticmethod
+    def _load_session(session):
+        """Loads cookies from a local file into the session."""
+        if os.path.exists(PolarstepsImporter.COOKIE_FILE):
+            try:
+                with open(PolarstepsImporter.COOKIE_FILE, 'rb') as f:
+                    session.cookies.update(pickle.load(f))
+                return True
+            except Exception:
+                return False
+        return False
+
+    @staticmethod
+    def _save_session(session):
+        """Saves session cookies to a local file."""
+        try:
+            with open(PolarstepsImporter.COOKIE_FILE, 'wb') as f:
+                pickle.dump(session.cookies, f)
+        except Exception:
+            pass
+
     @staticmethod
     def sync_from_url(url, user=None):
         """
@@ -39,6 +66,13 @@ class PolarstepsImporter:
         
         session = requests.Session()
         session.headers.update(headers)
+        
+        # Load existing session to look like a returning visitor
+        has_session = PolarstepsImporter._load_session(session)
+        
+        # Humanize: Add a small random jitter if we have no session
+        if not has_session:
+            time.sleep(random.uniform(0.5, 1.5))
         
         # 1. Parse URL components
         match = re.search(r'polarsteps\.com/([^/]+)/(\d+-[^?&]+)', url)
@@ -85,6 +119,8 @@ class PolarstepsImporter:
         
         try:
             data = response.json()
+            # Success! Save the session for next time
+            PolarstepsImporter._save_session(session)
         except Exception:
             raise Exception(_("Fehler beim Verarbeiten der Polarsteps-Daten. (Ungültiges Format)"))
             
