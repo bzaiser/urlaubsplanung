@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Trip, Day, Event, GlobalExpense, DiaryEntry, DiaryImage, TripTemplate, GlobalSetting
+from .models import (
+    Trip, Day, Event, GlobalExpense, DiaryEntry, DiaryImage, 
+    TripTemplate, GlobalSetting, ChecklistTemplate, ChecklistItemTemplate
+)
 
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
@@ -34,8 +37,20 @@ class DiaryImageAdmin(admin.ModelAdmin):
 
 @admin.register(TripTemplate)
 class TripTemplateAdmin(admin.ModelAdmin):
-    list_display = ('name', 'created_at')
+    list_display = ('name', 'user', 'created_at')
+    list_filter = ('user', 'created_at')
 
 @admin.register(GlobalSetting)
 class GlobalSettingAdmin(admin.ModelAdmin):
-    list_display = ('key', 'value')
+    list_display = ('key', 'user', 'value')
+    list_filter = ('user', 'key')
+
+@admin.register(ChecklistTemplate)
+class ChecklistTemplateAdmin(admin.ModelAdmin):
+    list_display = ('name', 'user')
+    list_filter = ('user',)
+
+@admin.register(ChecklistItemTemplate)
+class ChecklistItemTemplateAdmin(admin.ModelAdmin):
+    list_display = ('text', 'template', 'category')
+    list_filter = ('template__user', 'category')
