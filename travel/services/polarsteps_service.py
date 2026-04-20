@@ -23,7 +23,9 @@ class PolarstepsImporter:
         token_match = re.search(r'[?&]s=([^&]+)', url)
         
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Referer': 'https://www.polarsteps.com/',
         }
         
         if match:
@@ -51,7 +53,15 @@ class PolarstepsImporter:
                 raise Exception("Zugriff verweigert (401). Ist die Reise privat? Bitte den vollständigen 'Teilen'-Link nutzen.")
             raise Exception(f"Polarsteps API Fehler ({response.status_code}): {response.text[:100]}")
         
-        data = response.json()
+        # Diagnostics before parsing
+        if 'text/html' in response.headers.get('Content-Type', ''):
+            raise Exception("Unerwartete Antwort von Polarsteps: Die API hat eine Webseite statt Daten geschickt. Bitte versuchen Sie es in ein paar Minuten erneut.")
+
+        try:
+            data = response.json()
+        except Exception:
+            raise Exception(f"Fehler beim Verarbeiten der Polarsteps-Daten (Kein gültiges JSON). Empfangen: {response.text[:50]}...")
+            
         return PolarstepsImporter.create_trip_from_json(data, user=user)
 
     @staticmethod
