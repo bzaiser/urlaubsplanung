@@ -6,16 +6,44 @@
             <div class="timeline-marker"></div>
             
             <!-- Station Header -->
-            <div class="d-flex align-items-center gap-3 mb-3">
-                <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill shadow-sm station-badge"
-                      style="cursor: pointer;"
-                      onclick="window.flyToLocation({{ station.days.0.latitude|unlocalize|default:'null' }}, {{ station.days.0.longitude|unlocalize|default:'null' }}, {{ forloop.counter }})"
-                      title="Auf Karte zeigen">
-                    <i class="bi bi-geo-alt-fill me-1"></i>{{ station.location }}
+            <div id="timeline-station-display-{{ forloop.counter }}" class="d-flex align-items-center gap-3 mb-3">
+                <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill shadow-sm station-badge d-flex align-items-center">
+                    <span onclick="window.flyToLocation({{ station.days.0.latitude|unlocalize|default:'null' }}, {{ station.days.0.longitude|unlocalize|default:'null' }}, {{ forloop.counter }})" 
+                          style="cursor: pointer;" title="Auf Karte zeigen">
+                        <i class="bi bi-geo-alt-fill me-1"></i>{{ station.location }}
+                    </span>
+                    <button class="btn btn-link text-dark p-0 ms-2 opacity-50-hover" 
+                            onclick="event.stopPropagation(); document.getElementById('timeline-station-display-{{ forloop.counter }}').classList.add('d-none'); document.getElementById('timeline-station-edit-{{ forloop.counter }}').classList.remove('d-none'); document.getElementById('timeline-input-{{ forloop.counter }}').focus();"
+                            title="Station umbenennen">
+                        <i class="bi bi-pencil-fill" style="font-size: 0.7rem;"></i>
+                    </button>
                 </span>
                 <span class="badge bg-secondary bg-opacity-25 text-secondary rounded-pill">
                     {{ station.days_count }} Tage • {{ station.nights_count }} Nächte
                 </span>
+            </div>
+
+            <!-- Station Edit Form (Hidden by default) -->
+            <div id="timeline-station-edit-{{ forloop.counter }}" class="d-none mb-3">
+                <div class="input-group input-group-sm" style="max-width: 350px;">
+                    <span class="input-group-text bg-warning text-dark border-warning">📍</span>
+                    <input type="text" class="form-control bg-dark text-warning border-warning fw-bold" 
+                           name="new_name" value="{{ station.location }}"
+                           id="timeline-input-{{ forloop.counter }}"
+                           onkeyup="if(event.key==='Enter') document.getElementById('timeline-save-{{ forloop.counter }}').click();">
+                    <input type="hidden" name="old_name" value="{{ station.location }}">
+                    <button class="btn btn-success" id="timeline-save-{{ forloop.counter }}"
+                            hx-post="{% url 'travel:station_rename' active_trip.id %}"
+                            hx-include="#timeline-station-edit-{{ forloop.counter }} input"
+                            hx-target="#dashboard-refresh"
+                            hx-indicator=".loading-overlay">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" 
+                            onclick="document.getElementById('timeline-station-display-{{ forloop.counter }}').classList.remove('d-none'); document.getElementById('timeline-station-edit-{{ forloop.counter }}').classList.add('d-none');">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="timeline-days">
