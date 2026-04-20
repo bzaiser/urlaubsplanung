@@ -123,11 +123,11 @@ class Day(models.Model):
         if hasattr(self, 'diary'):
             primary = self.diary.images.filter(is_primary=True).first()
             if primary:
-                return primary.image.url
+                return primary.get_url
             
             first = self.diary.images.first()
             if first:
-                return first.image.url
+                return first.get_url
         return None
 
     @property
@@ -410,8 +410,21 @@ class DiaryImage(models.Model):
     is_primary = models.BooleanField(default=False)
 
     @property
+    def get_url(self):
+        """Returns the local image URL if file exists, else the remote URL."""
+        try:
+            if self.image and hasattr(self.image, 'url'):
+                return self.image.url
+        except ValueError:
+            pass
+        return self.remote_url
+
+    @property
     def exif_data(self):
         """Extracts basic EXIF data from the image file."""
+        if not self.image:
+            return None
+            
         try:
             with Image.open(self.image.path) as img:
                 info = img._getexif()

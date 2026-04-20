@@ -231,7 +231,7 @@ def get_dashboard_context(request, active_trip=None):
                 d_text = day.diary.text[:200]
                 primary_img = day.diary.images.filter(is_primary=True).first() or day.diary.images.first()
                 if primary_img:
-                    d_image = primary_img.image.url
+                    d_image = primary_img.get_url
 
             # 1. Day Location (if exists)
             if day.latitude and day.longitude:

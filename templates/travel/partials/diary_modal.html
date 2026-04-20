@@ -34,9 +34,9 @@
                             <div class="col" id="image-{{ f.instance.id }}">
                                 <div class="card bg-dark border-secondary h-100 overflow-hidden shadow-sm">
                                     <div class="position-relative">
-                                        <img src="{{ f.instance.image.url }}" alt="{{ f.instance.caption }}" 
+                                        <img src="{{ f.instance.get_url }}" alt="{{ f.instance.caption }}" 
                                              class="card-img-top object-fit-cover shadow-sm" style="aspect-ratio: 4/3; cursor: pointer;"
-                                             onclick="openLightbox('{{ f.instance.image.url }}', '{{ f.instance.caption|escapejs }}')">
+                                             onclick="openLightbox('{{ f.instance.get_url }}', '{{ f.instance.caption|escapejs }}')">
                                         
                                         <!-- Primary Star -->
                                         <div class="position-absolute top-0 start-0 m-1">
