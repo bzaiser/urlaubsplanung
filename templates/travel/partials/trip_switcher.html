@@ -4,18 +4,28 @@
     <!-- LEFT: Trip Selection & New -->
     <div class="d-flex align-items-center gap-1 gap-md-2 flex-grow-1 order-1">
         <!-- 1. Selection first -->
-        <select onchange="window.location.href='?trip_id=' + this.value + '{% if view_type %}&view={{ view_type }}{% endif %}';" 
-                class="form-select form-select-sm bg-dark text-warning border-secondary rounded-3 ps-2 ps-md-3 pe-4 shadow-sm trip-select-mobile"
-                style="min-width: 140px; width: 100%; max-width: 450px; cursor: pointer; background-position: right 0.5rem center;">
-            {% if not active_trip %}
-                <option value="" disabled selected>{% trans "Reise wählen..." %}</option>
-            {% endif %}
-            {% for trip in trips %}
-                <option value="{{ trip.id }}" {% if active_trip and trip.id == active_trip.id %}selected{% endif %}>
-                    {{ trip.name }}
-                </option>
-            {% endfor %}
-        </select>
+        <div class="dropdown flex-grow-1" style="max-width: 450px;">
+            <button class="btn btn-sm btn-dark text-warning border-secondary rounded-3 w-100 d-flex align-items-center justify-content-between px-2 px-md-3 shadow-sm dropdown-toggle trip-select-mobile" 
+                    type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                    style="min-height: 34px;">
+                <span class="text-truncate">
+                    {% if active_trip %}📍 {{ active_trip.name }}{% else %}{% trans "Reise wählen..." %}{% endif %}
+                </span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark shadow-lg w-100 meatball-menu" style="max-height: 300px; overflow-y: auto;">
+                {% for trip in trips %}
+                    <li>
+                        <a class="dropdown-item py-2 d-flex align-items-center justify-content-between {% if active_trip and trip.id == active_trip.id %}active{% endif %}" 
+                           href="?trip_id={{ trip.id }}{% if view_type %}&view={{ view_type }}{% endif %}">
+                            <span class="text-truncate mr-2">{{ trip.name }}</span>
+                            {% if active_trip and trip.id == active_trip.id %}
+                                <i class="bi bi-check2 text-warning"></i>
+                            {% endif %}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
 
         <!-- 2. + New Trip button next to it -->
         <div class="dropdown">

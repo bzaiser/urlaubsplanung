@@ -45,8 +45,9 @@ def get_dashboard_context(request, active_trip=None):
     """Helper to prepare the full context for trip_list.html, 
     ensuring AG Grid and view types are always synchronized."""
     view_type = request.GET.get('view', request.session.get('view_type', 'timeline'))
-    show_map = request.GET.get('show_map') == '1'
     request.session['view_type'] = view_type
+    
+    show_map = request.GET.get('show_map') == '1'
     
     # Trip Selection logic (if not provided)
     if not active_trip:

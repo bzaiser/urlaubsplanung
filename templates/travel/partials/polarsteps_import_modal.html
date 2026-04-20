@@ -193,8 +193,10 @@
 
             statusLabel.innerText = "{% trans 'Import abgeschlossen!' %}";
             setTimeout(() => {
-                window.location.href = `/?trip_id=${tripResult.trip_id}`;
-            }, 1000);
+                // Hard reload to dashboard with the same view mode
+                const currentView = new URLSearchParams(window.location.search).get('view') || 'timeline';
+                window.location.href = `/?trip_id=${tripResult.trip_id}&view=${currentView}`;
+            }, 1200);
 
         } catch (err) {
             console.error(err);
