@@ -50,79 +50,68 @@ class PolarstepsImporter:
         match = re.search(r'polarsteps\.com/([^/]+)/(\d+-[^?&]+)', url)
         token_match = re.search(r'[?&]s=([^&]+)', url)
         
-        # Advanced Stealth Headers
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Referer': 'https://www.polarsteps.com/',
-            'Origin': 'https://www.polarsteps.com',
-            'DNT': '1',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-        }
-        
-        session = requests.Session()
-        session.headers.update(headers)
-        
-        # Load existing session to look like a returning visitor
-        has_session = PolarstepsImporter._load_session(session)
-        
-        # Humanize: Add a small random jitter if we have no session
-        if not has_session:
-            time.sleep(random.uniform(0.5, 1.5))
-        
         # 1. Parse URL components
         match = re.search(r'polarsteps\.com/([^/]+)/(\d+-[^?&]+)', url)
         token_match = re.search(r'[?&]s=([^&]+)', url)
+        token = token_match.group(1) if token_match else None
         
-        if match:
-            username = match.group(1)
-            trip_slug = match.group(2)
-            token = token_match.group(1) if token_match else None
-            
-            # The most robust path for shared/private trips
-            api_url = f"https://www.polarsteps.com/api/users/by_username/{username}/trips/{trip_slug}"
-            params = {'invite_token': token} if token else {}
-            
-            # Set invite_token as cookie as well (extra stealth)
-            if token:
-                session.cookies.set('invite_token', token, domain='www.polarsteps.com')
-            
-            try:
-                response = session.get(api_url, params=params, timeout=30)
-            except Exception as e:
-                raise Exception(f"Verbindungsfehler zu Polarsteps: {str(e)}")
-        else:
-            # Fallback to ID-based
+        # 2. Decide Strategy: "Clean" for public, "Stealth" for private
+        if not token:
+            # --- STRATEGY A: CLEAN/STANDARD (for public trips) ---
+            # Extract ID and use simple request (as it worked initially)
             ps_id_match = re.search(r'/(\d+)', url)
             if ps_id_match:
                 ps_id = ps_id_match.group(1)
                 api_url = f"https://www.polarsteps.com/api/trips/{ps_id}"
-                response = session.get(api_url, timeout=30)
+                print(f"Polarsteps: Clean-Sync for public trip {ps_id}")
+                try:
+                    response = requests.get(api_url, timeout=30)
+                except Exception as e:
+                    raise Exception(f"Verbindungsfehler (Standard): {str(e)}")
             else:
-                raise Exception(_("Konnte keine Reise-ID oder Slug aus der URL extrahieren."))
+                raise Exception(_("Konnte keine Reise-ID aus dem öffentlichen Link extrahieren."))
+        else:
+            # --- STRATEGY B: STEALTH/HACKER (for private trips with token) ---
+            print("Polarsteps: Stealth-Sync for private trip with token")
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Referer': 'https://www.polarsteps.com/',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin',
+            }
+            
+            session = requests.Session()
+            session.headers.update(headers)
+            PolarstepsImporter._load_session(session)
+            session.cookies.set('invite_token', token, domain='www.polarsteps.com')
+            
+            username = match.group(1) if match else "user"
+            trip_slug = match.group(2) if match else "trip"
+            api_url = f"https://www.polarsteps.com/api/users/by_username/{username}/trips/{trip_slug}"
+            
+            try:
+                response = session.get(api_url, params={'invite_token': token}, timeout=30)
+            except Exception as e:
+                raise Exception(f"Verbindungsfehler (Stealth): {str(e)}")
 
         # Handle Polarsteps Bot-Wall / Redirection
         if response.status_code == 200 and 'text/html' in response.headers.get('Content-Type', ''):
-            # This is the "Bot Challenge" shell. 
-            raise Exception(_("Polarsteps blockiert gerade den Zugriff (Sicherheitsprüfung). Bitte versuchen Sie es in 1-2 Stunden erneut, wenn die Sperre abgelaufen ist."))
+            raise Exception(_("Polarsteps blockiert gerade den automatischen Zugriff. Bitte versuchen Sie es später noch einmal oder stellen Sie die Reise kurzzeitig auf 'Öffentlich'."))
 
         if response.status_code != 200:
             if response.status_code == 401:
                 raise Exception(_("Zugriff verweigert (401). Bitte prüfen Sie den 'Teilen'-Link."))
-            if response.status_code == 404:
-                raise Exception(_("Reise nicht gefunden (404). Bitte Link prüfen."))
-            raise Exception(f"Polarsteps API Fehler ({response.status_code})")
+            raise Exception(f"Polarsteps Fehler ({response.status_code})")
         
         try:
             data = response.json()
-            # Success! Save the session for next time
-            PolarstepsImporter._save_session(session)
+            if token: # Only save session if it was a stealth sync
+                PolarstepsImporter._save_session(session)
         except Exception:
-            raise Exception(_("Fehler beim Verarbeiten der Polarsteps-Daten. (Ungültiges Format)"))
+            raise Exception(_("Fehler beim Verarbeiten der Polarsteps-Daten."))
             
         return PolarstepsImporter.create_trip_from_json(data, user=user)
 
