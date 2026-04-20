@@ -21,13 +21,15 @@ from .views import (
     checklist_template_modal,
     checklist_template_manager, checklist_template_create_simple,
     checklist_template_delete_simple,
-    fix_event_type
+    fix_event_type,
+    import_polarsteps
 )
 
 app_name = 'travel'
 
 urlpatterns = [
     path('', TripDashboardView.as_view(), name='dashboard'),
+    path('import/polarsteps/', import_polarsteps, name='import_polarsteps'),
     path('trip/new/', trip_create, name='trip_create'),
     path('trip/<int:pk>/edit/', trip_edit, name='trip_edit'),
     path('trip/<int:pk>/delete/', trip_delete, name='trip_delete'),

@@ -1654,3 +1654,44 @@ def fix_event_type(request, pk):
     response = HttpResponse("")
     response['HX-Refresh'] = 'true'
     return response
+
+@login_required
+def import_polarsteps(request):
+    """
+    Triggers the autonomous Polarsteps import from the hardcoded path.
+    Returns an HTMX toast notification upon completion.
+    """
+    from .services.polarsteps_service import PolarstepsImporter
+    from django.contrib import messages
+    
+    # Path provided by user
+    export_path = "/home/bernd/Documents/dev/einmal-um-italien_17844350/"
+    
+    try:
+        importer = PolarstepsImporter(export_path)
+        trip, steps_count, images_count = importer.run()
+        
+        success_msg = f"Reise '{trip.name}' erfolgreich importiert! {steps_count} Stopps und {images_count} Bilder verarbeitet."
+        
+        if request.htmx:
+            # We use a custom header or just return a small snippet with an OOB toast
+            # Assuming there is a toast system in templates/base.html or similar
+            response = HttpResponse("")
+            response['HX-Redirect'] = f"/?trip_id={trip.id}"
+            messages.success(request, success_msg)
+            return response
+            
+        messages.success(request, success_msg)
+        return redirect('travel:dashboard')
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        error_msg = f"Fehler beim Polarsteps-Import: {str(e)}"
+        if request.htmx:
+            # In a real app we might return a toast partial
+            messages.error(request, error_msg)
+            return HttpResponse(f"<script>alert('{error_msg}');</script>")
+            
+        messages.error(request, error_msg)
+        return redirect('travel:dashboard')
