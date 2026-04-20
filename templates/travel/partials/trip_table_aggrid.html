@@ -227,6 +227,42 @@
                 return;
             }
             window.collapsedStations = new Set();
+            
+            // Global Helper for Station Renaming in AG Grid (Manual Fetch to avoid HTMX init issues in string renderer)
+            window.saveStationRename = async function(tripId, oldName) {
+                const uniqueId = `ag-station-${oldName}`;
+                const input = document.getElementById(`${uniqueId}-input`);
+                if (!input) return;
+                
+                const newName = input.value.trim();
+                if (!newName || newName === oldName) {
+                    document.getElementById(`${uniqueId}-cancel`).click();
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('old_name', oldName);
+                formData.append('new_name', newName);
+                
+                try {
+                    const response = await fetch(`/trip/${tripId}/station/rename/`, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                    });
+                    
+                    if (response.ok) {
+                        // Refresh the entire grid data via HTMX target as usual
+                        htmx.ajax('GET', window.location.href, { target: '#dashboard-refresh', select: '#dashboard-refresh' });
+                        showToast("✓ Station umbenannt");
+                    } else {
+                        showToast("⚠️ Fehler beim Umbenennen", true);
+                    }
+                } catch (err) {
+                    console.error('Rename failed:', err);
+                    showToast("⚠️ Netzwerkfehler", true);
+                }
+            };
 
             function formatCurrency(val) {
                 return (val || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -639,23 +675,25 @@
 
                                     <!-- Edit Mode -->
                                     <div id="${uniqueId}-edit" class="d-none w-100">
-                                        <div class="input-group input-group-sm" style="max-width: 350px;" onclick="event.stopPropagation()">
-                                            <span class="input-group-text bg-dark border-secondary text-warning">📍</span>
-                                            <input type="text" class="form-control bg-dark text-warning border-secondary fw-bold" 
-                                                   name="new_name" value="${d.station_location}"
+                                        <div class="d-flex align-items-center gap-1" style="height: 32px;" onclick="event.stopPropagation()">
+                                            <input type="text" class="form-control form-control-sm bg-dark text-warning border-warning fw-bold py-0" 
+                                                   style="height: 28px; font-size: 13px;"
+                                                   value="${d.station_location}"
                                                    id="${uniqueId}-input"
-                                                   onkeyup="if(event.key==='Enter') document.getElementById('${uniqueId}-save').click();">
-                                            <input type="hidden" name="old_name" value="${d.station_location}">
-                                            <button class="btn btn-success" id="${uniqueId}-save"
-                                                    hx-post="/trip/{{ active_trip.id }}/station/rename/"
-                                                    hx-include="#${uniqueId}-edit input"
-                                                    hx-target="#dashboard-refresh"
-                                                    hx-indicator=".loading-overlay">
-                                                <i class="bi bi-check-lg"></i>
+                                                   onkeydown="if(event.key==='Enter') window.saveStationRename('{{ active_trip.id }}', '${d.station_key.replace(/'/g, "\\'")}'); if(event.key==='Escape') document.getElementById('${uniqueId}-cancel').click();">
+                                            
+                                            <button class="btn btn-sm btn-success px-2 py-0 fw-bold" 
+                                                    style="height: 28px; font-size: 11px;"
+                                                    id="${uniqueId}-save"
+                                                    onclick="window.saveStationRename('{{ active_trip.id }}', '${d.station_key.replace(/'/g, "\\'")}');">
+                                                OK
                                             </button>
-                                            <button class="btn btn-outline-secondary" 
+                                            
+                                            <button class="btn btn-sm btn-outline-secondary px-2 py-0" 
+                                                    style="height: 28px; font-size: 11px;"
+                                                    id="${uniqueId}-cancel"
                                                     onclick="document.getElementById('${uniqueId}-display').classList.remove('d-none'); document.getElementById('${uniqueId}-edit').classList.add('d-none');">
-                                                <i class="bi bi-x-lg"></i>
+                                                X
                                             </button>
                                         </div>
                                     </div>
