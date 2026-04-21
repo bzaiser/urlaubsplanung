@@ -87,7 +87,7 @@
     <link rel="apple-touch-icon" sizes="167x167" href="/static/img/icon-160.png">
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <div id="loading-overlay" class="htmx-indicator" style="display: flex;">
+    <div id="loading-overlay" class="htmx-indicator">
         <div class="spinner-gold"></div>
         <div class="fw-bold fs-5" id="loading-status">{% trans "Dashboard wird geladen..." %}</div>
         <div class="text-secondary small" id="loading-sub">{% trans "Bitte einen kurzen Moment Geduld" %}</div>
