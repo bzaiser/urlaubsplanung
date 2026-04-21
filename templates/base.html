@@ -93,14 +93,84 @@
         <div class="text-secondary small" id="loading-sub">{% trans "Bitte einen kurzen Moment Geduld" %}</div>
     </div>
 
+    <!-- Pull-to-Refresh Indicator -->
+    <div id="ptr-indicator">
+        <div class="ptr-spinner"></div>
+    </div>
+
     <script>
-        function showLoadingOverlay(status, sub) {
-            const overlay = document.getElementById('loading-overlay');
-            if (status) document.getElementById('loading-status').innerText = status;
-            if (sub) document.getElementById('loading-sub').innerText = sub;
             overlay.classList.add('show-manual');
             document.body.style.overflow = 'hidden';
         }
+
+        // --- Pull-to-Refresh Logic (Native Feel) ---
+        (function() {
+            let startY = 0;
+            let currentY = 0;
+            let pulling = false;
+            const threshold = 120; // px to pull before refresh
+            const indicator = document.getElementById('ptr-indicator');
+            
+            document.addEventListener('touchstart', function(e) {
+                if (window.scrollY === 0) {
+                    startY = e.touches[0].pageY;
+                    pulling = false;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchmove', function(e) {
+                if (window.scrollY > 0 || startY === 0) return;
+                
+                currentY = e.touches[0].pageY;
+                const diff = currentY - startY;
+
+                if (diff > 20) {
+                    pulling = true;
+                    document.body.classList.add('ptr-pulling');
+                    
+                    // Natural resistance feel (logarithmic-ish)
+                    const y = Math.min(diff * 0.4, 100);
+                    indicator.style.top = (y - 50) + 'px';
+                    indicator.style.transform = `translateX(-50%) rotate(${diff * 2}deg)`;
+                    
+                    // Add haptic feedback if available (vibrate slightly when threshold reached)
+                    if (diff >= threshold && !indicator.dataset.reached) {
+                        if (window.navigator.vibrate) window.navigator.vibrate(10);
+                        indicator.dataset.reached = 'true';
+                        indicator.style.borderColor = '#c5a059';
+                    }
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchend', function() {
+                if (!pulling) return;
+                
+                const diff = currentY - startY;
+                document.body.classList.remove('ptr-pulling');
+                delete indicator.dataset.reached;
+
+                if (diff >= threshold) {
+                    document.body.classList.add('ptr-refreshing');
+                    indicator.style.top = '20px';
+                    
+                    // Trigger actual HTMX refresh
+                    if (typeof htmx !== 'undefined') {
+                        htmx.trigger('body', 'refresh');
+                    }
+                    
+                    // Auto-hide after refresh or timeout
+                    setTimeout(() => {
+                        document.body.classList.remove('ptr-refreshing');
+                        indicator.style.top = '-60px';
+                    }, 1000);
+                } else {
+                    indicator.style.top = '-60px';
+                }
+                
+                startY = 0;
+                currentY = 0;
+            });
+        })();
 
         // --- Instant Pre-loader Cleanup ---
         window.addEventListener('load', function() {

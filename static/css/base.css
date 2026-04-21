@@ -1152,3 +1152,45 @@ body {
     max-width: 80%;
     text-align: center;
 }
+
+/* --- Pull to Refresh --- */
+#ptr-indicator {
+    position: fixed;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 45px;
+    height: 45px;
+    background: rgba(10, 25, 47, 0.9);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--accent-gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 11000;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    transition: transform 0.1s linear, top 0.2s ease, opacity 0.2s ease;
+    opacity: 0;
+}
+
+#ptr-indicator .ptr-spinner {
+    width: 25px;
+    height: 25px;
+    border: 2px solid rgba(197, 160, 89, 0.1);
+    border-top: 2px solid var(--accent-gold);
+    border-radius: 50%;
+}
+
+.ptr-pulling #ptr-indicator {
+    opacity: 1;
+}
+
+.ptr-refreshing #ptr-indicator .ptr-spinner {
+    animation: spin 0.8s linear infinite;
+}
+
+/* Logic to prevent native refresh interference in some browsers */
+body {
+    overscroll-behavior-y: contain;
+}
