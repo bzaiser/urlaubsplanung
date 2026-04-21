@@ -416,7 +416,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 // Register Service Worker with stable version (v31)
-                const swUrl = `/serviceworker_v29.js?v=31.2`;
+                const swUrl = `/serviceworker_v29.js?v=31.3`;
                 navigator.serviceWorker.register(swUrl).then(function(reg) {
                     console.log("✅ PWA: Service Worker registered (" + swUrl + ")");
                     monitorSW(reg);

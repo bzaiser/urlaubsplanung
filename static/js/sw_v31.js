@@ -68,9 +68,24 @@ const isBypassed = (url) => {
 };
 
 self.addEventListener('fetch', (event) => {
-    if (event.request.method !== 'GET') return;
+    // --- SPECIAL HANDLING: HTMX Fragments (Stale-While-Revalidate) ---
+    const isHtmx = event.request.headers.get('HX-Request') === 'true';
+
+    // MUTATION GUARD: If we POST/PUT/DELETE, we MUST clear the dynamic cache to avoid stale fragments
+    if (event.request.method !== 'GET') {
+        event.respondWith(
+            fetch(event.request).then(response => {
+                if (response.ok) {
+                    log('Mutation detected. Purging DYNAMIC_CACHE for consistency.');
+                    caches.delete(DYNAMIC_CACHE);
+                }
+                return response;
+            })
+        );
+        return;
+    }
     
-    // GUARD: Only handle http/https requests to avoid chrome-extension:// crashes
+    // GUARD: Only handle http/https requests
     if (!event.request.url.startsWith('http')) return;
 
     const url = new URL(event.request.url);
@@ -80,14 +95,13 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // 1. NAVIGATION (Page Loads) -> Network First, then Cache
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request).then(response => {
                 if (response.ok && response.status === 200) {
                     const copy = response.clone();
-                    caches.open(STATIC_CACHE).then(cache => {
-                        cache.put(event.request, copy);
-                    });
+                    caches.open(STATIC_CACHE).then(cache => cache.put(event.request, copy));
                 }
                 return response;
             }).catch(async () => {
@@ -98,9 +112,28 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // 2. HTMX FRAGMENTS (Tab Switching) -> Stale-While-Revalidate (Ultra Fast)
+    if (isHtmx) {
+        event.respondWith(
+            caches.match(event.request).then(cachedResponse => {
+                const networkFetch = fetch(event.request).then(networkResponse => {
+                    if (networkResponse && networkResponse.status === 200) {
+                        const copy = networkResponse.clone();
+                        caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, copy));
+                    }
+                    return networkResponse;
+                });
+                
+                // Return cache immediately if available, otherwise wait for network
+                return cachedResponse || networkFetch;
+            })
+        );
+        return;
+    }
+
+    // 3. STATICS & MEDIA -> Cache First or Network
     event.respondWith(
         fetch(event.request).then((networkResponse) => {
-            // SUCCESS: We are online and the request worked
             if (networkResponse && networkResponse.status === 200) {
                 const cacheToUse = url.pathname.includes('/media/') ? MEDIA_CACHE : 
                                   (url.pathname.includes('/static/') ? STATIC_CACHE : DYNAMIC_CACHE);
@@ -109,7 +142,6 @@ self.addEventListener('fetch', (event) => {
             }
             return networkResponse;
         }).catch(() => {
-            // FAIL: We are offline, try to find it in the cache
             return caches.match(event.request).then((cachedResponse) => {
                 const isPage = event.request.mode === 'navigate';
                 if (isPage && !cachedResponse) {
