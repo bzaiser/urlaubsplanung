@@ -258,7 +258,8 @@
                     
                     if (response.ok) {
                         // Refresh the entire grid data via HTMX target as usual
-                        htmx.ajax('GET', window.location.href, { target: '#dashboard-refresh', select: '#dashboard-refresh' });
+                        // We remove 'select' because the partial response already contains the correct div content
+                        htmx.ajax('GET', window.location.href, { target: '#dashboard-refresh' });
                         showToast("✓ Station umbenannt");
                     } else {
                         showToast("⚠️ Fehler beim Umbenennen", true);
@@ -685,12 +686,12 @@
                                                    style="height: 28px; font-size: 13px;"
                                                    value="${d.station_location}"
                                                    id="${uniqueId}-input"
-                                                   onkeydown="if(event.key==='Enter') window.saveStationRename('{{ active_trip.id }}', '${d.station_key.replace(/'/g, "\\'")}'); if(event.key==='Escape') document.getElementById('${uniqueId}-cancel').click();">
+                                                   onkeydown="if(event.key==='Enter') window.saveStationRename('{{ active_trip.id }}', '${d.station_location.replace(/'/g, "\\'")}'); if(event.key==='Escape') document.getElementById('${uniqueId}-cancel').click();">
                                             
                                             <button class="btn btn-sm btn-success px-2 py-0 fw-bold" 
                                                     style="height: 28px; font-size: 11px;"
                                                     id="${uniqueId}-save"
-                                                    onclick="window.saveStationRename('{{ active_trip.id }}', '${d.station_key.replace(/'/g, "\\'")}');">
+                                                    onclick="window.saveStationRename('{{ active_trip.id }}', '${d.station_location.replace(/'/g, "\\'")}');">
                                                 OK
                                             </button>
                                             
