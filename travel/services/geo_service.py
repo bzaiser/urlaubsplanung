@@ -15,14 +15,23 @@ def geocode_location(location_name, countrycodes=None):
     clean_location = location_name
     
     # Step A: Pre-cleaning (Remove common artifacts)
-    # 1. Extract first part if "Start -> End" or "Start - End"
+    # 1. Extract DESTINATION if connectors are used (A to B -> B)
+    # This also handles "Start -> End" or "Start - End"
     if '->' in clean_location:
-         clean_location = clean_location.split('->')[0].strip()
+         clean_location = clean_location.split('->')[-1].strip()
     elif ' - ' in clean_location and not re.search(r'\d', clean_location.split(' - ')[1]):
-         # Only split if the second part doesn't look like a year or number
-         clean_location = clean_location.split(' - ')[0].strip()
+         clean_location = clean_location.split(' - ')[-1].strip()
+    
+    # 2. Extract Destination after movement keywords (zum, nach, bis, zu)
+    import re
+    movement_delimiters = [r'\s+zum\s+', r'\s+nach\s+', r'\s+bis\s+', r'\s+zu\s+']
+    for sep in movement_delimiters:
+        parts = re.split(sep, clean_location, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            clean_location = parts[-1].strip()
+            break
 
-    # 2. Dynamic Noise Removal (Polarsteps & General)
+    # 3. Dynamic Noise Removal (Polarsteps & General)
     import re
     # Remove timestamps (10:30, 22:15, 9:00...)
     clean_location = re.sub(r'\d{1,2}:\d{2}', '', clean_location)
