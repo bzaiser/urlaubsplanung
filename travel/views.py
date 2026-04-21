@@ -1812,17 +1812,11 @@ def bulk_photo_upload(request, trip_id):
             try:
                 diary, status = PolarstepsImporter.match_photo_by_exif(trip, f)
                 if diary and status == "success":
-                    # Save photo
-                    # Use a stable filename
-                    from django.core.files.base import ContentFile
-                    import os
-                    ext = f.name.split('.')[-1]
-                    filename = f"handy_{int(time.time()*1000)}_{f.name}"
-                    
+                    # Save photo with original sanitized name
                     DiaryImage.objects.create(
                         diary_entry=diary,
                         image=f,
-                        caption=f.name
+                        caption=""  # Leave empty for cleaner UI as requested
                     )
                     results['success'] += 1
                 else:

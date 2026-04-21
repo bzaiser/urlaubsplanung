@@ -363,11 +363,30 @@
         function openLightbox(src, caption) {
             const modal = document.getElementById('lightbox-modal');
             modal.innerHTML = `
-                <img src="${src}" class="img-fluid rounded shadow-lg" alt="${caption || ''}">
-                <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4 text-white bg-dark bg-opacity-50 px-3 py-1 rounded-pill">${caption || ''}</div>
-                <button class="btn-close btn-close-white position-absolute top-0 end-0 m-3"></button>
+                <img src="${src}" alt="${caption || ''}">
+                ${caption ? `<div class="lightbox-caption">${caption}</div>` : ''}
+                <button class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="this.parentElement.classList.remove('show')"></button>
             `;
             modal.classList.add('show');
+        }
+
+        function showExifInfo(date, model, width, height) {
+            Swal.fire({
+                title: '<i class="bi bi-info-circle text-warning"></i> Foto-Details',
+                background: '#0a192f',
+                color: '#fff',
+                confirmButtonColor: '#c5a059',
+                html: `
+                    <div class="text-start small p-2">
+                        <div class="mb-2"><span class="text-secondary">Aufnahme:</span> <b class="text-warning">${date || 'unbekannt'}</b></div>
+                        <div class="mb-2"><span class="text-secondary">Kamera:</span> <b>${model || 'unbekannt'}</b></div>
+                        <div class="mb-0"><span class="text-secondary">Auflösung:</span> <b>${width} x ${height}</b></div>
+                    </div>
+                `,
+                showCloseButton: true,
+                focusConfirm: false,
+                confirmButtonText: 'Schließen'
+            });
         }
 
         // --- Scroll Turbo Logic (v30.2 Dynamic) ---

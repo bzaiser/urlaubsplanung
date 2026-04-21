@@ -54,10 +54,12 @@
                                         <!-- EXIF Info Badge -->
                                         {% if f.instance.exif_data %}
                                         <div class="position-absolute bottom-0 start-0 m-1">
-                                            <span class="badge bg-dark bg-opacity-75 border border-secondary text-white x-small" 
-                                                  title="Aufnahme: {{ f.instance.exif_data.date|default:'unbekannt' }}&#10;Kamera: {{ f.instance.exif_data.model|default:'unbekannt' }}&#10;Größe: {{ f.instance.exif_data.width }}x{{ f.instance.exif_data.height }}">
-                                                <i class="bi bi-info-circle me-1"></i>INFO
-                                            </span>
+                                            <button type="button" 
+                                                  class="btn btn-xs btn-dark bg-opacity-75 border-secondary text-white x-small d-flex align-items-center gap-1"
+                                                  onclick="showExifInfo('{{ f.instance.exif_data.date|escapejs }}', '{{ f.instance.exif_data.model|escapejs }}', '{{ f.instance.exif_data.width }}', '{{ f.instance.exif_data.height }}')"
+                                                  title="Klicken für Details">
+                                                <i class="bi bi-info-circle"></i>INFO
+                                            </button>
                                         </div>
                                         {% endif %}
 
