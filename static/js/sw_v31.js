@@ -67,6 +67,10 @@ const isBypassed = (url) => {
     return url.includes('/edit/') || url.includes('/delete/') || url.includes('/create/') || url.includes('/import/') || url.includes('?t=');
 };
 
+self.addEventListener('fetch', (event) => {
+    // --- SPECIAL HANDLING: HTMX Fragments (Stale-While-Revalidate) ---
+    const isHtmx = event.request.headers.get('HX-Request') === 'true';
+
     // GUARD: Only handle http/https requests
     if (!event.request.url.startsWith('http')) return;
 
