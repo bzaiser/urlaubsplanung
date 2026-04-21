@@ -2,7 +2,7 @@
 <div class="mt-4 pb-5 timeline">
     <div class="timeline-line"></div>
     {% for station in active_trip.grouped_stations %}
-        <div class="position-relative {% if not forloop.first %}mt-5{% endif %}" id="station-{{ forloop.counter0 }}">
+        <div class="position-relative {% if not forloop.first %}mt-5{% endif %}" id="station-{{ forloop.counter }}">
             <div class="timeline-marker"></div>
             
             <!-- Station Header -->

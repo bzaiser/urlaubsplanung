@@ -391,12 +391,14 @@
                         setTimeout(() => this.setRadius(originalRadius), 300);
 
                         // 1. Sync with Timeline (Diary View)
-                        const targetId = `station-${s.index}`;
+                        // Robust lookup: If it's an event (e.g. index 1.2), we scroll to the parent station (station-1)
+                        const stationIdx = s.index.toString().split('.')[0];
+                        const targetId = `station-${stationIdx}`;
                         const targetEl = document.getElementById(targetId);
                         if (targetEl) {
-                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             targetEl.classList.add('station-highlight');
-                            setTimeout(() => targetEl.classList.remove('station-highlight'), 2000);
+                            setTimeout(() => targetEl.classList.remove('station-highlight'), 2500);
                         }
 
                         // 2. Sync with AG-Grid (Planner View)
