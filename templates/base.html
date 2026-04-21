@@ -103,44 +103,60 @@
             document.body.style.overflow = 'hidden';
         }
 
-        // --- Pull-to-Refresh Logic (Native Feel) ---
+        // --- Pull-to-Refresh Logic (Native Feel - iOS/Edge Optimized) ---
         (function() {
             let startY = 0;
             let currentY = 0;
             let pulling = false;
-            const threshold = 120; // px to pull before refresh
+            const threshold = 100; // lower threshold for snappier feel
             const indicator = document.getElementById('ptr-indicator');
             
             document.addEventListener('touchstart', function(e) {
-                if (window.scrollY === 0) {
-                    startY = e.touches[0].pageY;
+                // Only start tracking if we are at the very top
+                if (window.scrollY <= 0) {
+                    startY = e.touches[0].clientY;
                     pulling = false;
                 }
             }, { passive: true });
 
             document.addEventListener('touchmove', function(e) {
-                if (window.scrollY > 0 || startY === 0) return;
+                if (startY === 0 || window.scrollY > 0) return;
                 
-                currentY = e.touches[0].pageY;
+                currentY = e.touches[0].clientY;
                 const diff = currentY - startY;
 
-                if (diff > 20) {
+                if (diff > 0) {
+                    // Prevent native elastic scroll/bounce so our indicator can show
+                    if (e.cancelable) e.preventDefault();
+                    
                     pulling = true;
                     document.body.classList.add('ptr-pulling');
                     
-                    // Natural resistance feel (logarithmic-ish)
+                    const progress = Math.min(diff / threshold, 1.5);
                     const y = Math.min(diff * 0.4, 100);
-                    indicator.style.top = (y - 50) + 'px';
-                    indicator.style.transform = `translateX(-50%) rotate(${diff * 2}deg)`;
                     
-                    // Add haptic feedback if available (vibrate slightly when threshold reached)
-                    if (diff >= threshold && !indicator.dataset.reached) {
-                        if (window.navigator.vibrate) window.navigator.vibrate(10);
-                        indicator.dataset.reached = 'true';
-                        indicator.style.borderColor = '#c5a059';
+                    indicator.style.top = (y - 50) + 'px';
+                    indicator.style.transform = `translateX(-50%) rotate(${diff * 3}deg) scale(${0.5 + (progress * 0.5)})`;
+                    indicator.style.opacity = Math.min(progress * 1.2, 1);
+                    
+                    // Visual pulse instead of vibration for iOS
+                    if (diff >= threshold) {
+                        if (!indicator.dataset.reached) {
+                            indicator.dataset.reached = 'true';
+                            indicator.style.borderColor = '#ffffff';
+                            indicator.style.boxShadow = '0 0 20px #c5a059';
+                            // Haptic fallback for Android
+                            if (window.navigator.vibrate) window.navigator.vibrate(15);
+                        }
+                    } else {
+                        if (indicator.dataset.reached) {
+                            delete indicator.dataset.reached;
+                            indicator.style.borderColor = 'var(--accent-gold)';
+                            indicator.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5)';
+                        }
                     }
                 }
-            }, { passive: true });
+            }, { passive: false }); // Important: NOT passive to allow preventDefault
 
             document.addEventListener('touchend', function() {
                 if (!pulling) return;
@@ -152,23 +168,25 @@
                 if (diff >= threshold) {
                     document.body.classList.add('ptr-refreshing');
                     indicator.style.top = '20px';
+                    indicator.style.opacity = '1';
                     
-                    // Trigger actual HTMX refresh
                     if (typeof htmx !== 'undefined') {
                         htmx.trigger('body', 'refresh');
                     }
                     
-                    // Auto-hide after refresh or timeout
                     setTimeout(() => {
                         document.body.classList.remove('ptr-refreshing');
                         indicator.style.top = '-60px';
+                        indicator.style.opacity = '0';
                     }, 1000);
                 } else {
                     indicator.style.top = '-60px';
+                    indicator.style.opacity = '0';
                 }
                 
                 startY = 0;
                 currentY = 0;
+                pulling = false;
             });
         })();
 
