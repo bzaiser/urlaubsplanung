@@ -300,11 +300,11 @@
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
                 showToast("🛠️ PWA: Update gefunden, installiere...");
-                // Version 28 synchronization and cleanup
+                // Version 31 synchronization and cleanup
                 const currentV = localStorage.getItem('pwa_version');
-                if (currentV !== '28') {
-                    console.log("PWA: Version mismatch. Initiating cleanup for v28...");
-                    showToast("⚙️ System-Update: Synchronisierung auf v28...", false);
+                if (currentV !== '31') {
+                    console.log("PWA: Version mismatch. Initiating cleanup for v31...");
+                    showToast("⚙️ System-Update: Synchronisierung auf v31...", false);
                     
                     navigator.serviceWorker.getRegistrations().then(registrations => {
                         for(let registration of registrations) {
@@ -315,7 +315,7 @@
                                 return Promise.all(keys.map(k => caches.delete(k)));
                             });
                         }
-                        localStorage.setItem('pwa_version', '28');
+                        localStorage.setItem('pwa_version', '31');
                         setTimeout(() => window.location.reload(true), 1500);
                     });
                     return;
