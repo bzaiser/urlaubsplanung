@@ -155,17 +155,35 @@
         z-index: 1050;
         transition: background 0.2s;
         border-left: 1px solid transparent;
-        pointer-events: auto; /* Ensure it captures mouse even if parent has pointer-events: none */
+        pointer-events: auto;
     }
     .resize-handle:hover {
         background: rgba(255, 193, 7, 0.1);
         border-left: 2px solid var(--accent-gold);
     }
-    .resize-handle.active {
-        background: rgba(255, 193, 7, 0.2);
-        border-left: 2px solid var(--accent-gold);
-        width: 100vw; /* Create a large invisible target while dragging */
-        left: -50vw;
+    
+    /* Responsive Offcanvas (Bottom Sheet on Mobile) */
+    .offcanvas-map-responsive {
+        width: 500px !important;
+        top: 60px !important;
+        height: calc(100% - 60px) !important;
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    @media (max-width: 768px) {
+        .offcanvas-map-responsive {
+            width: 100% !important;
+            height: 45% !important; /* Bottom Sheet height */
+            top: auto !important;
+            bottom: 0 !important;
+            transform: translateY(100%);
+            border-start: none !important;
+            border-top: 1px solid var(--secondary) !important;
+        }
+        .offcanvas-map-responsive.show {
+            transform: translateY(0);
+        }
     }
 </style>
 
@@ -412,7 +430,11 @@
                             }
                         }
 
-                        if (currentView === 'timeline' && typeof htmx !== 'undefined' && s.day_id) {
+                        if (currentView === 'timeline' && s.day_id) {
+                            // In Diary View, we ONLY scroll to the day, no modal opening
+                            // This makes the map a navigator for the diary
+                        } else if (typeof htmx !== 'undefined' && s.day_id) {
+                            // Other views: still open the diary modal as a popup info
                             htmx.ajax('GET', `/day/${s.day_id}/diary/`, {target:'#modal-container', swap:'innerHTML'});
                         }
                     });

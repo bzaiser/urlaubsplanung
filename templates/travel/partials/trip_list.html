@@ -36,32 +36,41 @@
     {% endif %}
 
     <!-- Offcanvas for Route Map -->
-    <div class="offcanvas offcanvas-end bg-dark text-light border-start border-secondary" 
+    <div class="offcanvas offcanvas-end bg-dark text-light border-start border-secondary offcanvas-map-responsive" 
          tabindex="-1" id="offcanvasRouteMap" 
          data-bs-backdrop="false" 
          data-bs-scroll="true"
          aria-labelledby="offcanvasRouteMapLabel" 
-         style="width: 500px; --bs-offcanvas-bg: #1a1a1a; top: 60px; height: calc(100% - 60px);">
+         style="--bs-offcanvas-bg: #1a1a1a;">
         
-        <!-- Resize Handle -->
-        <div id="map-resize-handle" class="resize-handle"></div>
+        <!-- Resize Handle (Hidden on mobile) -->
+        <div id="map-resize-handle" class="resize-handle d-none d-md-block"></div>
 
         <div class="offcanvas-header border-bottom border-secondary">
             <h5 class="offcanvas-title text-warning fw-bold" id="offcanvasRouteMapLabel">
                 <i class="bi bi-map-fill me-2"></i>{% trans "Reiseroute" %}
             </h5>
-            <button id="btn-start-story" class="btn btn-sm btn-outline-info rounded-pill px-3 d-flex align-items-center gap-2" 
-                    onclick="startStoryMode()" 
-                    title="{% trans 'Reise-Film abspielen' %}">
-                <i class="bi bi-play-circle-fill"></i>
-                <span class="small fw-bold text-uppercase">Story</span>
-            </button>
-            <button id="btn-stop-story" class="btn btn-sm btn-danger rounded-pill px-3 d-none align-items-center gap-2" 
-                    onclick="stopStoryMode()" 
-                    title="{% trans 'Reise-Film beenden' %}">
-                <i class="bi bi-stop-circle-fill"></i>
-                <span class="small fw-bold text-uppercase">Beenden</span>
-            </button>
+            <div class="d-flex gap-2">
+                <button id="btn-start-story" class="btn btn-sm btn-outline-info rounded-pill px-3 d-flex align-items-center gap-2" 
+                        onclick="startStoryMode()" 
+                        title="{% trans 'Reise-Film abspielen' %}">
+                    <i class="bi bi-play-circle-fill"></i>
+                    <span class="small fw-bold text-uppercase d-none d-md-inline">Story</span>
+                </button>
+                <div id="story-active-controls" class="d-none gap-2">
+                    <button id="btn-record-story" class="btn btn-sm btn-outline-danger rounded-pill px-3 d-flex align-items-center gap-2" 
+                            title="{% trans 'Aufnahme starten' %}">
+                        <i class="bi bi-record-circle-fill"></i>
+                        <span class="small fw-bold text-uppercase d-none d-md-inline">Rec</span>
+                    </button>
+                    <button id="btn-stop-story" class="btn btn-sm btn-danger rounded-pill px-3 d-flex align-items-center gap-2" 
+                            onclick="stopStoryMode()" 
+                            title="{% trans 'Reise-Film beenden' %}">
+                        <i class="bi bi-stop-circle-fill"></i>
+                        <span class="small fw-bold text-uppercase d-none d-md-inline">Stop</span>
+                    </button>
+                </div>
+            </div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0 d-flex flex-column" id="map-panel-body">
