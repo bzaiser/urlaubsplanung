@@ -36,6 +36,7 @@
                                     <div class="position-relative">
                                         <img src="{{ f.instance.get_url }}" alt="{{ f.instance.caption }}" 
                                              class="card-img-top object-fit-cover shadow-sm" style="aspect-ratio: 4/3; cursor: pointer;"
+                                             loading="lazy"
                                              onclick="openLightbox('{{ f.instance.get_url }}', '{{ f.instance.caption|escapejs }}')">
                                         
                                         <!-- Primary Star -->

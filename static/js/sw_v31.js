@@ -67,16 +67,18 @@ const isBypassed = (url) => {
     return url.includes('/edit/') || url.includes('/delete/') || url.includes('/create/') || url.includes('/import/') || url.includes('?t=');
 };
 
-self.addEventListener('fetch', (event) => {
-    // --- SPECIAL HANDLING: HTMX Fragments (Stale-While-Revalidate) ---
-    const isHtmx = event.request.headers.get('HX-Request') === 'true';
+    // GUARD: Only handle http/https requests
+    if (!event.request.url.startsWith('http')) return;
+
+    const url = new URL(event.request.url);
+    const isLocal = url.origin === self.location.origin;
 
     // MUTATION GUARD: If we POST/PUT/DELETE, we MUST clear the dynamic cache to avoid stale fragments
     if (event.request.method !== 'GET') {
         event.respondWith(
             fetch(event.request).then(response => {
-                if (response.ok) {
-                    log('Mutation detected. Purging DYNAMIC_CACHE for consistency.');
+                if (response.ok && isLocal) {
+                    log('Local mutation detected. Purging DYNAMIC_CACHE.');
                     caches.delete(DYNAMIC_CACHE);
                 }
                 return response;
@@ -84,11 +86,6 @@ self.addEventListener('fetch', (event) => {
         );
         return;
     }
-    
-    // GUARD: Only handle http/https requests
-    if (!event.request.url.startsWith('http')) return;
-
-    const url = new URL(event.request.url);
 
     if (isBypassed(url.pathname)) {
         event.respondWith(fetch(event.request));
@@ -113,7 +110,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     // 2. HTMX FRAGMENTS (Tab Switching) -> Stale-While-Revalidate (Ultra Fast)
-    if (isHtmx) {
+    if (isHtmx && isLocal) {
         event.respondWith(
             caches.match(event.request).then(cachedResponse => {
                 const networkFetch = fetch(event.request).then(networkResponse => {
@@ -123,18 +120,17 @@ self.addEventListener('fetch', (event) => {
                     }
                     return networkResponse;
                 });
-                
-                // Return cache immediately if available, otherwise wait for network
                 return cachedResponse || networkFetch;
             })
         );
         return;
     }
 
-    // 3. STATICS & MEDIA -> Cache First or Network
+    // 3. STATICS, MEDIA & INTERNAL -> Cache or Network
     event.respondWith(
         fetch(event.request).then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
+            // Only cache successful local requests
+            if (isLocal && networkResponse && networkResponse.status === 200) {
                 const cacheToUse = url.pathname.includes('/media/') ? MEDIA_CACHE : 
                                   (url.pathname.includes('/static/') ? STATIC_CACHE : DYNAMIC_CACHE);
                 const responseClone = networkResponse.clone();

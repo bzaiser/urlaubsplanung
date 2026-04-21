@@ -248,8 +248,14 @@
             if (e.detail.target.id === "modal-container") {
                 document.getElementById('modal-container').classList.add('show');
                 document.body.classList.add('modal-open');
-                initPickers(); // Initialize date/time pickers in the new modal content
+                initPickers(); 
             }
+            
+            // Resilience: Re-initialize Bootstrap dropdowns after ANY swap to keep navbar alive
+            const dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
+            dropdownElementList.map(function (dropdownToggleEl) {
+                return new bootstrap.Dropdown(dropdownToggleEl);
+            });
         });
 
         // Robust way to close modals via server triggers
@@ -416,7 +422,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 // Register Service Worker with stable version (v31)
-                const swUrl = `/serviceworker_v29.js?v=31.3`;
+                const swUrl = `/serviceworker_v29.js?v=31.4`;
                 navigator.serviceWorker.register(swUrl).then(function(reg) {
                     console.log("✅ PWA: Service Worker registered (" + swUrl + ")");
                     monitorSW(reg);
