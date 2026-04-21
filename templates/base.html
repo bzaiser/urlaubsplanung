@@ -99,6 +99,10 @@
     </div>
 
     <script>
+        function showLoadingOverlay(status, sub) {
+            const overlay = document.getElementById('loading-overlay');
+            if (status) document.getElementById('loading-status').innerText = status;
+            if (sub) document.getElementById('loading-sub').innerText = sub;
             overlay.classList.add('show-manual');
             document.body.style.overflow = 'hidden';
         }
