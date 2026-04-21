@@ -159,10 +159,11 @@ window.startStoryMode = async function() {
         const s = stations[currentIndex];
         const nextS = stations[currentIndex + 1];
         
-        // 1. Zoom to Station
-        map.setView([s.lat, s.lon], 14, { animate: true, duration: 0.8 });
-        storyMarker.setLatLng([s.lat, s.lon]);
-        await new Promise(r => setTimeout(r, 900));
+        // 1. Position Dino and Zoom (only if starting or location changed)
+        if (currentIndex === 0) {
+            map.setView([s.lat, s.lon], 14, { animate: true, duration: 0.8 });
+            storyMarker.setLatLng([s.lat, s.lon]);
+        }
 
         // 2. Show Info Card
         const cardAnchor = document.getElementById('story-card-anchor');
@@ -182,21 +183,35 @@ window.startStoryMode = async function() {
 
         document.getElementById('story-progress-fill').style.width = `${((currentIndex + 1) / stations.length) * 100}%`;
 
-        await new Promise(r => setTimeout(r, WAIT_STATION)); 
+        // 3. Wait for user to read
+        // If next station is same location, wait less
+        const isSameLoc = nextS && Math.pow(nextS.lat - s.lat, 2) + Math.pow(nextS.lon - s.lon, 2) < 0.000001;
+        const waitTime = isSameLoc ? 1500 : WAIT_STATION;
+        await new Promise(r => setTimeout(r, waitTime)); 
 
-        const card = cardAnchor.querySelector('.story-card');
-        if (card) { card.classList.replace('animate__fadeInUp', 'animate__fadeOutDown'); }
-        await new Promise(r => setTimeout(r, 600));
-
-        // 3. Move along the route
+        // 4. Transition to next point
         if (nextS) {
-            const idx1 = findNearestIndex(s, routeGeometry);
-            const idx2 = findNearestIndex(nextS, routeGeometry);
-            
-            map.fitBounds([[s.lat, s.lon], [nextS.lat, nextS.lon]], { padding: [120, 120], animate: true, duration: 0.8 });
-            await new Promise(r => setTimeout(r, 900));
-            
-            await animatePath(idx1, idx2, s, nextS);
+            const card = cardAnchor.querySelector('.story-card');
+            if (card) { card.classList.replace('animate__fadeInUp', 'animate__fadeOutDown'); }
+            await new Promise(r => setTimeout(r, 600));
+
+            if (!isSameLoc) {
+                const idx1 = findNearestIndex(s, routeGeometry);
+                const idx2 = findNearestIndex(nextS, routeGeometry);
+                
+                map.fitBounds([[s.lat, s.lon], [nextS.lat, nextS.lon]], { padding: [120, 120], animate: true, duration: 1.0 });
+                await new Promise(r => setTimeout(r, 1100));
+                
+                await animatePath(idx1, idx2, s, nextS);
+            } else {
+                // Subtle "jump" animation to show we are switching days but staying at location
+                const iconEl = storyMarker.getElement()?.querySelector('.story-marker-icon');
+                if (iconEl) {
+                    iconEl.classList.add('animate__animated', 'animate__bounce');
+                    setTimeout(() => iconEl.classList.remove('animate__animated', 'animate__bounce'), 1000);
+                }
+                await new Promise(r => setTimeout(r, 1000));
+            }
         }
 
         currentIndex++;
