@@ -164,9 +164,9 @@
     
     /* Responsive Offcanvas (Bottom Sheet on Mobile) */
     .offcanvas-map-responsive {
-        width: 500px !important;
-        top: 60px !important;
-        height: calc(100% - 60px) !important;
+        width: 500px;
+        top: 60px;
+        height: calc(100% - 60px);
         transform: translateX(100%);
         transition: transform 0.3s ease-in-out;
     }
@@ -430,13 +430,9 @@
                             }
                         }
 
-                        if (currentView === 'timeline' && s.day_id) {
-                            // In Diary View, we ONLY scroll to the day, no modal opening
-                            // This makes the map a navigator for the diary
-                        } else if (typeof htmx !== 'undefined' && s.day_id) {
-                            // Other views: still open the diary modal as a popup info
-                            htmx.ajax('GET', `/day/${s.day_id}/diary/`, {target:'#modal-container', swap:'innerHTML'});
-                        }
+                        // 3. User Feedback: Only scroll, don't open diary automatically
+                        // The user can open the diary via the popup if needed
+                        console.log("Synced timeline/grid to station index:", s.index);
                     });
                     
                     marker.on('mouseover', function() { 
