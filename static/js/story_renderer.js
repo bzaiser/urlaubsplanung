@@ -1,6 +1,6 @@
 /**
- * Travel Story Renderer (v1.1)
- * Handles the animated trip showcase following the actual route path.
+ * Travel Story Renderer (v1.2)
+ * Handles the animated trip showcase with path-following and direct-flight fallback.
  */
 
 window.startStoryMode = async function() {
@@ -26,9 +26,9 @@ window.startStoryMode = async function() {
     if (!stations || stations.length === 0) return;
 
     // --- CONFIGURATION ---
-    const ICON_DEFAULT = '🕊️'; // Bird. Change to '🚐', '🚗' etc. as needed.
-    const SPEED_FACTOR = 1.5; // Multiplier for faster flight
-    const WAIT_STATION = 2500; // Time spent at each card
+    const ICON_DEFAULT = '🦕'; // Dino! 🦖
+    const SPEED_FACTOR = 1.8; // Faster flight
+    const WAIT_STATION = 2600; // Time spent at each card
     
     // UI Setup: Switch to Story Header
     const btnStart = document.getElementById('btn-start-story');
@@ -49,7 +49,7 @@ window.startStoryMode = async function() {
     `;
     document.body.appendChild(overlay);
 
-    // Dynamic transport marker
+    // Dynamic transport marker (The Dino)
     const storyMarker = L.marker([stations[0].lat, stations[0].lon], {
         icon: L.divIcon({
             html: `<div class="story-marker-icon bird-flying">${ICON_DEFAULT}</div>`,
@@ -76,18 +76,19 @@ window.startStoryMode = async function() {
                 window.isRecording = true;
                 recordBtn.classList.replace('btn-outline-danger', 'btn-danger');
                 recordBtn.innerHTML = '<i class="bi bi-stop-circle-fill"></i><span class="small fw-bold text-uppercase d-none d-md-inline">Stop Rec</span>';
-                showToast("📽️ Aufnahme gestartet (Browser-Tab teilen empfohlen)");
+                if (window.showToast) showToast("📽️ Aufnahme gestartet (Browser-Tab teilen empfohlen)");
             } else {
                 window.isRecording = false;
                 recordBtn.classList.replace('btn-danger', 'btn-outline-danger');
                 recordBtn.innerHTML = '<i class="bi bi-record-circle-fill"></i><span class="small fw-bold text-uppercase d-none d-md-inline">Rec</span>';
-                showToast("✅ Video gespeichert.");
+                if (window.showToast) showToast("✅ Video gespeichert.");
             }
         };
     }
 
     // --- Core Helper: Find point in routeGeometry ---
     function findNearestIndex(point, geometry) {
+        if (!geometry || geometry.length === 0) return -1;
         let minDist = Infinity;
         let index = 0;
         geometry.forEach((p, i) => {
@@ -98,35 +99,48 @@ window.startStoryMode = async function() {
     }
 
     // --- Path Animation Logic ---
-    async function animatePath(startIndex, endIndex) {
-        if (startIndex === endIndex) return;
+    async function animatePath(startIndex, endIndex, startCoords, endCoords) {
+        let pathPoints = [];
         
-        const direction = startIndex < endIndex ? 1 : -1;
-        const totalSteps = Math.abs(endIndex - startIndex);
+        // Use high-res route if available, otherwise direct line fallback
+        if (startIndex !== -1 && endIndex !== -1 && routeGeometry.length > 0) {
+            const direction = startIndex < endIndex ? 1 : -1;
+            const totalSteps = Math.abs(endIndex - startIndex);
+            for (let i = 0; i <= totalSteps; i++) {
+                pathPoints.push(routeGeometry[startIndex + (i * direction)]);
+            }
+        } else {
+            // FALLBACK: Linear interpolation if no route geometry
+            const steps = 60;
+            for (let i = 0; i <= steps; i++) {
+                const lat = startCoords.lat + (endCoords.lat - startCoords.lat) * (i / steps);
+                const lon = startCoords.lon + (endCoords.lon - startCoords.lon) * (i / steps);
+                pathPoints.push([lat, lon]);
+            }
+        }
+
+        if (pathPoints.length < 2) return;
         
-        const stepDelay = Math.max(8, 35 / SPEED_FACTOR); 
+        const stepDelay = Math.max(8, 45 / (SPEED_FACTOR * (pathPoints.length / 50))); 
         
-        for (let i = 0; i <= totalSteps; i++) {
+        for (let i = 0; i < pathPoints.length; i++) {
             if (!window.isStoryPlaying) return;
-            const currentIdx = startIndex + (i * direction);
-            const pos = routeGeometry[currentIdx];
-            if (!pos) continue;
+            const pos = pathPoints[i];
             
-            // Calculate rotation for the icon
-            if (i > 0) {
-                const prev = routeGeometry[startIndex + ((i-1) * direction)];
-                if (prev) {
-                    const angle = Math.atan2(pos[0] - prev[0], pos[1] - prev[1]) * 180 / Math.PI;
-                    const iconEl = storyMarker.getElement().querySelector('.story-marker-icon');
-                    if (iconEl) iconEl.style.transform = `rotate(${angle + 90}deg)`;
-                }
+            // Rotation Logic
+            if (i < pathPoints.length - 1) {
+                const nextPos = pathPoints[i + 1];
+                const angle = Math.atan2(nextPos[0] - pos[0], nextPos[1] - pos[1]) * 180 / Math.PI;
+                const iconEl = storyMarker.getElement()?.querySelector('.story-marker-icon');
+                if (iconEl) iconEl.style.transform = `rotate(${angle + 90}deg)`;
             }
 
             storyMarker.setLatLng(pos);
             if (window.storyPath) window.storyPath.addLatLng(pos);
             
-            if (i % 25 === 0 && !map.getBounds().pad(-0.1).contains(pos)) {
-                map.panTo(pos, { animate: true, duration: 0.4 });
+            // Smoother map follow
+            if (i % 20 === 0 && !map.getBounds().pad(-0.2).contains(pos)) {
+                map.panTo(pos, { animate: true, duration: 0.6 });
             }
             
             await new Promise(r => setTimeout(r, stepDelay));
@@ -174,15 +188,15 @@ window.startStoryMode = async function() {
         if (card) { card.classList.replace('animate__fadeInUp', 'animate__fadeOutDown'); }
         await new Promise(r => setTimeout(r, 600));
 
-        // 4. Move to next point along the route
-        if (nextS && routeGeometry.length > 0) {
+        // 3. Move along the route
+        if (nextS) {
             const idx1 = findNearestIndex(s, routeGeometry);
             const idx2 = findNearestIndex(nextS, routeGeometry);
             
             map.fitBounds([[s.lat, s.lon], [nextS.lat, nextS.lon]], { padding: [120, 120], animate: true, duration: 0.8 });
             await new Promise(r => setTimeout(r, 900));
             
-            await animatePath(idx1, idx2);
+            await animatePath(idx1, idx2, s, nextS);
         }
 
         currentIndex++;
@@ -200,35 +214,12 @@ window.stopStoryMode = function() {
     if (overlay) overlay.remove();
     
     // UI RESTORE
-    document.getElementById('btn-start-story')?.classList.remove('d-none');
-    const activeControls = document.getElementById('story-active-controls');
-    if (activeControls) {
-        activeControls.classList.add('d-none');
-        activeControls.classList.remove('d-flex');
-    }
-    showToast("🎬 Story beendet.");
-};
-
-window.stopStoryMode = function() {
-    window.isStoryPlaying = false;
-    if (window.activeStoryMarker) {
-        window.activeStoryMarker.remove();
-    }
-    if (window.storyPath) {
-        window.storyPath.remove();
-        window.storyPath = null;
-    }
-    const overlay = document.getElementById('story-overlay');
-    if (overlay) overlay.remove();
-    
-    // UI RESTORE
     const btnStart = document.getElementById('btn-start-story');
-    const btnStop = document.getElementById('btn-stop-story');
+    const btnActive = document.getElementById('story-active-controls');
     if (btnStart) btnStart.classList.remove('d-none');
-    if (btnStop) {
-        btnStop.classList.add('d-none');
-        btnStop.classList.remove('d-flex');
+    if (btnActive) {
+        btnActive.classList.add('d-none');
+        btnActive.classList.remove('d-flex');
     }
-
-    showToast("🎬 Story beendet.");
+    if (window.showToast) showToast("🎬 Story beendet.");
 };
