@@ -79,7 +79,10 @@
     </style>
 </head>
 <body>
-    <a href="#" onclick="window.print(); return false;" class="print-btn no-print">Drucken</a>
+    <div class="no-print" style="position: fixed; top: 20px; right: 20px; display: flex; gap: 10px;">
+        <a href="/" class="print-btn" style="position: static; background: #666;"> Zurück</a>
+        <a href="#" onclick="window.print(); return false;" class="print-btn" style="position: static;">Drucken</a>
+    </div>
 
     <h1>Packliste: {{ trip.name }}</h1>
     <div class="meta">
