@@ -161,7 +161,7 @@ def get_dashboard_context(request, active_trip=None):
                         'payment_method': event.get_payment_method_display() if event.payment_method != 'NONE' else '',
                         'cancellation_deadline': event.cancellation_deadline.strftime('%d.%m.') if event.cancellation_deadline else '',
                         'days_until_storno': (event.cancellation_deadline - date.today()).days if event.cancellation_deadline else None,
-                        'cost_actual': float(event.cost_actual),
+                        'cost_actual': float(event.cost_actual or 0),
                         'voucher_url': event.vouchers.first().file.url if event.vouchers.exists() else None,
                         'distance_km': event.distance_km,
                         'meals_info': event.meals_info,
@@ -195,10 +195,10 @@ def get_dashboard_context(request, active_trip=None):
                 'type': exp.expense_type,
                 'title': exp.title,
                 'location': 'Reiseweit',
-                'unit_price': float(exp.unit_price),
-                'units': exp.units,
-                'cost_booked': float(exp.total_amount),
-                'cost_total': float(exp.total_amount),
+                'unit_price': float(exp.unit_price or 0),
+                'units': exp.units or 1,
+                'cost_booked': float(exp.total_amount or 0),
+                'cost_total': float(exp.total_amount or 0),
                 'voucher_url': exp.vouchers.first().file.url if exp.vouchers.exists() else None,
                 'cost_estimated': 0,
                 'is_auto_calculated': exp.is_auto_calculated,
@@ -1433,7 +1433,10 @@ def station_rename(request, trip_id):
 
     if old_name and new_name:
         # Update all days in this trip that match the old station name
+        # 1. Matches where station was explicitly set
         Day.objects.filter(trip=trip, station=old_name).update(station=new_name)
+        # 2. Matches where station was empty and location provided the name
+        Day.objects.filter(trip=trip, station__in=["", None], location=old_name).update(station=new_name)
 
     # Re-render the dashboard (context includes grouped_stations)
     context = get_dashboard_context(request, active_trip=trip)
