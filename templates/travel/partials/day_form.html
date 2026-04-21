@@ -22,6 +22,26 @@
                            value="{{ day.location|default:'' }}" 
                            placeholder="z.B. Phuket Town" autofocus>
                 </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label for="id_latitude" class="form-label x-small text-uppercase text-secondary">{% trans "Breitengrad" %}</label>
+                        <input type="text" name="latitude" id="id_latitude" 
+                               class="form-control form-control-sm font-monospace" 
+                               value="{{ day.latitude|stringformat:'.6f'|default:'' }}" 
+                               placeholder="0.000000">
+                    </div>
+                    <div class="col-6">
+                        <label for="id_longitude" class="form-label x-small text-uppercase text-secondary">{% trans "Längengrad" %}</label>
+                        <input type="text" name="longitude" id="id_longitude" 
+                               class="form-control form-control-sm font-monospace" 
+                               value="{{ day.longitude|stringformat:'.6f'|default:'' }}" 
+                               placeholder="0.000000">
+                    </div>
+                    <div class="col-12 text-end">
+                        <small class="x-small text-secondary"><i class="bi bi-geo-alt me-1"></i>{% if day.is_geocoded %}{% trans "Automatisch gefunden" %}{% else %}{% trans "Manuell gesetzt" %}{% endif %}</small>
+                    </div>
+                </div>
             </div>
 
             <div class="modal-footer border-secondary">

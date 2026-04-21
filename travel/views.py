@@ -236,13 +236,30 @@ def get_dashboard_context(request, active_trip=None):
                 if primary_img:
                     d_image = primary_img.get_url
 
-            # 1. Day Location (if exists)
+            # 0. Departure Point (if exists, e.g. "Oberstenfeld" in "Oberstenfeld - Toblacher See")
+            origin, dest = geo_service.extract_route_parts(day.location)
+            if day.departure_latitude and day.departure_longitude:
+                map_data.append({
+                    'location': origin or f"Start ({day.location})",
+                    'lat': float(day.departure_latitude),
+                    'lon': float(day.departure_longitude),
+                    'day_id': day.id,
+                    'index': f"{d_idx}.0",
+                    'is_event': False,
+                    'image_url': d_image,
+                    'description': f"Start: {origin or day.location}",
+                    'date_str': _date(day.date, "j. b Y"),
+                    'transport_icon': '🛫' # Initial start icon
+                })
+                coords_for_routing.append([float(day.departure_longitude), float(day.departure_latitude)])
+
+            # 1. Day Location (if exists, the destination)
             if day.latitude and day.longitude:
                 # Check for transport event of the day
                 trans_ev = day.events.filter(type__in=['FLIGHT', 'CAR', 'RENTAL_CAR', 'CAMPER', 'TRAIN', 'BUS', 'BOAT', 'FERRY']).first()
                 
                 map_data.append({
-                    'location': day.location,
+                    'location': dest or day.location,
                     'lat': float(day.latitude),
                     'lon': float(day.longitude),
                     'day_id': day.id,
@@ -786,7 +803,17 @@ def day_edit(request, pk):
     day = get_object_or_404(Day, pk=pk)
     if request.method == 'POST':
         location = request.POST.get('location', '')
+        lat = request.POST.get('latitude')
+        lon = request.POST.get('longitude')
+        
         day.location = location
+        if lat and lon:
+            try:
+                day.latitude = float(lat.replace(',', '.'))
+                day.longitude = float(lon.replace(',', '.'))
+                day.is_geocoded = True
+            except ValueError: pass
+        
         day.save()
         if request.htmx:
             response = HttpResponse("")
