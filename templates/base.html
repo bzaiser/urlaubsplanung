@@ -103,62 +103,66 @@
             document.body.style.overflow = 'hidden';
         }
 
-        // --- Pull-to-Refresh Logic (Native Feel - iOS/Edge Optimized) ---
+        // --- Pull-to-Refresh Logic (Forgiving & iOS Optimized) ---
         (function() {
             let startY = 0;
             let currentY = 0;
             let pulling = false;
-            const threshold = 100; // lower threshold for snappier feel
+            const threshold = 110; 
             const indicator = document.getElementById('ptr-indicator');
             
-            document.addEventListener('touchstart', function(e) {
-                // Only start tracking if we are at the very top
-                if (window.scrollY <= 0) {
+            // Listen on window with capture to be sure we see the start of the touch
+            window.addEventListener('touchstart', function(e) {
+                // Forgiving check: allow trigger if scrolled up to 15px from top
+                if (window.scrollY <= 15) {
                     startY = e.touches[0].clientY;
                     pulling = false;
+                } else {
+                    startY = 0;
                 }
             }, { passive: true });
 
-            document.addEventListener('touchmove', function(e) {
-                if (startY === 0 || window.scrollY > 0) return;
+            window.addEventListener('touchmove', function(e) {
+                if (startY === 0 || window.scrollY > 15) return;
                 
                 currentY = e.touches[0].clientY;
                 const diff = currentY - startY;
 
-                if (diff > 0) {
-                    // Prevent native elastic scroll/bounce so our indicator can show
+                if (diff > 10) {
+                    // Lock scrolling so our indicator can take over
                     if (e.cancelable) e.preventDefault();
                     
                     pulling = true;
                     document.body.classList.add('ptr-pulling');
                     
-                    const progress = Math.min(diff / threshold, 1.5);
-                    const y = Math.min(diff * 0.4, 100);
+                    const progress = Math.min(diff / threshold, 1.3);
+                    const y = Math.min(diff * 0.45, 90);
                     
                     indicator.style.top = (y - 50) + 'px';
-                    indicator.style.transform = `translateX(-50%) rotate(${diff * 3}deg) scale(${0.5 + (progress * 0.5)})`;
-                    indicator.style.opacity = Math.min(progress * 1.2, 1);
+                    indicator.style.opacity = Math.min(progress * 1.5, 1);
+                    indicator.style.transform = `translateX(-50%) rotate(${diff * 2.5}deg) scale(${0.7 + (progress * 0.3)})`;
                     
-                    // Visual pulse instead of vibration for iOS
+                    // Visual state change: Gold to White-Glow when ready
                     if (diff >= threshold) {
                         if (!indicator.dataset.reached) {
                             indicator.dataset.reached = 'true';
                             indicator.style.borderColor = '#ffffff';
-                            indicator.style.boxShadow = '0 0 20px #c5a059';
-                            // Haptic fallback for Android
+                            indicator.style.backgroundColor = 'rgba(197, 160, 89, 0.9)'; // Dark Gold highlight
+                            indicator.style.boxShadow = '0 0 25px #c5a059';
                             if (window.navigator.vibrate) window.navigator.vibrate(15);
                         }
                     } else {
                         if (indicator.dataset.reached) {
                             delete indicator.dataset.reached;
                             indicator.style.borderColor = 'var(--accent-gold)';
+                            indicator.style.backgroundColor = 'rgba(10, 25, 47, 0.9)';
                             indicator.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5)';
                         }
                     }
                 }
-            }, { passive: false }); // Important: NOT passive to allow preventDefault
+            }, { passive: false });
 
-            document.addEventListener('touchend', function() {
+            window.addEventListener('touchend', function() {
                 if (!pulling) return;
                 
                 const diff = currentY - startY;
@@ -167,7 +171,7 @@
 
                 if (diff >= threshold) {
                     document.body.classList.add('ptr-refreshing');
-                    indicator.style.top = '20px';
+                    indicator.style.top = '25px';
                     indicator.style.opacity = '1';
                     
                     if (typeof htmx !== 'undefined') {
@@ -178,7 +182,7 @@
                         document.body.classList.remove('ptr-refreshing');
                         indicator.style.top = '-60px';
                         indicator.style.opacity = '0';
-                    }, 1000);
+                    }, 800);
                 } else {
                     indicator.style.top = '-60px';
                     indicator.style.opacity = '0';
