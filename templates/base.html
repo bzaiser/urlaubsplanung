@@ -369,7 +369,8 @@
         function monitorSW(registration) {
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
-                showToast("🛠️ PWA: Update gefunden, installiere...");
+                // Silenced: only show if relevant
+                console.log("🛠️ PWA: Update found...");
                 // Version 31 synchronization and cleanup
                 const currentV = localStorage.getItem('pwa_version');
                 if (currentV !== '31') {
@@ -391,9 +392,9 @@
                     return;
                 }
                 newWorker.addEventListener('statechange', () => {
-                    showToast(`📦 PWA Status: ${newWorker.state}`);
+                    console.log(`📦 PWA Status: ${newWorker.state}`);
                     if (newWorker.state === 'activated') {
-                        showToast("✅ PWA: Update fertig! Bitte jetzt neu laden.", false);
+                        // showToast("✅ PWA: Update fertig! Bitte jetzt neu laden.", false);
                     }
                 });
             });
@@ -406,8 +407,8 @@
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                // Register Service Worker with timestamp to force update-check
-                const swUrl = `/serviceworker_v29.js?v={% now 'U' %}`;
+                // Register Service Worker with stable version (v31)
+                const swUrl = `/serviceworker_v29.js?v=31.2`;
                 navigator.serviceWorker.register(swUrl).then(function(reg) {
                     console.log("✅ PWA: Service Worker registered (" + swUrl + ")");
                     monitorSW(reg);
