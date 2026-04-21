@@ -16,14 +16,21 @@
 
             <div class="modal-body">
                 <div class="mb-3">
-                    <label for="id_location" class="form-label small text-uppercase text-secondary">{% trans "Ort / Name des Tages" %}</label>
+                    <div class="d-flex justify-content-between align-items-end">
+                        <label for="id_location" class="form-label small text-uppercase text-secondary mb-0">{% trans "Ort / Name des Tages" %}</label>
+                        <a href="javascript:void(0)" class="text-warning text-decoration-none small" 
+                           onclick="document.getElementById('geodata-section').style.display = document.getElementById('geodata-section').style.display === 'none' ? 'flex' : 'none'"
+                           title="{% trans 'Geodaten bearbeiten' %}">
+                            <i class="bi bi-geo-alt-fill"></i>
+                        </a>
+                    </div>
                     <input type="text" name="location" id="id_location" 
-                           class="form-control" 
+                           class="form-control mt-1" 
                            value="{{ day.location|default:'' }}" 
                            placeholder="z.B. Phuket Town" autofocus>
                 </div>
 
-                <div class="row g-2 mb-3">
+                <div class="row g-2 mb-3" id="geodata-section" style="display: none;">
                     <div class="col-6">
                         <label for="id_latitude" class="form-label x-small text-uppercase text-secondary">{% trans "Breitengrad" %}</label>
                         <input type="text" name="latitude" id="id_latitude" 
@@ -39,7 +46,7 @@
                                placeholder="0.000000">
                     </div>
                     <div class="col-12 text-end">
-                        <small class="x-small text-secondary"><i class="bi bi-geo-alt me-1"></i>{% if day.is_geocoded %}{% trans "Automatisch gefunden" %}{% else %}{% trans "Manuell gesetzt" %}{% endif %}</small>
+                        <small class="x-small text-secondary"><i class="bi bi-info-circle me-1"></i>{% if day.is_geocoded %}{% trans "Automatisch gefunden" %}{% else %}{% trans "Manuell gesetzt" %}{% endif %}</small>
                     </div>
                 </div>
             </div>

@@ -34,13 +34,20 @@
                         <input type="text" name="title" value="{{ form.title.value|default:'' }}" required class="form-control form-control-sm">
                     </div>
                     <div class="col-6">
-                        <label class="form-label small text-uppercase text-secondary">{% trans "Ort / Ziel" %}</label>
-                        <input type="text" name="location" value="{{ form.location.value|default:'' }}" class="form-control form-control-sm">
+                        <div class="d-flex justify-content-between align-items-end">
+                            <label class="form-label small text-uppercase text-secondary mb-0">{% trans "Ort / Ziel" %}</label>
+                            <a href="javascript:void(0)" class="text-warning text-decoration-none x-small" 
+                               onclick="const sec = document.getElementById('event-geodata-section'); sec.style.display = sec.style.display === 'none' ? 'flex' : 'none';"
+                               title="{% trans 'Geodaten bearbeiten' %}">
+                                <i class="bi bi-geo-alt-fill"></i>
+                            </a>
+                        </div>
+                        <input type="text" name="location" value="{{ form.location.value|default:'' }}" class="form-control form-control-sm mt-1">
                     </div>
                 </div>
 
                 <!-- Row 1b: Geodata (Manual Override) -->
-                <div class="row g-2 mb-2">
+                <div class="row g-2 mb-2" id="event-geodata-section" style="display: none;">
                     <div class="col-6">
                         <label class="form-label x-small text-uppercase text-secondary">{% trans "Breitengrad" %}</label>
                         <input type="text" name="latitude" value="{{ form.latitude.value|stringformat:'.6f'|default:'' }}" 
