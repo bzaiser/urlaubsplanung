@@ -83,9 +83,11 @@ class Day(models.Model):
         if self.pk:
             old_day = Day.objects.get(pk=self.pk)
             if old_day.location != self.location:
-                self.latitude = None
-                self.longitude = None
-                self.is_geocoded = False
+                # Only reset if the geodata hasn't been updated already for the new location (View-precedence)
+                if self.latitude == old_day.latitude and self.longitude == old_day.longitude:
+                    self.latitude = None
+                    self.longitude = None
+                    self.is_geocoded = False
         super().save(*args, **kwargs)
 
     class Meta:
@@ -277,9 +279,11 @@ class Event(models.Model):
             try:
                 old_instance = Event.objects.get(pk=self.pk)
                 if old_instance.location != self.location:
-                    self.latitude = None
-                    self.longitude = None
-                    self.is_geocoded = False
+                    # Only reset if the geodata hasn't been updated already for the new location (View-precedence)
+                    if self.latitude == old_instance.latitude and self.longitude == old_instance.longitude:
+                        self.latitude = None
+                        self.longitude = None
+                        self.is_geocoded = False
             except Event.DoesNotExist: pass
 
         # Recursion and Automation Guard

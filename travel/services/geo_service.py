@@ -14,29 +14,51 @@ def geocode_location(location_name, countrycodes=None):
     # 1. CLEANING: Remove icons AND common travel prefixes to get the pure location
     clean_location = location_name
     
-    # Extract first part if "Start -> End"
+    # Step A: Pre-cleaning (Remove common artifacts)
+    # 1. Extract first part if "Start -> End" or "Start - End"
     if '->' in clean_location:
          clean_location = clean_location.split('->')[0].strip()
-    elif ' - ' in clean_location:
+    elif ' - ' in clean_location and not re.search(r'\d', clean_location.split(' - ')[1]):
+         # Only split if the second part doesn't look like a year or number
          clean_location = clean_location.split(' - ')[0].strip()
 
-    # Step A: Strip icons and special chars FIRST (so they don't block prefix detection)
+    # 2. Dynamic Noise Removal (Polarsteps & General)
     import re
-    clean_location = re.sub(r'\(.*\)', '', clean_location).strip() # Strip (via Singapore)
-    clean_location = re.sub(r'[^\w\s,\-]', '', clean_location).strip() # Strip Icons
-         
+    # Remove timestamps (10:30, 22:15, 9:00...)
+    clean_location = re.sub(r'\d{1,2}:\d{2}', '', clean_location)
+    # Remove coordinate-like strings
+    clean_location = re.sub(r'\d+\.\d+,?\s?\d+\.\d+', '', clean_location)
+    # Remove "Step", "Trip" noise
+    clean_location = re.sub(r'\b(Step|Trip|Day|Location|Track)\b(\s+\d+)?', '', clean_location, flags=re.IGNORECASE)
+    # Remove "from... to..." noise (common in flights/transfers)
+    clean_location = re.sub(r'\b(from|to|via)\b', '', clean_location, flags=re.IGNORECASE)
+    
+    # 3. Strip icons, parentheses, and special chars
+    clean_location = re.sub(r'\(.*\)', '', clean_location).strip() 
+    clean_location = re.sub(r'[^\w\s,\-]', '', clean_location).strip() 
+          
     # Step B: Strip common prefixes (case insensitive)
     prefixes_to_strip = [
         'flug nach', 'flug von', 'anfahrt zum', 'anfahrt nach', 'anfahrt von',
         'rückreise nach', 'fahrt nach', 'check-in:', 'check-out:', 'hotel:',
         'besuch der', 'besuch des', 'wanderung zum', 'wanderung am', 'tour zum',
         'roller-tour zur', 'taxi zum', 'privat-taxi zum', 'schnellfähre nach',
-        'fähre von', 'flug nach', 'anfahrt', 'taxi', 'privat-transfer zum', 'privat-taxi'
+        'fähre von', 'anfahrt', 'taxi', 'privat-transfer zum', 'privat-taxi'
     ]
     for prefix in prefixes_to_strip:
         pattern = re.compile(rf'\b{re.escape(prefix)}\b', re.IGNORECASE)
         clean_location = pattern.sub('', clean_location).strip()
     
+    # Step C: Word Deduplication (e.g., "Manila, Manila" -> "Manila")
+    words = clean_location.split()
+    unique_words = []
+    seen = set()
+    for w in words:
+        if w.lower() not in seen:
+            unique_words.append(w)
+            seen.add(w.lower())
+    clean_location = " ".join(unique_words)
+
     if not clean_location or len(clean_location) < 3:
         return None, None
 
