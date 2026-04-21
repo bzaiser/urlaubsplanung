@@ -76,6 +76,11 @@ class Day(models.Model):
     longitude = models.DecimalField(_("Längengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
     is_geocoded = models.BooleanField(_("Geokodierung versucht"), default=False)
     
+    # Departure coordinates for transition days (Point A to Point B)
+    departure_latitude = models.DecimalField(_("Start-Breitengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
+    departure_longitude = models.DecimalField(_("Start-Längengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
+    departure_is_geocoded = models.BooleanField(_("Start-Geokodierung versucht"), default=False)
+    
     def save(self, *args, **kwargs):
         if self.location:
             self.location = self.location.strip()
@@ -83,11 +88,10 @@ class Day(models.Model):
         if self.pk:
             old_day = Day.objects.get(pk=self.pk)
             if old_day.location != self.location:
-                # Only reset if the geodata hasn't been updated already for the new location (View-precedence)
-                if self.latitude == old_day.latitude and self.longitude == old_day.longitude:
-                    self.latitude = None
-                    self.longitude = None
-                    self.is_geocoded = False
+                # Flag for re-geocoding, but KEEP coordinates (e.g. from Polarsteps)
+                # to avoid data loss until the new coordinates are found.
+                self.is_geocoded = False
+                self.departure_is_geocoded = False
         super().save(*args, **kwargs)
 
     class Meta:
@@ -277,13 +281,10 @@ class Event(models.Model):
         # Optimize: Only check for changes if it's an update AND we're not skipping
         if self.pk and not self._skip_automation:
             try:
-                old_instance = Event.objects.get(pk=self.pk)
-                if old_instance.location != self.location:
-                    # Only reset if the geodata hasn't been updated already for the new location (View-precedence)
-                    if self.latitude == old_instance.latitude and self.longitude == old_instance.longitude:
-                        self.latitude = None
-                        self.longitude = None
-                        self.is_geocoded = False
+                old_event = Event.objects.get(pk=self.pk)
+                if old_event.location != self.location or old_event.title != self.title:
+                    # Flag for re-geocoding but keep old coords to prevent temporary map holes
+                    self.is_geocoded = False
             except Event.DoesNotExist: pass
 
         # Recursion and Automation Guard

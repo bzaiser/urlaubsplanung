@@ -1,6 +1,7 @@
 import requests
 import time
 from django.conf import settings
+from django.db.models import Q
 
 def geocode_location(location_name, countrycodes=None):
     """
@@ -142,7 +143,7 @@ def update_trip_coordinates(trip, limit=10):
     
     # 1. Update Days first (highest priority for map)
     searchable_missing_days = trip.days.filter(
-        is_geocoded=False
+        Q(is_geocoded=False) | Q(departure_is_geocoded=False)
     ).exclude(
         location=''
     ).exclude(
@@ -152,21 +153,39 @@ def update_trip_coordinates(trip, limit=10):
     days_to_geocode = searchable_missing_days[:limit]
     for day in days_to_geocode:
         # Avoid blocking for empty or placeholder locations
-        cleaned_loc = day.location.strip()
+        cleaned_loc = (day.location or "").strip()
         if not cleaned_loc or cleaned_loc in ['', 'Planung läuft...', 'TBD', '?']:
             day.is_geocoded = True
+            day.departure_is_geocoded = True
             day.save()
             continue
 
-        lat, lon = geocode_location(cleaned_loc, countrycodes=country_context)
-                
-        if lat and lon:
-            day.latitude = lat
-            day.longitude = lon
-        day.is_geocoded = True
+        # Extract Origin/Destination
+        origin, dest = extract_route_parts(cleaned_loc)
+
+        # A. Geocode Destination (Main Location)
+        if not day.is_geocoded:
+            lat, lon = geocode_location(dest, countrycodes=country_context)
+            if lat and lon:
+                day.latitude = lat
+                day.longitude = lon
+            day.is_geocoded = True
+            processed_locations.append(dest or "Unbekannter Ort")
+            time.sleep(1.2)
+
+        # B. Geocode Origin (Departure)
+        if origin and not day.departure_is_geocoded:
+            o_lat, o_lon = geocode_location(origin, countrycodes=country_context)
+            if o_lat and o_lon:
+                day.departure_latitude = o_lat
+                day.departure_longitude = o_lon
+            day.departure_is_geocoded = True
+            processed_locations.append(f"Start: {origin}")
+            time.sleep(1.2)
+        else:
+            day.departure_is_geocoded = True
+
         day.save()
-        processed_locations.append(cleaned_loc or "Unbekannter Ort")
-        time.sleep(1.5) # Wait ONLY if we actually did a geocoding lookup
 
             
     # 2. Update Events (Only travel types that affect the route)
@@ -234,3 +253,28 @@ def get_route_geometry(coordinates):
         
     # FALLBACK: If OSRM fails, return simple straight lines (Leaflet needs [lat, lon])
     return [[c[1], c[0]] for c in coordinates]
+
+def extract_route_parts(location_name):
+    """
+    Analyzes a location name to see if it represents a route (A to B).
+    Returns (origin, destination) or (None, destination).
+    """
+    if not location_name:
+        return None, None
+        
+    name = location_name.strip()
+    
+    # Check for common delimiters
+    import re
+    movement_delimiters = [r'\s*->\s*', r'\s+zum\s+', r'\s+nach\s+', r'\s+bis\s+', r'\s+zu\s+', r'\s+-\s+']
+    for sep in movement_delimiters:
+        parts = re.split(sep, name, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            origin = parts[0].strip()
+            dest = parts[-1].strip()
+            # Basic validation: ensure it's not just noise or numbers
+            if len(origin) > 1 and not re.search(r'^\d+$', origin) and not any(p in origin.lower() for p in ['anfahrt', 'rückreise', 'fahrt']):
+                return origin, dest
+            return None, dest
+            
+    return None, name
