@@ -257,12 +257,14 @@
                 document.body.appendChild(toast);
             }
             toast.innerText = message;
-            toast.className = 'position-fixed top-0 end-0 m-3 px-3 py-2 rounded-3 text-white fw-bold shadow-lg ' + (isError ? 'bg-danger' : 'bg-success');
+            toast.className = 'position-fixed top-0 end-0 m-3 px-3 py-2 rounded-pill text-white fw-bold shadow-lg ' + (isError ? 'bg-danger' : 'bg-success');
             toast.style.zIndex = '9999';
             toast.style.transform = 'translateY(0)';
+            
+            // Short timeouts for mobile: 3s for errors, 2s for success
             setTimeout(() => {
                 toast.style.transform = 'translateY(-100px)';
-            }, isError ? 15000 : 4000); // 15s for errors, 4s for success
+            }, isError ? 3000 : 2000);
         }
 
         // --- DIAGNOSTICS: Global Error Reporting ---
@@ -271,8 +273,9 @@
         };
 
         window.onerror = function(msg, url, lineNo, columnNo, error) {
-            const errorMsg = `🚨 JS Error: ${msg} (Line ${lineNo})`;
-            console.error(errorMsg, error);
+            let source = url ? url.split('/').pop() : 'inline/eval';
+            const errorMsg = `🚨 JS Error: ${msg} (${source}:${lineNo})`;
+            console.error(errorMsg, {msg, url, lineNo, columnNo, error});
             showToast(errorMsg, true);
             return false;
         };
