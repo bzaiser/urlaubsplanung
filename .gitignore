@@ -21,3 +21,4 @@ project_rules.md
 prompt.txt
 .DS_Store
 ~$*
+db.sqlite3*
