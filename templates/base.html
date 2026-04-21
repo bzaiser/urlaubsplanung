@@ -51,38 +51,27 @@
         .ag-theme-thailand-gold .ag-row {
             border-bottom: 1px solid var(--glass-border);
         }
-        /* Loading Overlay */
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            color: var(--accent-gold);
-            font-family: 'Outfit', sans-serif;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .loading-overlay.htmx-request {
-            display: flex !important;
-        }
-        .spinner-gold {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(197, 160, 89, 0.1);
-            border-top: 3px solid var(--accent-gold);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 10001;
+            align-items: center; justify-content: center;
+            flex-direction: column; gap: 15px;
+            color: var(--accent-gold);
+            font-family: 'Outfit', sans-serif;
+            transition: opacity 0.15s ease;
+        }
+        #loading-overlay.htmx-request, 
+        #loading-overlay.show-manual {
+            display: flex !important;
         }
     </style>
     <link rel="manifest" href="{% url 'manifest' %}">
@@ -93,38 +82,31 @@
     <link rel="apple-touch-icon" href="/static/img/icon-160.png">
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <!-- Global Loading Overlay -->
-    <div id="loading-overlay" style="display: flex;">
-        <div class="loading-spinner"></div>
-        <div class="loading-status-text" id="loading-status">{% trans "Dashboard wird geladen..." %}</div>
-        <div class="loading-sub-text" id="loading-sub">{% trans "Bitte einen kurzen Moment Geduld" %}</div>
+    <div id="loading-overlay" class="htmx-indicator" style="display: flex;">
+        <div class="spinner-gold"></div>
+        <div class="fw-bold fs-5" id="loading-status">{% trans "Dashboard wird geladen..." %}</div>
+        <div class="text-secondary small" id="loading-sub">{% trans "Bitte einen kurzen Moment Geduld" %}</div>
     </div>
 
     <script>
         function showLoadingOverlay(status, sub) {
             const overlay = document.getElementById('loading-overlay');
-            const statusEl = document.getElementById('loading-status');
-            const subEl = document.getElementById('loading-sub');
-            
-            if (status) statusEl.innerText = status;
-            if (sub) subEl.innerText = sub;
-            
-            overlay.style.display = 'flex';
+            if (status) document.getElementById('loading-status').innerText = status;
+            if (sub) document.getElementById('loading-sub').innerText = sub;
+            overlay.classList.add('show-manual');
             document.body.style.overflow = 'hidden';
         }
 
-        // --- Pre-loader Logic ---
+        // --- Instant Pre-loader Cleanup ---
         window.addEventListener('load', function() {
             const overlay = document.getElementById('loading-overlay');
-            // Slight delay for a smoother transition
+            overlay.style.opacity = '0';
             setTimeout(() => {
-                overlay.style.opacity = '0';
-                setTimeout(() => {
-                    overlay.style.display = 'none';
-                    overlay.style.opacity = '1'; // Reset for next JS call
-                    document.body.style.overflow = 'auto';
-                }, 300);
-            }, 200);
+                overlay.classList.remove('show-manual');
+                overlay.style.display = 'none';
+                overlay.style.opacity = '1';
+                document.body.style.overflow = 'auto';
+            }, 150);
         });
     </script>
     <nav class="navbar navbar-dark bg-dark sticky-top border-bottom border-secondary py-1 py-md-2">
@@ -150,11 +132,6 @@
         {% endblock %}
     </main>
     
-    <!-- Global Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner-gold"></div>
-        <div class="fw-bold fs-5">{% trans "Bitte warten..." %}</div>
-    </div>
 
     <!-- Modal Container -->
     <div id="modal-container" class="modal" hx-target="this" hx-swap="innerHTML">

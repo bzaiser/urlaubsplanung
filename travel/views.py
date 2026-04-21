@@ -95,8 +95,8 @@ def get_dashboard_context(request, active_trip=None):
         context['today'] = date.today()
     
     
-    # Prepare AG Grid Data
-    if active_trip:
+    # 2. Prepare AG Grid Data (Only if needed for table view to save CPU)
+    if active_trip and view_type == 'table':
         grid_data = []
         for i, station in enumerate(active_trip.grouped_stations):
             station_key = f"st-{i}"
@@ -205,6 +205,8 @@ def get_dashboard_context(request, active_trip=None):
             })
 
         context['grid_data_json'] = json.dumps(grid_data, cls=DjangoJSONEncoder)
+    
+    if active_trip:
         context['ui_settings_json'] = json.dumps(active_trip.ui_settings or {})
     # 3. Prepare Map Data (Step-by-Step Transparency: Show everything with coords)
     map_data = []
