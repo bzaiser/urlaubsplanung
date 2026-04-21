@@ -28,7 +28,33 @@ window.startStoryMode = async function() {
     // --- CONFIGURATION ---
     const ICON_DEFAULT = '🦖'; 
     const MAX_FLIGHT_DURATION = 4000; // Never fly longer than 4s per segment
-    const WAIT_STATION = 3000;       // Dwell time at each waypost
+    const WAIT_STATION = 6000;       // Dwell time at each waypost (Extended for readability)
+    
+    window.isStoryPaused = false;
+    
+    window.toggleStoryPause = function() {
+        if (!window.isStoryPlaying) return;
+        window.isStoryPaused = !window.isStoryPaused;
+        console.log("⏯️ Story " + (window.isStoryPaused ? "Paused" : "Resumed"));
+        
+        const pauseIndicator = document.getElementById('story-pause-indicator');
+        if (pauseIndicator) {
+            pauseIndicator.style.display = window.isStoryPaused ? 'flex' : 'none';
+        }
+    };
+    
+    // Pause-Aware Timer
+    async function pauseAwareWait(ms) {
+        let remaining = ms;
+        const tick = 100;
+        while (remaining > 0) {
+            if (!window.isStoryPlaying) return; 
+            if (!window.isStoryPaused) {
+                remaining -= tick;
+            }
+            await new Promise(r => setTimeout(r, tick));
+        }
+    }
     
     // UI Setup
     const btnStart = document.getElementById('btn-start-story');
@@ -44,9 +70,61 @@ window.startStoryMode = async function() {
     overlay.className = 'story-overlay-container';
     overlay.innerHTML = `
         <div id="story-card-anchor" class="story-card-anchor"></div>
+        <div id="story-pause-indicator" class="story-pause-indicator" style="display: none;">
+            <div class="pause-icon"><i class="bi bi-pause-fill"></i> PAUSE</div>
+        </div>
         <div class="story-progress-bar"><div id="story-progress-fill"></div></div>
     `;
     document.body.appendChild(overlay);
+
+    // CSS for Pause Indicator
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .story-pause-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            color: #ffc107;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: bold;
+            font-size: 1.5rem;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 2px solid #ffc107;
+            box-shadow: 0 0 30px rgba(255, 193, 7, 0.4);
+            pointer-events: none;
+        }
+        .pause-icon { animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Event Listeners for Pause
+    const keyHandler = (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            window.toggleStoryPause();
+        }
+    };
+    document.addEventListener('keydown', keyHandler);
+    window.storyKeyHandler = keyHandler;
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target.closest('.story-card') || e.target.id === 'story-overlay') {
+            window.toggleStoryPause();
+        }
+    });
 
     const storyMarker = L.marker([stations[0].lat, stations[0].lon], {
         icon: L.divIcon({
@@ -140,7 +218,7 @@ window.startStoryMode = async function() {
                 map.panTo(pos, { animate: true, duration: 0.5 });
             }
             
-            await new Promise(r => setTimeout(r, stepDelay));
+            await pauseAwareWait(stepDelay);
         }
         if (markerIcon) markerIcon.classList.add('marker-pulse');
     }
@@ -163,7 +241,7 @@ window.startStoryMode = async function() {
         if (currentIndex === 0) {
             map.setView([s.lat, s.lon], targetZoom, { animate: true, duration: 1.2 });
             storyMarker.setLatLng([s.lat, s.lon]);
-            await new Promise(r => setTimeout(r, 1300));
+            await pauseAwareWait(1300);
         }
 
         // 2. Show Card
@@ -186,13 +264,13 @@ window.startStoryMode = async function() {
 
         // 3. Dwell
         const isSameLoc = nextS && getDistance(s, nextS) < 0.05;
-        await new Promise(r => setTimeout(r, isSameLoc ? 1500 : WAIT_STATION)); 
+        await pauseAwareWait(isSameLoc ? 2000 : WAIT_STATION); 
 
         // 4. Move
         if (nextS) {
             const card = cardAnchor.querySelector('.story-card');
             if (card) { card.classList.replace('animate__fadeInUp', 'animate__fadeOutDown'); }
-            await new Promise(r => setTimeout(r, 600));
+            await pauseAwareWait(600);
 
             if (!isSameLoc) {
                 const idx1 = findNearestIndex(s, routeGeometry);
@@ -201,11 +279,11 @@ window.startStoryMode = async function() {
                 // Smart Zoom: If it's a "City Hop" (e.g. < 10km), don't zoom out too far!
                 if (currentDist > 10) {
                     map.fitBounds([[s.lat, s.lon], [nextS.lat, nextS.lon]], { padding: [120, 120], animate: true, duration: 1.2 });
-                    await new Promise(r => setTimeout(r, 1300));
+                    await pauseAwareWait(1300);
                 } else {
                     // Local movement: ensure we are close enough to see the Dino
                     if (map.getZoom() < 14) map.setZoom(15, { animate: true });
-                    await new Promise(r => setTimeout(r, 500));
+                    await pauseAwareWait(500);
                 }
                 
                 await animatePath(idx1, idx2, s, nextS);
@@ -216,7 +294,7 @@ window.startStoryMode = async function() {
                     iconEl.classList.add('animate__animated', 'animate__bounce');
                     setTimeout(() => iconEl.classList.remove('animate__animated', 'animate__bounce'), 1000);
                 }
-                await new Promise(r => setTimeout(r, 1000));
+                await pauseAwareWait(1000);
             }
         }
 
@@ -233,6 +311,11 @@ window.stopStoryMode = function() {
     if (window.storyPath) { window.storyPath.remove(); window.storyPath = null; }
     const overlay = document.getElementById('story-overlay');
     if (overlay) overlay.remove();
+
+    if (window.storyKeyHandler) {
+        document.removeEventListener('keydown', window.storyKeyHandler);
+        window.storyKeyHandler = null;
+    }
     
     // UI RESTORE
     const btnStart = document.getElementById('btn-start-story');
