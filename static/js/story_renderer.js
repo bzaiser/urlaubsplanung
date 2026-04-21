@@ -26,7 +26,7 @@ window.startStoryMode = async function() {
     if (!stations || stations.length === 0) return;
 
     // --- CONFIGURATION ---
-    const ICON_DEFAULT = '🦕'; // Dino! 🦖
+    const ICON_DEFAULT = '🦖'; // T-Rex! 🦖
     const SPEED_FACTOR = 1.8; // Faster flight
     const WAIT_STATION = 2600; // Time spent at each card
     
