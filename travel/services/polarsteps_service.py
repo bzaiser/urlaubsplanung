@@ -5,9 +5,11 @@ import random
 import re
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, date, time as dt_time
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from PIL import Image
+from PIL.ExifTags import TAGS
 from ..models import Trip, Day, Event, DiaryEntry, DiaryImage
 
 class PolarstepsImporter:
@@ -149,8 +151,9 @@ class PolarstepsImporter:
             if not trip.polarsteps_id:
                 trip.polarsteps_id = ps_id
                 trip.save()
-            # Cleanup old noisy data before re-syncing
-            PolarstepsImporter.cleanup_noisy_steps(trip)
+            # Cleanup old noisy data (only if not doing a manual folder sync)
+            # Actually, we keep cleanup but we make sure the 'create' logic below matches ps IDs
+            # PolarstepsImporter.cleanup_noisy_steps(trip)
         
         if not trip:
             start_ts = data.get('start_date', time.time())
@@ -181,17 +184,17 @@ class PolarstepsImporter:
             loc_name = location_data.get('name', 'Unbekannter Ort')
             
             # 1. Day
-            day, created = Day.objects.get_or_create(
-                trip=trip,
-                date=step_date,
-                defaults={
-                    'location': loc_name,
-                    'station': loc_name,
-                    'latitude': location_data.get('lat'),
-                    'longitude': location_data.get('lon'),
-                    'is_geocoded': True
-                }
-            )
+            day = Day.objects.filter(trip=trip, date=step_date).first()
+            if not day:
+                day = Day.objects.create(
+                    trip=trip,
+                    date=step_date,
+                    location=loc_name,
+                    station=loc_name,
+                    latitude=location_data.get('lat'),
+                    longitude=location_data.get('lon'),
+                    is_geocoded=True
+                )
             
             # 2. Event (Deduplicate based on title and time if possible)
             ev_title = step.get('name') or loc_name
@@ -230,19 +233,11 @@ class PolarstepsImporter:
                         diary.text += separator + desc
                 diary.save()
             
-            # 4. Media (Links only for sync)
-            media_items = step.get('media', [])
-            for media in media_items:
-                cdn_url = media.get('cdn_path') or media.get('path')
-                if cdn_url:
-                    # Check if this image link already exists for this entry
-                    exists = DiaryImage.objects.filter(diary_entry=diary, remote_url=cdn_url).exists()
-                    if not exists:
-                        DiaryImage.objects.create(
-                            diary_entry=diary,
-                            remote_url=cdn_url,
-                            caption=media.get('description', '') or ""
-                        )
+            # 4. Media (Skip thumbnails/remote URLs by default to avoid broken links)
+            # The user prefers local high-res uploads.
+            # Only sync if explicitly requested or if it's a legacy requirement.
+            # We skip it here to keep the DB clean as requested.
+            pass
             
             steps_mapping[step_id] = diary.id
             
@@ -330,3 +325,56 @@ class PolarstepsImporter:
         # Finally, delete ANY Events with a polarsteps_step_id that were NOT in the filtered list
         # (This handles the case where steps were deleted in Polarsteps or no longer meet our filter)
         # But for now, the pre-filtering & delete above is sufficient.
+
+    @staticmethod
+    def match_photo_by_exif(trip, photo_file):
+        """
+        Extracts EXIF time from photo_file and finds the best DiaryEntry in trip.
+        Returns the (diary_entry, match_type) or (None, None).
+        """
+        try:
+            with Image.open(photo_file) as img:
+                exif_raw = img._getexif()
+                if not exif_raw:
+                    return None, "no_exif"
+                
+                exif = {TAGS.get(tag, tag): value for tag, value in exif_raw.items()}
+                date_str = exif.get('DateTimeOriginal') or exif.get('DateTime')
+                if not date_str:
+                    return None, "no_date"
+                
+                # Format: "YYYY:MM:DD HH:MM:SS"
+                dt = datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+                photo_date = dt.date()
+                photo_time = dt.time()
+                
+                # 1. Find the day
+                day = Day.objects.filter(trip=trip, date=photo_date).first()
+                if not day:
+                    return None, "day_not_in_trip"
+                
+                # 2. Find the diary entry (create if missing)
+                diary, _ = DiaryEntry.objects.get_or_create(day=day)
+                
+                # 3. Find the best event on that day
+                # We prioritize events that are closest to the photo time
+                events = day.events.filter(time__isnull=False).order_by('time')
+                best_event = None
+                
+                if events.exists():
+                    import datetime as dt_mod
+                    photo_dt = dt_mod.datetime.combine(dt_mod.date.min, photo_time)
+                    min_diff = dt_mod.timedelta(hours=24)
+                    
+                    for event in events:
+                        event_dt = dt_mod.datetime.combine(dt_mod.date.min, event.time)
+                        diff = abs(photo_dt - event_dt)
+                        if diff < min_diff:
+                            min_diff = diff
+                            best_event = event
+                
+                return diary, "success"
+                
+        except Exception as e:
+            print(f"EXIF Match Error: {e}")
+            return None, "error"

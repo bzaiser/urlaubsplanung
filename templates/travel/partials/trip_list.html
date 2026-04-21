@@ -10,6 +10,16 @@
                 {{ active_trip.days.count }} Tage
             </span>
         </div>
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-sm btn-outline-warning rounded-pill d-flex align-items-center gap-2 px-3 shadow-sm"
+                    onclick="document.getElementById('handy-photo-upload').click()"
+                    title="Bilder vom Handy hochladen (Magic Match)">
+                <i class="bi bi-camera-fill"></i>
+                <span class="small fw-bold text-uppercase">Bilder</span>
+            </button>
+            <input type="file" id="handy-photo-upload" multiple accept="image/*" class="d-none" 
+                   onchange="uploadHandyPhotos(this.files, {{ active_trip.id }})">
+        </div>
     </div>
 
     {% if view_type == 'table' %}
@@ -103,3 +113,54 @@
     </div>
     {% endif %}
 </section>
+
+<script>
+    async function uploadHandyPhotos(files, tripId) {
+        if (!files || files.length === 0) return;
+        
+        // Show global loader if available or just a simple alert
+        Swal.fire({
+            title: '{% trans "Magic Match läuft..." %}',
+            text: '{% trans "Deine Bilder werden analysiert und automatisch zugeordnet." %}',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        const formData = new FormData();
+        for (const file of files) {
+            formData.append('files', file);
+        }
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        try {
+            const response = await fetch(`/trip/${tripId}/bulk-photo-upload/`, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            });
+
+            const result = await response.json();
+            if (result.status === 'ok') {
+                Swal.fire({
+                    icon: 'success',
+                    title: '{% trans "Fertig!" %}',
+                    text: `${result.results.success} {% trans "Bilder erfolgreich zugeordnet." %}`,
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    // Refresh current view
+                    const currentView = new URLSearchParams(window.location.search).get('view') || 'timeline';
+                    window.location.href = `/?trip_id=${tripId}&view=${currentView}`;
+                });
+            } else {
+                throw new Error(result.message || 'Upload failed');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire({
+                icon: 'error',
+                title: '{% trans "Hoppla..." %}',
+                text: '{% trans "Fehler beim Upload:" %} ' + err.message
+            });
+        }
+    }
+</script>

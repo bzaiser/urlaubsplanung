@@ -1795,3 +1795,43 @@ def archive_polarsteps_images(request, trip_id):
         return JsonResponse({'status': 'ok'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+@login_required
+def bulk_photo_upload(request, trip_id):
+    """
+    Handles multiple photos uploaded via the 'Magic Match' feature.
+    Matches photos to diary entries based on EXIF timestamps.
+    """
+    from .services.polarsteps_service import PolarstepsImporter
+    trip = get_object_or_404(Trip, id=trip_id, user=request.user)
+    
+    if request.method == 'POST':
+        files = request.FILES.getlist('files')
+        results = {'success': 0, 'failed': 0, 'errors': []}
+        
+        for f in files:
+            try:
+                diary, status = PolarstepsImporter.match_photo_by_exif(trip, f)
+                if diary and status == "success":
+                    # Save photo
+                    # Use a stable filename
+                    from django.core.files.base import ContentFile
+                    import os
+                    ext = f.name.split('.')[-1]
+                    filename = f"handy_{int(time.time()*1000)}_{f.name}"
+                    
+                    DiaryImage.objects.create(
+                        diary_entry=diary,
+                        image=f,
+                        caption=f.name
+                    )
+                    results['success'] += 1
+                else:
+                    results['failed'] += 1
+                    results['errors'].append(f"{f.name}: {status}")
+            except Exception as e:
+                results['failed'] += 1
+                results['errors'].append(f"{f.name}: {str(e)}")
+        
+        return JsonResponse({'status': 'ok', 'results': results})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)

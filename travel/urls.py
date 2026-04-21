@@ -26,6 +26,7 @@ from .views import (
     import_polarsteps_photo,
     sync_polarsteps_live,
     archive_polarsteps_images,
+    bulk_photo_upload,
     station_rename
 )
 
@@ -37,6 +38,7 @@ urlpatterns = [
     path('import/polarsteps/photo/', import_polarsteps_photo, name='import_polarsteps_photo'),
     path('trip/<int:trip_id>/sync-polarsteps/', sync_polarsteps_live, name='sync_polarsteps_live'),
     path('trip/<int:trip_id>/archive-photos/', archive_polarsteps_images, name='archive_polarsteps_images'),
+    path('trip/<int:trip_id>/bulk-photo-upload/', bulk_photo_upload, name='bulk_photo_upload'),
     path('trip/new/', trip_create, name='trip_create'),
     path('trip/<int:pk>/edit/', trip_edit, name='trip_edit'),
     path('trip/<int:pk>/delete/', trip_delete, name='trip_delete'),
