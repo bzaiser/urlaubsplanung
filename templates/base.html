@@ -261,10 +261,10 @@
             toast.style.zIndex = '9999';
             toast.style.transform = 'translateY(0)';
             
-            // Short timeouts for mobile: 3s for errors, 2s for success
+            // Ultra-short timeouts for mobile: 3s for errors, 1s for success
             setTimeout(() => {
                 toast.style.transform = 'translateY(-100px)';
-            }, isError ? 3000 : 2000);
+            }, isError ? 3000 : 1000);
         }
 
         // --- DIAGNOSTICS: Global Error Reporting ---
