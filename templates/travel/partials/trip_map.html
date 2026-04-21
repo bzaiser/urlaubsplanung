@@ -391,12 +391,11 @@
                         setTimeout(() => this.setRadius(originalRadius), 300);
 
                         // 1. Sync with Timeline (Diary View)
-                        // Robust lookup: If it's an event (e.g. index 1.2), we scroll to the parent station (station-1)
-                        const stationIdx = s.index.toString().split('.')[0];
-                        const targetId = `station-${stationIdx}`;
+                        // Precise lookup using day_id (independent of grouping/indexing)
+                        const targetId = `day-main-${s.day_id}`;
                         const targetEl = document.getElementById(targetId);
                         if (targetEl) {
-                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             targetEl.classList.add('station-highlight');
                             setTimeout(() => targetEl.classList.remove('station-highlight'), 2500);
                         }
