@@ -1,10 +1,10 @@
 /**
- * Travel Story Renderer (v1.2)
- * Handles the animated trip showcase with path-following and direct-flight fallback.
+ * Travel Story Renderer (v1.3)
+ * Optimized for consistent speed, smart zooming, and T-Rex power.
  */
 
 window.startStoryMode = async function() {
-    console.log("🎬 Story Mode initiated...");
+    console.log("🎬 Story Mode (High-Performance) initiated...");
     
     let map = window.currentTripMap;
     if (!map) {
@@ -26,11 +26,11 @@ window.startStoryMode = async function() {
     if (!stations || stations.length === 0) return;
 
     // --- CONFIGURATION ---
-    const ICON_DEFAULT = '🦖'; // T-Rex! 🦖
-    const SPEED_FACTOR = 1.8; // Faster flight
-    const WAIT_STATION = 2600; // Time spent at each card
+    const ICON_DEFAULT = '🦖'; 
+    const MAX_FLIGHT_DURATION = 4000; // Never fly longer than 4s per segment
+    const WAIT_STATION = 3000;       // Dwell time at each waypost
     
-    // UI Setup: Switch to Story Header
+    // UI Setup
     const btnStart = document.getElementById('btn-start-story');
     const btnActive = document.getElementById('story-active-controls');
     if (btnStart) btnStart.classList.add('d-none');
@@ -39,7 +39,6 @@ window.startStoryMode = async function() {
         btnActive.classList.add('d-flex');
     }
 
-    // Progress Overlay (Minimal)
     const overlay = document.createElement('div');
     overlay.id = 'story-overlay';
     overlay.className = 'story-overlay-container';
@@ -49,10 +48,9 @@ window.startStoryMode = async function() {
     `;
     document.body.appendChild(overlay);
 
-    // Dynamic transport marker (The Dino)
     const storyMarker = L.marker([stations[0].lat, stations[0].lon], {
         icon: L.divIcon({
-            html: `<div class="story-marker-icon bird-flying">${ICON_DEFAULT}</div>`,
+            html: `<div class="story-marker-icon marker-pulse">${ICON_DEFAULT}</div>`,
             className: 'story-marker-container',
             iconSize: [45, 45]
         }),
@@ -62,35 +60,25 @@ window.startStoryMode = async function() {
     window.activeStoryMarker = storyMarker;
     window.isStoryPlaying = true;
     
-    // Path Management
     if (window.storyPath) window.storyPath.remove();
     window.storyPath = L.polyline([], {
         color: 'var(--accent-gold)', weight: 3, opacity: 0.6, dashArray: '5, 10'
     }).addTo(map);
 
-    // Recording Logic
-    const recordBtn = document.getElementById('btn-record-story');
-    if (recordBtn) {
-        recordBtn.onclick = () => {
-            if (!window.isRecording) {
-                window.isRecording = true;
-                recordBtn.classList.replace('btn-outline-danger', 'btn-danger');
-                recordBtn.innerHTML = '<i class="bi bi-stop-circle-fill"></i><span class="small fw-bold text-uppercase d-none d-md-inline">Stop Rec</span>';
-                if (window.showToast) showToast("📽️ Aufnahme gestartet (Browser-Tab teilen empfohlen)");
-            } else {
-                window.isRecording = false;
-                recordBtn.classList.replace('btn-danger', 'btn-outline-danger');
-                recordBtn.innerHTML = '<i class="bi bi-record-circle-fill"></i><span class="small fw-bold text-uppercase d-none d-md-inline">Rec</span>';
-                if (window.showToast) showToast("✅ Video gespeichert.");
-            }
-        };
+    // Helpers
+    function getDistance(p1, p2) {
+        const R = 6371; 
+        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+        const dLon = (p2.lon - p1.lon) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) * 
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // --- Core Helper: Find point in routeGeometry ---
     function findNearestIndex(point, geometry) {
         if (!geometry || geometry.length === 0) return -1;
-        let minDist = Infinity;
-        let index = 0;
+        let minDist = Infinity, index = 0;
         geometry.forEach((p, i) => {
             const d = Math.pow(p[0] - point.lat, 2) + Math.pow(p[1] - point.lon, 2);
             if (d < minDist) { minDist = d; index = i; }
@@ -98,56 +86,65 @@ window.startStoryMode = async function() {
         return index;
     }
 
-    // --- Path Animation Logic ---
+    /**
+     * Optimized Animation: Smooth, time-limited, and orientation-aware.
+     */
     async function animatePath(startIndex, endIndex, startCoords, endCoords) {
         let pathPoints = [];
-        
-        // Use high-res route if available, otherwise direct line fallback
         if (startIndex !== -1 && endIndex !== -1 && routeGeometry.length > 0) {
             const direction = startIndex < endIndex ? 1 : -1;
-            const totalSteps = Math.abs(endIndex - startIndex);
-            for (let i = 0; i <= totalSteps; i++) {
+            const steps = Math.abs(endIndex - startIndex);
+            // Thinning: If path is too dense, only use every Nth point for animation smoothness
+            const stepSkip = Math.max(1, Math.floor(steps / 100)); 
+            for (let i = 0; i <= steps; i += stepSkip) {
                 pathPoints.push(routeGeometry[startIndex + (i * direction)]);
             }
+            if (pathPoints[pathPoints.length-1] !== routeGeometry[endIndex]) pathPoints.push(routeGeometry[endIndex]);
         } else {
-            // FALLBACK: Linear interpolation if no route geometry
             const steps = 60;
             for (let i = 0; i <= steps; i++) {
-                const lat = startCoords.lat + (endCoords.lat - startCoords.lat) * (i / steps);
-                const lon = startCoords.lon + (endCoords.lon - startCoords.lon) * (i / steps);
-                pathPoints.push([lat, lon]);
+                pathPoints.push([
+                    startCoords.lat + (endCoords.lat - startCoords.lat) * (i / steps),
+                    startCoords.lon + (endCoords.lon - startCoords.lon) * (i / steps)
+                ]);
             }
         }
 
         if (pathPoints.length < 2) return;
         
-        const stepDelay = Math.max(8, 45 / (SPEED_FACTOR * (pathPoints.length / 50))); 
+        // DURATION LOGIC: Long paths shouldn't take forever, short paths shouldn't be too fast
+        const dist = getDistance(startCoords, endCoords);
+        const duration = Math.min(MAX_FLIGHT_DURATION, Math.max(1200, dist * 50)); 
+        const stepDelay = duration / pathPoints.length;
         
+        const markerIcon = storyMarker.getElement()?.querySelector('.story-marker-icon');
+        if (markerIcon) markerIcon.classList.remove('marker-pulse');
+
         for (let i = 0; i < pathPoints.length; i++) {
             if (!window.isStoryPlaying) return;
             const pos = pathPoints[i];
             
-            // Rotation Logic
             if (i < pathPoints.length - 1) {
                 const nextPos = pathPoints[i + 1];
                 const angle = Math.atan2(nextPos[0] - pos[0], nextPos[1] - pos[1]) * 180 / Math.PI;
-                const iconEl = storyMarker.getElement()?.querySelector('.story-marker-icon');
-                if (iconEl) iconEl.style.transform = `rotate(${angle + 90}deg)`;
+                if (markerIcon) markerIcon.style.transform = `rotate(${angle + 90}deg)`;
             }
 
             storyMarker.setLatLng(pos);
             if (window.storyPath) window.storyPath.addLatLng(pos);
             
-            // Smoother map follow
-            if (i % 20 === 0 && !map.getBounds().pad(-0.2).contains(pos)) {
-                map.panTo(pos, { animate: true, duration: 0.6 });
+            // Map follow (Dynamic threshold based on zoom)
+            const currentZoom = map.getZoom();
+            const threshold = currentZoom > 12 ? 10 : 30;
+            if (i % threshold === 0 && !map.getBounds().pad(-0.15).contains(pos)) {
+                map.panTo(pos, { animate: true, duration: 0.5 });
             }
             
             await new Promise(r => setTimeout(r, stepDelay));
         }
+        if (markerIcon) markerIcon.classList.add('marker-pulse');
     }
 
-    // --- The Animation Loop ---
     let currentIndex = 0;
 
     async function playNextWaypoint() {
@@ -159,13 +156,17 @@ window.startStoryMode = async function() {
         const s = stations[currentIndex];
         const nextS = stations[currentIndex + 1];
         
-        // 1. Position Dino and Zoom (only if starting or location changed)
+        // 1. Initial Position / Re-focus
+        const currentDist = nextS ? getDistance(s, nextS) : 0;
+        const targetZoom = currentDist < 10 ? 15 : 14; 
+
         if (currentIndex === 0) {
-            map.setView([s.lat, s.lon], 14, { animate: true, duration: 0.8 });
+            map.setView([s.lat, s.lon], targetZoom, { animate: true, duration: 1.2 });
             storyMarker.setLatLng([s.lat, s.lon]);
+            await new Promise(r => setTimeout(r, 1300));
         }
 
-        // 2. Show Info Card
+        // 2. Show Card
         const cardAnchor = document.getElementById('story-card-anchor');
         cardAnchor.innerHTML = `
             <div class="story-card animate__animated animate__fadeInUp">
@@ -173,7 +174,7 @@ window.startStoryMode = async function() {
                 <div class="story-card-body">
                     <div class="story-card-meta">
                         <span class="badge bg-warning text-dark">${s.date_str}</span>
-                        <span class="text-secondary opacity-75 small">${s.location}</span>
+                        <span class="text-secondary opacity-100 small fw-bold">${s.location}</span>
                     </div>
                     <h5 class="story-card-title">${s.is_event ? s.title : 'Tagebuch-Eintrag'}</h5>
                     <p class="story-card-text">${s.description || 'Schöner Tag in ' + s.location}</p>
@@ -183,13 +184,11 @@ window.startStoryMode = async function() {
 
         document.getElementById('story-progress-fill').style.width = `${((currentIndex + 1) / stations.length) * 100}%`;
 
-        // 3. Wait for user to read
-        // If next station is same location, wait less
-        const isSameLoc = nextS && Math.pow(nextS.lat - s.lat, 2) + Math.pow(nextS.lon - s.lon, 2) < 0.000001;
-        const waitTime = isSameLoc ? 1500 : WAIT_STATION;
-        await new Promise(r => setTimeout(r, waitTime)); 
+        // 3. Dwell
+        const isSameLoc = nextS && getDistance(s, nextS) < 0.05;
+        await new Promise(r => setTimeout(r, isSameLoc ? 1500 : WAIT_STATION)); 
 
-        // 4. Transition to next point
+        // 4. Move
         if (nextS) {
             const card = cardAnchor.querySelector('.story-card');
             if (card) { card.classList.replace('animate__fadeInUp', 'animate__fadeOutDown'); }
@@ -199,12 +198,19 @@ window.startStoryMode = async function() {
                 const idx1 = findNearestIndex(s, routeGeometry);
                 const idx2 = findNearestIndex(nextS, routeGeometry);
                 
-                map.fitBounds([[s.lat, s.lon], [nextS.lat, nextS.lon]], { padding: [120, 120], animate: true, duration: 1.0 });
-                await new Promise(r => setTimeout(r, 1100));
+                // Smart Zoom: If it's a "City Hop" (e.g. < 10km), don't zoom out too far!
+                if (currentDist > 10) {
+                    map.fitBounds([[s.lat, s.lon], [nextS.lat, nextS.lon]], { padding: [120, 120], animate: true, duration: 1.2 });
+                    await new Promise(r => setTimeout(r, 1300));
+                } else {
+                    // Local movement: ensure we are close enough to see the Dino
+                    if (map.getZoom() < 14) map.setZoom(15, { animate: true });
+                    await new Promise(r => setTimeout(r, 500));
+                }
                 
                 await animatePath(idx1, idx2, s, nextS);
             } else {
-                // Subtle "jump" animation to show we are switching days but staying at location
+                // Bounce to show it's a new day card but same place
                 const iconEl = storyMarker.getElement()?.querySelector('.story-marker-icon');
                 if (iconEl) {
                     iconEl.classList.add('animate__animated', 'animate__bounce');
