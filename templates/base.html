@@ -458,6 +458,28 @@
                 focusConfirm: false,
                 confirmButtonText: 'Schließen'
             });
+            });
+        }
+
+        function showMagicMatchInfo() {
+            Swal.fire({
+                title: '<i class="bi bi-magic text-warning"></i> Magic Match',
+                background: '#0a192f',
+                color: '#fff',
+                confirmButtonColor: '#c5a059',
+                html: `
+                    <div class="text-start small p-2">
+                        <p>Das <b>Magic Match</b> System ist deine Geheimwaffe für das Tagebuch:</p>
+                        <ul class="text-secondary">
+                            <li>Analysiert Datum & Uhrzeit deiner Fotos</li>
+                            <li>Findet automatisch den passenden Reisetag</li>
+                            <li>Ordnet Bilder direkt der richtigen Station zu</li>
+                        </ul>
+                        <p class="mb-0 text-secondary x-small mt-2 italic">Einfach alle Bilder auswählen und entspannt zurücklehnen.</p>
+                    </div>
+                `,
+                confirmButtonText: 'Verstanden'
+            });
         }
 
         // --- Scroll Turbo Logic (v30.2 Dynamic) ---
