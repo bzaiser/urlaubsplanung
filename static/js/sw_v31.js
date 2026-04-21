@@ -99,21 +99,22 @@ self.addEventListener('fetch', (event) => {
     }
 
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            const isStatic = ASSETS.includes(url.pathname) || url.pathname.includes('/static/');
-            
-            if (isStatic && cachedResponse) {
-                return cachedResponse;
+        fetch(event.request).then((networkResponse) => {
+            // SUCCESS: We are online and the request worked
+            if (networkResponse && networkResponse.status === 200) {
+                const cacheToUse = url.pathname.includes('/media/') ? MEDIA_CACHE : 
+                                  (url.pathname.includes('/static/') ? STATIC_CACHE : DYNAMIC_CACHE);
+                const responseClone = networkResponse.clone();
+                caches.open(cacheToUse).then(cache => cache.put(event.request, responseClone));
             }
-
-            return fetch(event.request).then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200) {
-                    const cacheToUse = url.pathname.includes('/media/') ? MEDIA_CACHE : DYNAMIC_CACHE;
-                    const responseClone = networkResponse.clone();
-                    caches.open(cacheToUse).then(cache => cache.put(event.request, responseClone));
+            return networkResponse;
+        }).catch(() => {
+            // FAIL: We are offline, try to find it in the cache
+            return caches.match(event.request).then((cachedResponse) => {
+                const isPage = event.request.mode === 'navigate';
+                if (isPage && !cachedResponse) {
+                    return new Response(EMERGENCY_SHELL_HTML, { headers: { 'Content-Type': 'text/html' } });
                 }
-                return networkResponse;
-            }).catch(() => {
                 return cachedResponse || new Response('', { status: 408 });
             });
         })

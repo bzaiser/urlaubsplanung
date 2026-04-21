@@ -336,17 +336,17 @@
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                // Register Service Worker v29 (Cache-Bust Fix)
-                navigator.serviceWorker.register('/serviceworker_v29.js').then(function(reg) {
-                    console.log("✅ PWA: Service Worker v29 registered");
+                // Register Service Worker with timestamp to force update-check
+                const swUrl = `/serviceworker_v29.js?v={% now 'U' %}`;
+                navigator.serviceWorker.register(swUrl).then(function(reg) {
+                    console.log("✅ PWA: Service Worker registered (" + swUrl + ")");
                     monitorSW(reg);
                     
-                    // Only check for updates if we are actually online to prevent console errors
+                    // Force update check if online
                     if (navigator.onLine) {
                         reg.update();
                     }
                 }).catch(function(err) {
-                    // Only show registration errors if they are not due to being offline
                     if (navigator.onLine) {
                         console.error("❌ PWA Register Error:", err);
                     }
