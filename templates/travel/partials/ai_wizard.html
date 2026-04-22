@@ -1,5 +1,5 @@
 {% load i18n %}
-<div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 95%;">
+<div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 95%;" hx-history="false">
     <div class="modal-content bg-dark border">
         
         <div class="modal-header border-secondary">
@@ -84,45 +84,50 @@
                     
                     <script>
                         (function() {
-                            const startInput = document.getElementById('wizard-start-date');
-                            const endInput = document.getElementById('wizard-end-date');
-                            const daysInput = document.getElementById('wizard-days');
-                            
-                            function updateFromDates() {
-                                if(startInput.value && endInput.value) {
-                                    const start = new Date(startInput.value);
-                                    const end = new Date(endInput.value);
-                                    if (end >= start) {
-                                        const diffTime = Math.abs(end - start);
-                                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
-                                        daysInput.value = diffDays;
+                            function initWizard() {
+                                var startInput = document.getElementById('wizard-start-date');
+                                var endInput = document.getElementById('wizard-end-date');
+                                var daysInput = document.getElementById('wizard-days');
+                                
+                                if (!startInput || !endInput || !daysInput) return;
+                                
+                                function updateFromDates() {
+                                    if(startInput.value && endInput.value) {
+                                        var start = new Date(startInput.value);
+                                        var end = new Date(endInput.value);
+                                        if (end >= start) {
+                                            var diffTime = Math.abs(end - start);
+                                            var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+                                            daysInput.value = diffDays;
+                                        }
                                     }
                                 }
-                            }
-                            
-                            function updateFromDays() {
-                                const days = parseInt(daysInput.value) || 0;
-                                if(startInput.value && days > 0) {
-                                    const d = new Date(startInput.value);
-                                    d.setDate(d.getDate() + days - 1);
-                                    endInput.value = d.toISOString().split('T')[0];
+                                
+                                function updateFromDays() {
+                                    var days = parseInt(daysInput.value) || 0;
+                                    if(startInput.value && days > 0) {
+                                        var d = new Date(startInput.value);
+                                        d.setDate(d.getDate() + days - 1);
+                                        endInput.value = d.toISOString().split('T')[0];
+                                    }
                                 }
-                            }
 
-                            // Initialize end date if start and days exist
-                            if (startInput.value && daysInput.value && !endInput.value) {
-                                updateFromDays();
+                                if (startInput.value && daysInput.value && !endInput.value) {
+                                    updateFromDays();
+                                }
+                                
+                                startInput.addEventListener('change', function() {
+                                    if (endInput.value) updateFromDates();
+                                    else if (daysInput.value) updateFromDays();
+                                });
+                                
+                                endInput.addEventListener('change', updateFromDates);
+                                daysInput.addEventListener('change', updateFromDays);
+                                daysInput.addEventListener('keyup', updateFromDays);
                             }
                             
-                            startInput.addEventListener('change', () => {
-                                if (endInput.value) updateFromDates();
-                                else if (daysInput.value) updateFromDays();
-                            });
-                            
-                            endInput.addEventListener('change', updateFromDates);
-                            
-                            daysInput.addEventListener('change', updateFromDays);
-                            daysInput.addEventListener('keyup', updateFromDays);
+                            // Initialize
+                            initWizard();
                         })();
                     </script>
                 </form>
