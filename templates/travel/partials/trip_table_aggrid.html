@@ -143,8 +143,8 @@
     .badge-pay.paid { border-color: var(--accent-teal); color: var(--accent-teal); background: rgba(0, 128, 128, 0.1); }
 </style>
 
-<div id="ag-grid-wrapper" style="width: 100%; position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-    <div id="ag-trip-grid" class="ag-theme-quartz-dark" style="width: 100%; min-width: 1000px; font-family: 'Outfit', sans-serif;" 
+<div id="ag-grid-wrapper" style="width: 100%; height: calc(100vh - 150px); position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+    <div id="ag-trip-grid" class="ag-theme-quartz-dark" style="width: 100%; height: 100%; min-width: 1000px; font-family: 'Outfit', sans-serif;" 
          data-persons="{{ active_trip.persons_count|default:1 }}"
          data-trip-id="{{ active_trip.id }}"
          data-show-map="{% if show_map %}true{% else %}false{% endif %}"></div>
@@ -632,7 +632,6 @@
                     rowSelection: 'multiple',
                     suppressRowClickSelection: true,
                     tooltipShowDelay: 100,
-                    domLayout: 'autoHeight',
                     pinnedBottomRowData: [],
                     isFullWidthRow: (params) => (params.rowNode.data.is_station_header || params.rowNode.data.is_day_header) && params.rowNode.rowPinned !== 'bottom',
                     fullWidthCellRenderer: (params) => {
