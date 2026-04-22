@@ -345,16 +345,7 @@ class TripDashboardView(LoginRequiredMixin, ListView):
             # Render the primary partial (trip_list or trip_map)
             template_name = self.get_template_names()[0]
             primary_html = render_to_string(template_name, context, request=self.request)
-            
-            # Prepare OOB switcher
-            switcher_html = render_to_string('travel/partials/trip_switcher.html', {
-                'active_trip': context.get('active_trip'),
-                'view_type': context.get('view_type', 'timeline'),
-                'trips': context.get('trips'),
-                'is_oob': True
-            }, request=self.request)
-            
-            return HttpResponse(primary_html + "\n" + switcher_html)
+            return HttpResponse(primary_html)
             
         return super().render_to_response(context, **response_kwargs)
 
