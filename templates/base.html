@@ -355,7 +355,13 @@
         };
 
         window.onerror = function(msg, url, lineNo, columnNo, error) {
-            let source = url ? url.split('/').pop() : 'inline/eval';
+            // SILENCE harmless third-party or browser-internal errors
+            if (!url || msg === "Script error.") {
+                console.log("ℹ️ JS Info (Suppressed):", msg);
+                return false;
+            }
+            
+            let source = url.split('/').pop();
             const errorMsg = `🚨 JS Error: ${msg} (${source}:${lineNo})`;
             console.error(errorMsg, {msg, url, lineNo, columnNo, error});
             showToast(errorMsg, true);
