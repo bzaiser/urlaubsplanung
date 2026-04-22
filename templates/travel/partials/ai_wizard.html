@@ -208,12 +208,6 @@
                                     {% trans "Lese ein..." %}
                                 </span>
                             </button>
-                            <button type="button" class="btn btn-danger w-100 mt-2 py-1 fw-bold" 
-                                    hx-post="{% url 'travel:ai_wizard' %}" 
-                                    hx-vals='{"action": "test_import_file", "start_date": "{{ start_date }}", "persons_count": "{{ persons_count }}"}'
-                                    hx-target="#modal-container">
-                                🐛 DEBUG: test.json importieren
-                            </button>
                         </div>
                         </div>
                     </form>
