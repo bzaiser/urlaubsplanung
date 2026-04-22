@@ -625,6 +625,8 @@
                         sortable: false, // Prevents breaking the hierarchy/grouping
                         filter: true, 
                         resizable: true,
+                        suppressMovable: true, // Prevents drag and drop reordering
+                        lockVisible: true,     // Prevents hiding columns
                         editable: params => !params.data.is_global_expense,
                         singleClickEdit: false,
                         tooltipComponent: null 
@@ -788,7 +790,7 @@
                         const serverSettings = settingsEl ? JSON.parse(settingsEl.textContent) : null;
                         const savedState = (serverSettings && serverSettings.columnState) 
                                             ? JSON.parse(serverSettings.columnState) 
-                                            : localStorage.getItem('ag-trip-column-state');
+                                            : localStorage.getItem('ag-trip-column-state-v2');
                         
                         if (savedState) {
                             try {
@@ -848,7 +850,7 @@
                 function saveColumnState(p) {
                     const state = p.api.getColumnState();
                     // 1. Local backup
-                    localStorage.setItem('ag-trip-column-state', JSON.stringify(state));
+                    localStorage.setItem('ag-trip-column-state-v2', JSON.stringify(state));
                     
                     // 2. Server Sync with Debounce
                     clearTimeout(saveTimeout);
