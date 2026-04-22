@@ -174,7 +174,7 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "  \"global_expenses\": [{\"title\": \"Maut\", \"type\": \"FEE\", \"cost\": 15}]\n"
         "}\n"
     )
-    user_text = f"Sonderwünsche/Ziel: {preferences}. Starttermin: {start_date}. Dauer: {days} Tage. Personen: {persons_count} (Alter: {persons_ages})."
+    user_text = f"Sonderwünsche/Ziel: {preferences}. Startort: {start_location if start_location else 'Zuhause'}. Starttermin: {start_date}. Dauer: {days} Tage. Personen: {persons_count} (Alter: {persons_ages})."
     
     return f"{system_text}\n\n{user_text}"
 
