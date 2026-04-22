@@ -685,12 +685,20 @@ def invalidate_trip_cache(sender, instance, **kwargs):
 @receiver(post_save, sender=Day)
 @receiver(post_delete, sender=Day)
 def invalidate_day_cache(sender, instance, **kwargs):
+    # Skip invalidation if this is purely a geocoding update (internal)
+    update_fields = kwargs.get('update_fields')
+    if update_fields and all(f in ['latitude', 'longitude', 'is_geocoded', 'departure_latitude', 'departure_longitude', 'departure_is_geocoded'] for f in update_fields):
+        return
     if instance.trip and instance.trip.user_id:
         clear_trip_cache(instance.trip_id, instance.trip.user_id)
 
 @receiver(post_save, sender=Event)
 @receiver(post_delete, sender=Event)
 def invalidate_event_cache(sender, instance, **kwargs):
+    # Skip invalidation if this is purely a geocoding update (internal)
+    update_fields = kwargs.get('update_fields')
+    if update_fields and all(f in ['latitude', 'longitude', 'is_geocoded'] for f in update_fields):
+        return
     if instance.day and instance.day.trip and instance.day.trip.user_id:
         clear_trip_cache(instance.day.trip_id, instance.day.trip.user_id)
 
