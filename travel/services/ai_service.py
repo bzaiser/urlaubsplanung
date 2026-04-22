@@ -143,6 +143,7 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         "19. GLOBAL_EXPENSES: Erfasse NUR zusätzliche Gebühren wie 'Maut', 'Vignette' oder 'Fähre-Pauschale' in der Liste 'global_expenses'. (KEINE Verpflegung hier eintragen!).\n"
         "20. REISEGRUPPE: Berücksichtige bei der Planung (Zimmerwahl, Restaurants, Aktivitäten) die Anzahl und das Alter der Personen.\n"
         "21. UNTERKUNFT-DAUER: Gib bei JEDEM Check-in (HOTEL, CAMPING, PITCH) das Feld 'nights' (Anzahl der Nächte) an. Die Summe der Nächte muss die gesamte Reisedauer abdecken.\n"
+        "22. LOGISTIK: Plane für JEDEN Aufenthalt (HOTEL, CAMPING, PITCH) zwingend ZWEI separate Events: Ein 'Check-in'-Event am Ankunftstag (typischerweise 15:00 Uhr) und ein 'Check-out'-Event am Abreisetag (typischerweise 11:00 oder 12:00 Uhr). Dies gilt ausdrücklich auch für Camping- und Stellplätze!\n"
         "22. TRANSPORT-TYPEN: Nutze für die Klassifizierung (Feld 'type') folgende Tabelle für lokale Begriffe:\n"
         "Land | ZUG (TRAIN) | METRO (METRO) | STRASSENBAHN (TRAM)\n"
         "DE | Zug, Bahn | U-Bahn | Straßenbahn, Tram\n"
