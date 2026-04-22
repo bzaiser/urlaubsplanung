@@ -1,5 +1,5 @@
 {% load i18n %}{% load static %}
-<div class="modal-dialog modal-lg">
+<div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 95%;">
     <div class="modal-content bg-dark border">
         <!-- Header -->
         <div class="modal-header border-0 pb-3">
@@ -9,6 +9,19 @@
             </div>
             <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
         </div>
+
+        <script>
+            function openDiaryGallery(clickedImg) {
+                // Find all gallery images in this modal
+                const images = Array.from(document.querySelectorAll('#diary-form .diary-gallery-img')).map(img => ({
+                    src: img.src,
+                    caption: img.alt
+                }));
+                // Find index of clicked image
+                const index = images.findIndex(img => img.src === clickedImg.src);
+                openLightboxGallery(images, index !== -1 ? index : 0);
+            }
+        </script>
 
         <form hx-post="{% url 'travel:edit_diary' day.id %}" 
               hx-encoding="multipart/form-data" 
@@ -35,9 +48,9 @@
                                 <div class="card bg-dark border-secondary h-100 overflow-hidden shadow-sm">
                                     <div class="position-relative">
                                         <img src="{{ f.instance.get_url }}" alt="{{ f.instance.caption }}" 
-                                             class="card-img-top object-fit-cover shadow-sm" style="aspect-ratio: 4/3; cursor: pointer;"
+                                             class="card-img-top object-fit-cover shadow-sm diary-gallery-img" style="aspect-ratio: 4/3; cursor: pointer;"
                                              loading="lazy"
-                                             onclick="openLightbox('{{ f.instance.get_url }}', '{{ f.instance.caption|escapejs }}')">
+                                             onclick="openDiaryGallery(this)">
                                         
                                         <!-- Primary Star -->
                                         <div class="position-absolute top-0 start-0 m-1">

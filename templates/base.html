@@ -443,14 +443,50 @@
     </div>
 
     <script>
+        let currentLightboxImages = [];
+        let currentLightboxIndex = 0;
+
         function openLightbox(src, caption) {
+            // Fallback for single images
+            openLightboxGallery([{src: src, caption: caption}], 0);
+        }
+
+        function openLightboxGallery(images, startIndex) {
+            currentLightboxImages = images;
+            currentLightboxIndex = startIndex;
+            renderLightbox();
+        }
+
+        function renderLightbox() {
+            if (!currentLightboxImages || currentLightboxImages.length === 0) return;
+            const imgData = currentLightboxImages[currentLightboxIndex];
             const modal = document.getElementById('lightbox-modal');
+            
+            let navButtons = '';
+            if (currentLightboxImages.length > 1) {
+                navButtons = `
+                    <button class="btn btn-dark bg-opacity-75 position-absolute top-50 start-0 translate-middle-y ms-2 p-3 text-white border-0 rounded-circle shadow" onclick="event.stopPropagation(); changeLightbox(-1)" style="z-index: 10001;"><i class="bi bi-chevron-left fs-3"></i></button>
+                    <button class="btn btn-dark bg-opacity-75 position-absolute top-50 end-0 translate-middle-y me-2 p-3 text-white border-0 rounded-circle shadow" onclick="event.stopPropagation(); changeLightbox(1)" style="z-index: 10001;"><i class="bi bi-chevron-right fs-3"></i></button>
+                    <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4 bg-dark bg-opacity-75 px-3 py-1 rounded-pill text-white small shadow" style="z-index: 10001; bottom: 80px !important;">
+                        ${currentLightboxIndex + 1} / ${currentLightboxImages.length}
+                    </div>
+                `;
+            }
+
             modal.innerHTML = `
-                <img src="${src}" alt="${caption || ''}">
-                ${caption ? `<div class="lightbox-caption">${caption}</div>` : ''}
-                <button class="btn-close btn-close-white position-absolute top-0 end-0 m-3" onclick="this.parentElement.classList.remove('show')"></button>
+                <img src="${imgData.src}" alt="${imgData.caption || ''}" onclick="event.stopPropagation()">
+                ${imgData.caption ? `<div class="lightbox-caption">${imgData.caption}</div>` : ''}
+                <button class="btn-close btn-close-white position-absolute top-0 end-0 m-3 shadow" style="z-index: 10001;" onclick="document.getElementById('lightbox-modal').classList.remove('show')"></button>
+                ${navButtons}
             `;
             modal.classList.add('show');
+        }
+
+        function changeLightbox(dir) {
+            currentLightboxIndex += dir;
+            if (currentLightboxIndex < 0) currentLightboxIndex = currentLightboxImages.length - 1;
+            if (currentLightboxIndex >= currentLightboxImages.length) currentLightboxIndex = 0;
+            renderLightbox();
         }
 
         function showExifInfo(date, model, width, height) {
