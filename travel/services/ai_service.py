@@ -101,7 +101,10 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
     """Returns the raw prompt text for manual copy-pasting into external LLMs."""
     v1_name = get_setting('vehicle1_name', 'Camper', user=user)
     v1_range = get_setting('vehicle1_range', '400', user=user)
+    v1_cons = get_setting('vehicle1_consumption', '10.5', user=user)
     v2_name = get_setting('vehicle2_name', 'PKW', user=user)
+    v2_cons = get_setting('vehicle2_consumption', '6.5', user=user)
+    fuel_price = get_setting('fuel_price_per_liter', '1.85', user=user)
     
     system_text = (
         "Du bist ein Weltklasse-Reiseplaner. Erstelle einen detaillierten Reiseplan auf DEUTSCH.\n"
@@ -128,7 +131,7 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
         system_text += "6. LOGISTIK: Plane zwingend sowohl den Weg von Zuhause zum Flughafen (Hinfahrt) als auch den Weg zurück nach Hause (Rückfahrt) am letzten Tag als eigene Events ein.\n"
 
     system_text += (
-        "7. FAHRZEUGE: Nutze ein " + v1_name + " (Reichweite " + v1_range + "km) NUR, wenn die Reise explizit als Wohnmobil-Tour bezeichnet wird oder das Ziel dafür bekannt ist (z.B. Neuseeland, Island, Roadtrip). In allen anderen Fällen (wie Strand-Bungalow-Urlaub) nutze " + v2_name + ", Roller (SCOOTER), TAXI oder Fähre für Teilstrecken.\n"
+        "7. FAHRZEUGE: Nutze ein " + v1_name + " (Verbrauch " + v1_cons + "L/100km, Reichweite " + v1_range + "km) NUR für explizite Wohnmobil-Touren. In allen anderen Fällen nutze " + v2_name + " (Verbrauch " + v2_cons + "L/100km). Berechne Treibstoffkosten basierend auf " + fuel_price + "€/Liter und schätze diese in 'cost_estimated' für Transport-Events ein.\n"
         "8. STIL: Bevorzuge Bungalows in Strandnähe, lokale Streetfood-Märkte (RESTAURANT) und Aktivitäten wie Wandern, Tauchen oder Roller-Touren.\n"
         "9. SICHERHEIT: KEINE Bilder, KEINE Google Maps Links, KEINE externen Medien in der Antwort.\n"
         "10. LOGISTIK: Jeder einzelne der " + str(days) + " Tage MUSS mindestens ein Event enthalten (KEINE leeren Tage).\n"
