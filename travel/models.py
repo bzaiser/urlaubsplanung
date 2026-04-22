@@ -666,3 +666,42 @@ def auto_delete_file_on_delete(sender, instance, **kwargs):
                 except Exception as e:
                     import logging
                     logger.error(f"Error deleting file {instance.image.name}: {e}")
+
+# --- CACHE INVALIDATION SIGNALS (v2 Stable) ---
+
+def clear_trip_cache(trip_id, user_id):
+    """Clears all dashboard partial caches for a specific trip and user."""
+    if not trip_id or not user_id: return
+    for vt in ['timeline', 'table', 'checklist', 'map']:
+        key = f"dashboard_v2_{trip_id}_{user_id}_{vt}"
+        cache.delete(key)
+
+@receiver(post_save, sender=Trip)
+@receiver(post_delete, sender=Trip)
+def invalidate_trip_cache(sender, instance, **kwargs):
+    if instance.user_id:
+        clear_trip_cache(instance.id, instance.user_id)
+
+@receiver(post_save, sender=Day)
+@receiver(post_delete, sender=Day)
+def invalidate_day_cache(sender, instance, **kwargs):
+    if instance.trip and instance.trip.user_id:
+        clear_trip_cache(instance.trip_id, instance.trip.user_id)
+
+@receiver(post_save, sender=Event)
+@receiver(post_delete, sender=Event)
+def invalidate_event_cache(sender, instance, **kwargs):
+    if instance.day and instance.day.trip and instance.day.trip.user_id:
+        clear_trip_cache(instance.day.trip_id, instance.day.trip.user_id)
+
+@receiver(post_save, sender=DiaryEntry)
+@receiver(post_delete, sender=DiaryEntry)
+def invalidate_diary_cache(sender, instance, **kwargs):
+    if instance.day and instance.day.trip and instance.day.trip.user_id:
+        clear_trip_cache(instance.day.trip_id, instance.day.trip.user_id)
+
+@receiver(post_save, sender=GlobalExpense)
+@receiver(post_delete, sender=GlobalExpense)
+def invalidate_expense_cache(sender, instance, **kwargs):
+    if instance.trip and instance.trip.user_id:
+        clear_trip_cache(instance.trip_id, instance.trip.user_id)

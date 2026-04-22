@@ -341,6 +341,18 @@ class TripDashboardView(LoginRequiredMixin, ListView):
         return [self.template_name]
 
     def render_to_response(self, context, **response_kwargs):
+        active_trip = context.get('active_trip')
+        view_type = context.get('view_type', 'timeline')
+        
+        # Server-side Cache for partials (Synology Performance Optimization)
+        cache_key = None
+        if active_trip and self.request.user.is_authenticated and self.request.htmx:
+            # We cache by trip ID, user ID and view type
+            cache_key = f"dashboard_v2_{active_trip.id}_{self.request.user.id}_{view_type}"
+            cached_response = cache.get(cache_key)
+            if cached_response:
+                return HttpResponse(cached_response)
+
         if self.request.htmx:
             # Render the primary partial (trip_list or trip_map)
             template_name = self.get_template_names()[0]
@@ -354,7 +366,13 @@ class TripDashboardView(LoginRequiredMixin, ListView):
                 'is_oob': True
             }, request=self.request)
             
-            return HttpResponse(primary_html + "\n" + switcher_html)
+            final_html = primary_html + "\n" + switcher_html
+            
+            if cache_key:
+                # Cache for 15 minutes (invalidated by signals on change)
+                cache.set(cache_key, final_html, 900)
+                
+            return HttpResponse(final_html)
             
         return super().render_to_response(context, **response_kwargs)
 
