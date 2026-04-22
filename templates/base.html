@@ -449,8 +449,8 @@
     </div>
 
     <script>
-        let currentLightboxImages = [];
-        let currentLightboxIndex = 0;
+        window.currentLightboxImages = window.currentLightboxImages || [];
+        window.currentLightboxIndex = window.currentLightboxIndex || 0;
 
         function openLightbox(src, caption) {
             // Fallback for single images
@@ -458,23 +458,23 @@
         }
 
         function openLightboxGallery(images, startIndex) {
-            currentLightboxImages = images;
-            currentLightboxIndex = startIndex;
+            window.currentLightboxImages = images;
+            window.currentLightboxIndex = startIndex;
             renderLightbox();
         }
 
         function renderLightbox() {
-            if (!currentLightboxImages || currentLightboxImages.length === 0) return;
-            const imgData = currentLightboxImages[currentLightboxIndex];
+            if (!window.currentLightboxImages || window.currentLightboxImages.length === 0) return;
+            const imgData = window.currentLightboxImages[window.currentLightboxIndex];
             const modal = document.getElementById('lightbox-modal');
             
             let navButtons = '';
-            if (currentLightboxImages.length > 1) {
+            if (window.currentLightboxImages.length > 1) {
                 navButtons = `
                     <button class="btn btn-dark bg-opacity-75 position-absolute top-50 start-0 translate-middle-y ms-2 p-3 text-white border-0 rounded-circle shadow" onclick="event.stopPropagation(); changeLightbox(-1)" style="z-index: 10001;"><i class="bi bi-chevron-left fs-3"></i></button>
                     <button class="btn btn-dark bg-opacity-75 position-absolute top-50 end-0 translate-middle-y me-2 p-3 text-white border-0 rounded-circle shadow" onclick="event.stopPropagation(); changeLightbox(1)" style="z-index: 10001;"><i class="bi bi-chevron-right fs-3"></i></button>
                     <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4 bg-dark bg-opacity-75 px-3 py-1 rounded-pill text-white small shadow" style="z-index: 10001; bottom: 80px !important;">
-                        ${currentLightboxIndex + 1} / ${currentLightboxImages.length}
+                        ${window.currentLightboxIndex + 1} / ${window.currentLightboxImages.length}
                     </div>
                 `;
             }
@@ -489,9 +489,9 @@
         }
 
         function changeLightbox(dir) {
-            currentLightboxIndex += dir;
-            if (currentLightboxIndex < 0) currentLightboxIndex = currentLightboxImages.length - 1;
-            if (currentLightboxIndex >= currentLightboxImages.length) currentLightboxIndex = 0;
+            window.currentLightboxIndex += dir;
+            if (window.currentLightboxIndex < 0) window.currentLightboxIndex = window.currentLightboxImages.length - 1;
+            if (window.currentLightboxIndex >= window.currentLightboxImages.length) window.currentLightboxIndex = 0;
             renderLightbox();
         }
 
