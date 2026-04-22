@@ -120,7 +120,14 @@ def get_itinerary_prompt(preferences, start_date, days, start_location, persons_
     
     system_text += (
         "5. SICHERHEIT: Bei Flügen KEINE Zwischenlandungen in Krisengebieten!\n"
-        "6. LOGISTIK: Berücksichtige den Startort " + start_location + ". Plane zwingend sowohl den Weg zum Startflughafen (Hinfahrt) als auch den Weg vom Zielflughafen/Parkplatz zurück nach Hause (Rückfahrt) als eigene Events ein.\n"
+    )
+    
+    if start_location:
+        system_text += f"6. LOGISTIK: Die Reise MUSS zwingend in '{start_location}' beginnen und enden! Plane das allererste Event als Abreise von '{start_location}' und am letzten Tag die Rückkehr zu exakt diesem Ort als eigenes Event ein.\n"
+    else:
+        system_text += "6. LOGISTIK: Plane zwingend sowohl den Weg von Zuhause zum Flughafen (Hinfahrt) als auch den Weg zurück nach Hause (Rückfahrt) am letzten Tag als eigene Events ein.\n"
+
+    system_text += (
         "7. FAHRZEUGE: Nutze ein " + v1_name + " (Reichweite " + v1_range + "km) NUR, wenn die Reise explizit als Wohnmobil-Tour bezeichnet wird oder das Ziel dafür bekannt ist (z.B. Neuseeland, Island, Roadtrip). In allen anderen Fällen (wie Strand-Bungalow-Urlaub) nutze " + v2_name + ", Roller (SCOOTER), TAXI oder Fähre für Teilstrecken.\n"
         "8. STIL: Bevorzuge Bungalows in Strandnähe, lokale Streetfood-Märkte (RESTAURANT) und Aktivitäten wie Wandern, Tauchen oder Roller-Touren.\n"
         "9. SICHERHEIT: KEINE Bilder, KEINE Google Maps Links, KEINE externen Medien in der Antwort.\n"
