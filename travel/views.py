@@ -369,8 +369,8 @@ class TripDashboardView(LoginRequiredMixin, ListView):
             final_html = primary_html + "\n" + switcher_html
             
             if cache_key:
-                # Cache for 15 minutes (invalidated by signals on change)
-                cache.set(cache_key, final_html, 900)
+                # Cache for 4 hours (invalidated by signals on change)
+                cache.set(cache_key, final_html, 14400)
                 
             return HttpResponse(final_html)
             
