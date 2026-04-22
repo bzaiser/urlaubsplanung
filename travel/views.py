@@ -21,6 +21,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.cache import never_cache
+from django.core.cache import cache
 import logging
 
 logger = logging.getLogger(__name__)
@@ -340,15 +341,25 @@ class TripDashboardView(LoginRequiredMixin, ListView):
         return [self.template_name]
 
     def render_to_response(self, context, **response_kwargs):
+        active_trip = context.get('active_trip')
+        view_type = context.get('view_type', 'timeline')
+        
+        # Server-side Cache for partials (Synology Performance Optimization)
+        cache_key = None
+        if active_trip and self.request.htmx:
+            # We cache by trip ID, user ID and view type (so Bernd doesn't see Klaus's trip)
+            cache_key = f"dashboard_partial_{active_trip.id}_{self.request.user.id}_{view_type}"
+            cached_response = cache.get(cache_key)
+            if cached_response:
+                logger.info(f"⚡ Cache Hit: {cache_key}")
+                return HttpResponse(cached_response)
+
         if self.request.htmx:
             # Render the primary partial (trip_list or trip_map)
             template_name = self.get_template_names()[0]
             primary_html = render_to_string(template_name, context, request=self.request)
             
             # Prepare OOB switcher
-            view_type = context.get('view_type', 'timeline')
-            active_trip = context.get('active_trip')
-            
             switcher_html = render_to_string('travel/partials/trip_switcher.html', {
                 'active_trip': active_trip,
                 'view_type': view_type,
@@ -356,7 +367,14 @@ class TripDashboardView(LoginRequiredMixin, ListView):
                 'is_oob': True
             }, request=self.request)
             
-            return HttpResponse(primary_html + "\n" + switcher_html)
+            final_html = primary_html + "\n" + switcher_html
+            
+            if cache_key:
+                # Cache for 10 minutes (invalidated by signals on change)
+                cache.set(cache_key, final_html, 600)
+                logger.info(f"💾 Cache Set: {cache_key}")
+                
+            return HttpResponse(final_html)
             
         return super().render_to_response(context, **response_kwargs)
 

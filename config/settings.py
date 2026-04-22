@@ -156,6 +156,13 @@ if not DEBUG:
     if MYDS_DOMAIN not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(MYDS_DOMAIN)
 
+# Cache Settings (Server-Side Performance)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
 
 # -----------------------------------------------------------------------------
 # SQLite Performance Tuning (WAL Mode & Concurrency)
