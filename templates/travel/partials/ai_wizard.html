@@ -172,6 +172,9 @@
                     <div class="alert alert-info py-2 small mb-2">
                         <i class="bi bi-info-circle me-1"></i>
                         Bitte nutze in Gemini ausschließlich das <strong>Kopieren-Icon (oben rechts)</strong> im JSON-Feld, um das Ergebnis fehlerfrei zu übernehmen.
+                        <br><br>
+                        <strong><i class="bi bi-exclamation-triangle text-warning"></i> Wichtig bei langen Reisen (>14 Tage):</strong><br>
+                        KIs wie Gemini haben ein Text-Limit. Oft stoppen sie mittendrin (z.B. bei Tag 14). Schreibe dann in Gemini einfach <strong>"weiter"</strong>, kopiere beide Teile heraus und füge sie zusammen, ODER lass dir die Reise in 2 Schritten (z.B. Tag 1-20 und Tag 21-40) generieren.
                     </div>
 
                     <form hx-post="{% url 'travel:ai_wizard' %}" hx-target="#modal-container">
@@ -204,6 +207,12 @@
                                     <span class="spinner-border spinner-border-sm me-1" role="status"></span>
                                     {% trans "Lese ein..." %}
                                 </span>
+                            </button>
+                            <button type="button" class="btn btn-danger w-100 mt-2 py-1 fw-bold" 
+                                    hx-post="{% url 'travel:ai_wizard' %}" 
+                                    hx-vals='{"action": "test_import_file", "start_date": "{{ start_date }}", "persons_count": "{{ persons_count }}"}'
+                                    hx-target="#modal-container">
+                                🐛 DEBUG: test.json importieren
                             </button>
                         </div>
                         </div>

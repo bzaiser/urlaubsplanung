@@ -1130,6 +1130,26 @@ def ai_wizard(request):
             except Exception as e:
                 context.update({'step': 'error', 'error': f"Fehler beim Einlesen: {str(e)}"})
                 return render(request, 'travel/partials/ai_wizard.html', context)
+                
+        elif action == 'test_import_file':
+            start_date = request.POST.get('start_date')
+            persons_count = request.POST.get('persons_count', 2)
+            try:
+                import json
+                with open('/home/bernd/Documents/dev/test.json', 'r') as f:
+                    trip_data = json.load(f)
+                trip = ai_service.save_itinerary_to_db(trip_data, start_date, persons_count, '', user=request.user)
+                
+                request.session['active_trip_id'] = trip.id
+                
+                if request.htmx:
+                    response = HttpResponse("")
+                    response['HX-Redirect'] = f"/?trip_id={trip.id}"
+                    return response
+                return redirect('travel:dashboard')
+            except Exception as e:
+                context.update({'step': 'error', 'error': f"Debug-Import Fehler: {str(e)}"})
+                return render(request, 'travel/partials/ai_wizard.html', context)
             
         elif action == 'import':
             itinerary_json = request.POST.get('itinerary_json')
