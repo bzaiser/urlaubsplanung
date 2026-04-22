@@ -795,9 +795,13 @@
                         if (savedState) {
                             try {
                                 const parsedState = typeof savedState === 'string' ? JSON.parse(savedState) : savedState;
+                                const safeState = parsedState.map(s => {
+                                    delete s.hide;
+                                    return s;
+                                });
                                 p.api.applyColumnState({
-                                    state: parsedState,
-                                    applyOrder: true
+                                    state: safeState,
+                                    applyOrder: false
                                 });
                             } catch (e) {
                                 console.error('Failed to restore column state', e);
