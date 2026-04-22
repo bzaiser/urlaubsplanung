@@ -1064,7 +1064,7 @@ def ai_wizard(request):
         'templates': templates,
         'days': request.POST.get('days', 28),
         'start_date': request.POST.get('start_date', ''),
-        'start_location': request.POST.get('start_location', 'Zuhause'),
+        'start_location': request.POST.get('start_location', ''),
         'persons_count': request.POST.get('persons_count', 2),
         'persons_ages': request.POST.get('persons_ages', ''),
         'user_preferences': request.POST.get('user_preferences', ''),
@@ -1078,7 +1078,7 @@ def ai_wizard(request):
             template_id = request.POST.get('template_id')
             days = request.POST.get('days', 28)
             start_date = request.POST.get('start_date')
-            start_location = request.POST.get('start_location', 'Zuhause')
+            start_location = request.POST.get('start_location', '')
             persons_count = request.POST.get('persons_count', 2)
             persons_ages = request.POST.get('persons_ages', '')
             user_prefs = request.POST.get('user_preferences', '').strip()
@@ -1158,7 +1158,7 @@ def ai_wizard(request):
 
     if step == 'select':
         templates = TripTemplate.objects.filter(user=request.user).order_by('-created_at')
-        home_city = get_setting('user_home_city', 'München', user=request.user)
+        home_city = get_setting('user_home_city', '', user=request.user)
         p_count = get_setting('default_persons_count', '2', user=request.user)
         p_ages = get_setting('default_persons_ages', '40, 38', user=request.user)
         

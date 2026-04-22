@@ -36,18 +36,23 @@
 
                     <div class="mb-3">
                         <label class="form-label small">Wohnort / Startort:</label>
-                        <input type="text" name="start_location" placeholder="z.B. München" required value="{{ start_location|default:'Zuhause' }}" class="form-control">
+                        <input type="text" name="start_location" placeholder="z.B. München" value="{{ start_location|default:'' }}" class="form-control">
                     </div>
 
                     <div class="row g-3 mb-3">
-                        <div class="col-6">
+                        <div class="col-4">
                             <label class="form-label small">Starttermin <span class="text-danger">*</span>:</label>
-                            <input type="date" name="start_date" required value="{{ start_date|default:'' }}" class="form-control">
+                            <input type="date" id="wizard-start-date" name="start_date" required value="{{ start_date|default:'' }}" class="form-control">
                         </div>
-                        <div class="col-6">
+                        <div class="col-4">
+                            <label class="form-label small">Endtermin:</label>
+                            <input type="date" id="wizard-end-date" class="form-control">
+                        </div>
+                        <div class="col-4">
                             <label class="form-label small">Dauer (Tage):</label>
-                            <input type="number" name="days" value="{{ days|default:21 }}" class="form-control">
+                            <input type="number" id="wizard-days" name="days" value="{{ days|default:21 }}" class="form-control">
                         </div>
+                    </div>
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -72,6 +77,50 @@
                             </div>
                         </button>
                     </div>
+                    
+                    <script>
+                        (function() {
+                            const startInput = document.getElementById('wizard-start-date');
+                            const endInput = document.getElementById('wizard-end-date');
+                            const daysInput = document.getElementById('wizard-days');
+                            
+                            function updateFromDates() {
+                                if(startInput.value && endInput.value) {
+                                    const start = new Date(startInput.value);
+                                    const end = new Date(endInput.value);
+                                    if (end >= start) {
+                                        const diffTime = Math.abs(end - start);
+                                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+                                        daysInput.value = diffDays;
+                                    }
+                                }
+                            }
+                            
+                            function updateFromDays() {
+                                const days = parseInt(daysInput.value) || 0;
+                                if(startInput.value && days > 0) {
+                                    const d = new Date(startInput.value);
+                                    d.setDate(d.getDate() + days - 1);
+                                    endInput.value = d.toISOString().split('T')[0];
+                                }
+                            }
+
+                            // Initialize end date if start and days exist
+                            if (startInput.value && daysInput.value && !endInput.value) {
+                                updateFromDays();
+                            }
+                            
+                            startInput.addEventListener('change', () => {
+                                if (endInput.value) updateFromDates();
+                                else if (daysInput.value) updateFromDays();
+                            });
+                            
+                            endInput.addEventListener('change', updateFromDates);
+                            
+                            daysInput.addEventListener('change', updateFromDays);
+                            daysInput.addEventListener('keyup', updateFromDays);
+                        })();
+                    </script>
                 </form>
 
             {% elif step == 'preview' %}
