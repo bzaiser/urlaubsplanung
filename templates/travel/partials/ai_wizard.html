@@ -65,6 +65,11 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label small">Sonderwünsche / Ziele:</label>
+                        <textarea name="user_preferences" rows="4" placeholder="z.B. Wir wollen unbedingt zum Grand Canyon. Bitte Fokus auf ruhige Natur, keine Partys..." class="form-control">{{ user_preferences|default:'' }}</textarea>
+                    </div>
+
                     <div class="d-grid mt-4">
                         <button type="submit" name="action" value="manual_step" class="btn btn-warning btn-lg d-flex flex-column align-items-center py-3" hx-indicator="#loading-ai">
                             <span class="fs-3 indicator-hide">📋</span>
