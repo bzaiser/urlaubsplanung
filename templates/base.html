@@ -104,7 +104,6 @@
             if (status) document.getElementById('loading-status').innerText = status;
             if (sub) document.getElementById('loading-sub').innerText = sub;
             overlay.classList.add('show-manual');
-            document.body.style.overflow = 'hidden';
         }
 
         // --- Pull-to-Refresh Logic (Forgiving & iOS Optimized) ---
@@ -206,7 +205,6 @@
                 overlay.classList.remove('show-manual');
                 overlay.style.display = 'none';
                 overlay.style.opacity = '1';
-                document.body.style.overflow = 'auto';
             }, 150);
         });
     </script>
