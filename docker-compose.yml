@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+    logging:
+      driver: none
     volumes:
       - .:/app
       - ${APP_DATA_PATH:-./data}:/app/data
