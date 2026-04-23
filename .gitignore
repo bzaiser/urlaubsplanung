@@ -22,3 +22,4 @@ prompt.txt
 .DS_Store
 ~$*
 db.sqlite3*
+docker/backup-usb.sh
