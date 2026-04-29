@@ -321,7 +321,8 @@
                 }).addTo(map);
                 
                 if (!window.mapWasInteracted) {
-                    map.fitBounds(roadLine.getBounds(), { padding: [50, 50] });
+                    const pad = window.innerWidth < 768 ? 20 : 50;
+                    map.fitBounds(roadLine.getBounds(), { padding: [pad, pad] });
                 }
             }
 
@@ -464,7 +465,8 @@
             // Fallback fitBounds if no route
             if (!routeGeometry && stations.length > 0 && !window.mapWasInteracted) {
                 const group = new L.featureGroup(markers);
-                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+                const pad = window.innerWidth < 768 ? 20 : 50;
+                map.fitBounds(group.getBounds(), { padding: [pad, pad] });
             }
 
             // 7. Global Handlers
