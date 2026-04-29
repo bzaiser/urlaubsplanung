@@ -278,7 +278,8 @@ window.startStoryMode = async function() {
                 
                 // Smart Zoom: If it's a "City Hop" (e.g. < 10km), don't zoom out too far!
                 if (currentDist > 10) {
-                    map.fitBounds([[s.lat, s.lon], [nextS.lat, nextS.lon]], { padding: [120, 120], animate: true, duration: 1.2 });
+                    const pad = window.innerWidth < 768 ? 40 : 120;
+                    map.fitBounds([[s.lat, s.lon], [nextS.lat, nextS.lon]], { padding: [pad, pad], animate: true, duration: 1.2 });
                     await pauseAwareWait(1300);
                 } else {
                     // Local movement: ensure we are close enough to see the Dino
