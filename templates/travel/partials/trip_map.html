@@ -464,9 +464,11 @@
 
             // Fallback fitBounds if no route
             if (!routeGeometry && stations.length > 0 && !window.mapWasInteracted) {
-                const group = new L.featureGroup(markers);
-                const pad = window.innerWidth < 768 ? 20 : 50;
-                map.fitBounds(group.getBounds(), { padding: [pad, pad] });
+                if (markers.length > 0) {
+                    const group = new L.featureGroup(markers);
+                    const pad = window.innerWidth < 768 ? 20 : 50;
+                    map.fitBounds(group.getBounds(), { padding: [pad, pad] });
+                }
             }
 
             // 7. Global Handlers
@@ -505,11 +507,23 @@
         };
 
         // Initialize properly
-        setTimeout(initMap, 250);
+        setTimeout(() => {
+            const offcanvasEl = document.getElementById('offcanvasRouteMap');
+            // If already shown or showing, init immediately
+            if (offcanvasEl && (offcanvasEl.classList.contains('show') || offcanvasEl.classList.contains('showing'))) {
+                initMap();
+            } else {
+                initMap(); // Attempt init anyway (will abort if 0x0)
+            }
+        }, 250);
         
         // Fix for offcanvas rendering issues
         const offcanvas = document.getElementById('offcanvasRouteMap');
         if (offcanvas) {
+            // Also listen to 'show.bs.offcanvas' to catch it early
+            offcanvas.addEventListener('show.bs.offcanvas', function() {
+                setTimeout(initMap, 50); // Small delay to let DOM update
+            });
             offcanvas.addEventListener('shown.bs.offcanvas', function () {
                 const mapContainer = document.getElementById('trip-map');
                 if (mapContainer && mapContainer._leaflet_id) {
