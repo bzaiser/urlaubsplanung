@@ -313,16 +313,37 @@
 
             map.on('movestart zoomstart', () => { window.mapWasInteracted = true; });
 
+            // Safe fitBounds wrapper to prevent Leaflet crash on small containers or massive data
+            const safeFitBounds = (bounds, isRoad) => {
+                try {
+                    if (!bounds || !bounds.isValid()) return;
+                    const size = map.getSize();
+                    const pad = window.innerWidth < 768 ? 20 : 50;
+                    // If container is extremely small (animating), fallback to setView
+                    if (size.x < pad * 2 + 10 || size.y < pad * 2 + 10) {
+                        map.setView(bounds.getCenter(), isRoad ? 8 : 12);
+                    } else {
+                        map.fitBounds(bounds, { padding: [pad, pad] });
+                    }
+                } catch (e) {
+                    console.warn("SafeFitBounds fallback executed due to:", e);
+                    try { map.setView(bounds.getCenter(), 10); } catch(e2) {}
+                }
+            };
+
             // 5. Routing (Draw this FIRST)
             let roadLine = null;
             if (routeGeometry && routeGeometry.length > 0) {
-                roadLine = L.polyline(routeGeometry, {
-                    color: '#ffc107', weight: 5, opacity: 0.8, lineJoin: 'round'
-                }).addTo(map);
-                
-                if (!window.mapWasInteracted) {
-                    const pad = window.innerWidth < 768 ? 20 : 50;
-                    map.fitBounds(roadLine.getBounds(), { padding: [pad, pad] });
+                try {
+                    roadLine = L.polyline(routeGeometry, {
+                        color: '#ffc107', weight: 5, opacity: 0.8, lineJoin: 'round'
+                    }).addTo(map);
+                    
+                    if (!window.mapWasInteracted) {
+                        safeFitBounds(roadLine.getBounds(), true);
+                    }
+                } catch (err) {
+                    console.warn("Could not draw full route geometry:", err);
                 }
             }
 
@@ -465,9 +486,12 @@
             // Fallback fitBounds if no route
             if (!routeGeometry && stations.length > 0 && !window.mapWasInteracted) {
                 if (markers.length > 0) {
-                    const group = new L.featureGroup(markers);
-                    const pad = window.innerWidth < 768 ? 20 : 50;
-                    map.fitBounds(group.getBounds(), { padding: [pad, pad] });
+                    try {
+                        const group = new L.featureGroup(markers);
+                        safeFitBounds(group.getBounds(), false);
+                    } catch (e) {
+                        console.warn("Marker group fitbounds error:", e);
+                    }
                 }
             }
 
