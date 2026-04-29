@@ -537,7 +537,8 @@
             if (offcanvasEl && (offcanvasEl.classList.contains('show') || offcanvasEl.classList.contains('showing'))) {
                 initMap();
             } else {
-                initMap(); // Attempt init anyway (will abort if 0x0)
+                // Do not init in background! Wait for user to open the map.
+                console.log("Map is closed. Waiting for user to open it...");
             }
         }, 250);
         
