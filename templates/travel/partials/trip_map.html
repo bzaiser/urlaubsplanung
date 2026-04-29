@@ -249,6 +249,15 @@
             const container = document.getElementById(mapId);
             if (!container) return;
 
+            // FIX: Prevent Leaflet "maximum callstack size exceeded" bug.
+            // If the map is initialized while hidden (0x0 size), fitBounds will infinitely loop.
+            // We delay the initialization until the offcanvas is actually shown.
+            const rect = container.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                console.log("Map is hidden (0x0). Delaying initialization until opened.");
+                return;
+            }
+
             // 1. Memory: Save existing view state if available
             let lastCenter = null;
             let lastZoom = null;
@@ -503,7 +512,9 @@
                 const mapContainer = document.getElementById('trip-map');
                 if (mapContainer && mapContainer._leaflet_id) {
                     // Update size when drawer opens
-                    window.dispatchEvent(new Event('resize'));
+                    if (window.currentTripMap) {
+                        window.currentTripMap.invalidateSize();
+                    }
                 } else {
                     initMap();
                 }
