@@ -277,8 +277,13 @@
             }
 
             // 2. Data Prep
-            const stations = {{ map_data_json|default:"[]"|safe }};
-            const routeGeometry = {{ route_geometry_json|default:"[]"|safe }};
+            // FIX: Safari throws "Maximum call stack size exceeded" when parsing massive array literals.
+            // We use JSON.parse on a stringified version to safely load the data without overloading the AST parser.
+            const stationsStr = `{{ map_data_json|default:"[]"|escapejs }}`;
+            const routeGeometryStr = `{{ route_geometry_json|default:"[]"|escapejs }}`;
+            
+            const stations = stationsStr ? JSON.parse(stationsStr) : [];
+            const routeGeometry = routeGeometryStr ? JSON.parse(routeGeometryStr) : [];
             
             if (!stations || stations.length === 0) return;
 
