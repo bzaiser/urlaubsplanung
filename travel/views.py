@@ -1878,3 +1878,63 @@ def bulk_photo_upload(request, trip_id):
         return JsonResponse({'status': 'ok', 'results': results})
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+import os
+import json
+from django.template import engines
+
+@csrf_exempt
+def tracking_view(request):
+    tracking_file = os.path.join(settings.BASE_DIR, 'data', 'tracking.json')
+    
+    if request.method == 'POST':
+        try:
+            payload = json.loads(request.body)
+            data = []
+            if os.path.exists(tracking_file):
+                with open(tracking_file, 'r', encoding='utf-8') as f:
+                    try:
+                        data = json.load(f)
+                    except json.JSONDecodeError:
+                        pass
+            
+            if not isinstance(data, list):
+                data = []
+            data.append(payload)
+            data = data[-50:]  # Keep last 50 entries
+            
+            with open(tracking_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+            return JsonResponse({"status": "ok"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+            
+    else:
+        content = "Keine Daten empfangen."
+        if os.path.exists(tracking_file):
+            with open(tracking_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+        html = """
+        {% extends 'base.html' %}
+        {% block title %}Tracking Daten{% endblock %}
+        {% block content %}
+        <div class="container mt-4">
+            <h2><i class="bi bi-geo-alt text-success"></i> Owntracks Tracking Daten</h2>
+            <div class="card bg-dark text-light mt-3">
+                <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                    <pre><code class="text-warning">{{ content }}</code></pre>
+                </div>
+            </div>
+            <a href="/" class="btn btn-outline-warning mt-3">
+                <i class="bi bi-arrow-left"></i> Zurück zum Dashboard
+            </a>
+        </div>
+        {% endblock %}
+        """
+        
+        django_engine = engines['django']
+        template = django_engine.from_string(html)
+        return HttpResponse(template.render({'content': content}, request))

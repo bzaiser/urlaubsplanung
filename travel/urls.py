@@ -27,13 +27,16 @@ from .views import (
     sync_polarsteps_live,
     archive_polarsteps_images,
     bulk_photo_upload,
-    station_rename
+    station_rename,
+    tracking_view
 )
 
 app_name = 'travel'
 
 urlpatterns = [
     path('', TripDashboardView.as_view(), name='dashboard'),
+    path('tracking/', tracking_view, name='tracking_view'),
+    path('tracking', tracking_view),
     path('import/polarsteps/', import_polarsteps, name='import_polarsteps'),
     path('import/polarsteps/photo/', import_polarsteps_photo, name='import_polarsteps_photo'),
     path('trip/<int:trip_id>/sync-polarsteps/', sync_polarsteps_live, name='sync_polarsteps_live'),
