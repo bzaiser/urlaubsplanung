@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import (
     Trip, Day, Event, GlobalExpense, DiaryEntry, DiaryImage, 
     TripTemplate, GlobalSetting, ChecklistTemplate, ChecklistItemTemplate,
-    TrackingPoint
+    TrackingPoint, TrackingSuggestion
 )
 
 @admin.register(Trip)
@@ -90,4 +90,11 @@ class TrackingPointAdmin(admin.ModelAdmin):
     list_display = ('timestamp_local', 'user', 'trip', 'status', 'lat', 'lon', 'speed')
     list_filter = ('user', 'status', 'trip')
     search_fields = ('raw_data',)
+    readonly_fields = ('created_at',)
+
+@admin.register(TrackingSuggestion)
+class TrackingSuggestionAdmin(admin.ModelAdmin):
+    list_display = ('title', 'suggestion_type', 'trip', 'day', 'start_time', 'is_processed', 'is_accepted')
+    list_filter = ('trip', 'is_processed', 'is_accepted', 'suggestion_type')
+    search_fields = ('title', 'notes')
     readonly_fields = ('created_at',)

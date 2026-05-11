@@ -627,6 +627,35 @@ class TrackingPoint(models.Model):
     def __str__(self):
         return f"Tracking {self.timestamp_local or self.timestamp_utc} ({self.status})"
 
+class TrackingSuggestion(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tracking_suggestions", null=True, blank=True)
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="tracking_suggestions")
+    day = models.ForeignKey(Day, on_delete=models.CASCADE, related_name="tracking_suggestions")
+    
+    title = models.CharField(_("Vorschlag"), max_length=200)
+    suggestion_type = models.CharField(_("Typ"), max_length=50) # z.B. 'STAY', 'TRANSPORT'
+    
+    start_time = models.DateTimeField(_("Startzeit"), null=True, blank=True)
+    end_time = models.DateTimeField(_("Endzeit"), null=True, blank=True)
+    
+    lat = models.DecimalField(_("Breitengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
+    lon = models.DecimalField(_("Längengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
+    
+    notes = models.TextField(_("Notizen/Info"), blank=True)
+    
+    is_processed = models.BooleanField(_("Bearbeitet"), default=False)
+    is_accepted = models.BooleanField(_("Übernommen"), default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Tracking Vorschlag")
+        verbose_name_plural = _("Tracking Vorschläge")
+        ordering = ['start_time']
+
+    def __str__(self):
+        return f"Vorschlag: {self.title}"
+
 
 # --- Signals for Multi-User Initial Setup ---
 from django.db.models.signals import post_save

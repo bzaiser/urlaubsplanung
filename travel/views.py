@@ -1974,6 +1974,7 @@ def tracking_view(request):
             return JsonResponse({"status": "error", "message": str(e)}, status=400)
             
     else:
+        # GET fallback for plain tracking text
         content = "Keine Daten empfangen."
         if os.path.exists(tracking_file):
             with open(tracking_file, 'r', encoding='utf-8') as f:
@@ -2000,3 +2001,77 @@ def tracking_view(request):
         django_engine = engines['django']
         template = django_engine.from_string(html)
         return HttpResponse(template.render({'content': content}, request))
+
+
+from django.contrib.auth.decorators import login_required
+from .models import TrackingSuggestion, DiaryEntry
+from django.contrib import messages
+from django.shortcuts import redirect, render
+from .services.tracking_service import TrackingProcessor
+
+@login_required
+def tracking_ui_view(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'process':
+            count = TrackingProcessor.process_raw_points()
+            messages.success(request, f"{count} neue Tracking-Vorschläge wurden generiert.")
+            return redirect('travel:tracking_ui')
+            
+        elif action in ['import', 'ignore']:
+            suggestion_ids = request.POST.getlist('suggestion_ids')
+            suggestions = TrackingSuggestion.objects.filter(id__in=suggestion_ids, user=request.user)
+            
+            if action == 'ignore':
+                suggestions.update(is_processed=True, is_accepted=False)
+                messages.info(request, f"{suggestions.count()} Vorschläge wurden ignoriert.")
+            
+            elif action == 'import':
+                count = 0
+                for sug in suggestions:
+                    if sug.is_processed: continue
+                    
+                    # Ensure DiaryEntry exists
+                    diary, created = DiaryEntry.objects.get_or_create(
+                        day=sug.day,
+                        defaults={'text': ''}
+                    )
+                    
+                    # Append to diary
+                    time_str = ""
+                    if sug.start_time and sug.end_time:
+                        time_str = f"[{sug.start_time.strftime('%H:%M')} - {sug.end_time.strftime('%H:%M')}] "
+                        
+                    append_text = f"\n\n--- Automatische Ergänzung ---\n{time_str}{sug.title}"
+                    if sug.notes:
+                        append_text += f"\n{sug.notes}"
+                    if sug.lat and sug.lon:
+                        append_text += f"\nLink: https://www.google.com/maps/search/?api=1&query={sug.lat},{sug.lon}"
+                        
+                    if not diary.text:
+                        diary.text = append_text.strip()
+                    else:
+                        diary.text += append_text
+                        
+                    diary.save()
+                    
+                    sug.is_processed = True
+                    sug.is_accepted = True
+                    sug.save()
+                    count += 1
+                    
+                messages.success(request, f"{count} Vorschläge wurden ins Tagebuch übernommen.")
+                
+            return redirect('travel:tracking_ui')
+            
+    # GET request
+    suggestions = TrackingSuggestion.objects.filter(
+        user=request.user, 
+        is_processed=False
+    ).order_by('start_time')
+    
+    return render(request, 'travel/tracking_manager.html', {
+        'suggestions': suggestions
+    })
+
