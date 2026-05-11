@@ -594,6 +594,39 @@ class TripVoucher(models.Model):
     def __str__(self):
         return self.original_filename or os.path.basename(self.file.name)
 
+class TrackingPoint(models.Model):
+    STATUS_CHOICES = [
+        ('RAW', _('Rohdaten')),
+        ('PROCESSED', _('Verarbeitet')),
+        ('IMPORTED', _('Übernommen')),
+        ('ARCHIVED', _('Archiviert')),
+    ]
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tracking_points", null=True, blank=True)
+    trip = models.ForeignKey(Trip, on_delete=models.SET_NULL, null=True, blank=True, related_name="tracking_points")
+    day = models.ForeignKey(Day, on_delete=models.SET_NULL, null=True, blank=True, related_name="tracking_points")
+    
+    lat = models.DecimalField(_("Breitengrad"), max_digits=9, decimal_places=6)
+    lon = models.DecimalField(_("Längengrad"), max_digits=9, decimal_places=6)
+    alt = models.IntegerField(_("Höhe"), null=True, blank=True)
+    speed = models.IntegerField(_("Geschwindigkeit (km/h)"), null=True, blank=True)
+    
+    timestamp_utc = models.DateTimeField(_("Zeitstempel (UTC)"))
+    timestamp_local = models.DateTimeField(_("Zeitstempel (Lokal)"), null=True, blank=True)
+    
+    status = models.CharField(_("Status"), max_length=20, choices=STATUS_CHOICES, default='RAW')
+    raw_data = models.JSONField(_("Rohdaten"), default=dict, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Tracking Punkt")
+        verbose_name_plural = _("Tracking Punkte")
+        ordering = ['-timestamp_utc']
+
+    def __str__(self):
+        return f"Tracking {self.timestamp_local or self.timestamp_utc} ({self.status})"
+
 
 # --- Signals for Multi-User Initial Setup ---
 from django.db.models.signals import post_save

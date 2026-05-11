@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from .models import (
     Trip, Day, Event, GlobalExpense, DiaryEntry, DiaryImage, 
-    TripTemplate, GlobalSetting, ChecklistTemplate, ChecklistItemTemplate
+    TripTemplate, GlobalSetting, ChecklistTemplate, ChecklistItemTemplate,
+    TrackingPoint
 )
 
 @admin.register(Trip)
@@ -83,3 +84,10 @@ class ChecklistItemTemplateAdmin(admin.ModelAdmin):
     def get_user(self, obj):
         return obj.template.user
     get_user.short_description = _("Benutzer")
+
+@admin.register(TrackingPoint)
+class TrackingPointAdmin(admin.ModelAdmin):
+    list_display = ('timestamp_local', 'user', 'trip', 'status', 'lat', 'lon', 'speed')
+    list_filter = ('user', 'status', 'trip')
+    search_fields = ('raw_data',)
+    readonly_fields = ('created_at',)

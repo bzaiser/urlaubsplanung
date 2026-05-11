@@ -1884,6 +1884,15 @@ from django.conf import settings
 import os
 import json
 from django.template import engines
+from django.http import JsonResponse, HttpResponse
+from datetime import datetime
+import pytz
+from timezonefinder import TimezoneFinder
+from .models import TrackingPoint, Trip, Day
+from django.contrib.auth import get_user_model
+
+# Initialize timezone finder globally for performance
+tf = TimezoneFinder()
 
 @csrf_exempt
 def tracking_view(request):
@@ -1892,6 +1901,8 @@ def tracking_view(request):
     if request.method == 'POST':
         try:
             payload = json.loads(request.body)
+            
+            # 1. Fallback JSON logging (keeps debugging easy)
             data = []
             if os.path.exists(tracking_file):
                 with open(tracking_file, 'r', encoding='utf-8') as f:
@@ -1907,8 +1918,59 @@ def tracking_view(request):
             
             with open(tracking_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
+                
+            # 2. Smart Ingestion into DB
+            if payload.get('_type') == 'location' and 'lat' in payload and 'lon' in payload:
+                lat = float(payload['lat'])
+                lon = float(payload['lon'])
+                alt = payload.get('alt')
+                speed = payload.get('vel')
+                tst = payload.get('tst')
+                
+                if tst:
+                    timestamp_utc = datetime.fromtimestamp(tst, tz=pytz.utc)
+                    
+                    # Timezone lookup
+                    tz_str = tf.timezone_at(lng=lon, lat=lat)
+                    timestamp_local = timestamp_utc
+                    if tz_str:
+                        local_tz = pytz.timezone(tz_str)
+                        timestamp_local = timestamp_utc.astimezone(local_tz)
+                        
+                    # Find active trip
+                    # Default to first admin user for external webhooks
+                    User = get_user_model()
+                    user = User.objects.filter(is_superuser=True).first() or User.objects.first()
+                    
+                    active_trip = None
+                    day = None
+                    if user:
+                        active_trip = Trip.objects.filter(
+                            user=user,
+                            start_date__lte=timestamp_local.date(),
+                            end_date__gte=timestamp_local.date()
+                        ).first()
+                        
+                        if active_trip:
+                            day = Day.objects.filter(trip=active_trip, date=timestamp_local.date()).first()
+                            
+                    TrackingPoint.objects.create(
+                        user=user,
+                        trip=active_trip,
+                        day=day,
+                        lat=lat,
+                        lon=lon,
+                        alt=alt,
+                        speed=speed,
+                        timestamp_utc=timestamp_utc,
+                        timestamp_local=timestamp_local,
+                        raw_data=payload
+                    )
+                    
             return JsonResponse({"status": "ok"})
         except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Tracking error: {e}")
             return JsonResponse({"status": "error", "message": str(e)}, status=400)
             
     else:
