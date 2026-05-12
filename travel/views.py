@@ -1973,6 +1973,7 @@ def tracking_view(request):
                         speed=speed,
                         timestamp_utc=timestamp_utc,
                         timestamp_local=timestamp_local,
+                        timezone=tz_str,
                         raw_data=payload
                     )
                     
@@ -2073,10 +2074,7 @@ def tracking_ui_view(request):
                     )
 
                     # Human-readable summary for Diary
-                    if sug.suggestion_type == 'STAY':
-                        summary = f"\n- Aufenthalt: {sug.title} ({int((sug.end_time - sug.start_time).total_seconds() / 60)} Min)"
-                    else:
-                        summary = f"\n- {sug.title}"
+                    summary = f"\n- {sug.notes}"
                     
                     if not diary.text:
                         diary.text = summary.strip()

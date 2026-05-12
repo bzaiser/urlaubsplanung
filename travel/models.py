@@ -613,6 +613,7 @@ class TrackingPoint(models.Model):
     
     timestamp_utc = models.DateTimeField(_("Zeitstempel (UTC)"))
     timestamp_local = models.DateTimeField(_("Zeitstempel (Lokal)"), null=True, blank=True)
+    timezone = models.CharField(_("Zeitzone"), max_length=50, blank=True, null=True)
     
     status = models.CharField(_("Status"), max_length=20, choices=STATUS_CHOICES, default='RAW')
     raw_data = models.JSONField(_("Rohdaten"), default=dict, blank=True)

@@ -1,11 +1,12 @@
 import logging
 import time
 import re
+import pytz
 from datetime import timedelta
 from django.utils import timezone
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
-from travel.models import TrackingPoint, TrackingSuggestion, Trip, GlobalSetting
+from travel.models import TrackingPoint, TrackingSuggestion, Trip, GlobalSetting, Day
 
 logger = logging.getLogger(__name__)
 
@@ -19,70 +20,47 @@ class TrackingProcessor:
         return default
 
     @classmethod
+    def _get_maps_link(cls, lat, lon):
+        return f"https://www.google.com/maps/search/?api=1&query={float(lat):.6f},{float(lon):.6f}"
+
+    @classmethod
     def reverse_geocode(cls, lat, lon):
         try:
             geolocator = Nominatim(user_agent="urlaubsplanung_app")
-            # Force language to German/English
             location = geolocator.reverse((lat, lon), timeout=10, language='de,en')
             if location:
                 raw = location.raw
                 address = raw.get('address', {})
-                
-                # 1. Try to find a real name (POI)
-                poi_keys = [
-                    'amenity', 'tourism', 'historic', 'shop', 'leisure', 'office', 'craft',
-                    'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 
-                    'castle', 'monument', 'marina', 'pier', 'park', 'supermarket', 'mall'
-                ]
-                
+                poi_keys = ['amenity', 'tourism', 'historic', 'shop', 'leisure', 'office', 'craft', 'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 'castle', 'monument', 'marina', 'pier', 'park', 'supermarket', 'mall']
                 name = None
                 for key in poi_keys:
                     if key in address:
                         name = address[key]
                         break
-                
-                # 2. Get specific location parts
                 suburb = address.get('suburb') or address.get('city_district') or address.get('neighbourhood')
                 road = address.get('road')
                 city = address.get('city') or address.get('town') or address.get('village')
-                
-                # 3. Handle administrative names as last resort
-                # If we only have administrative names, they often contain "Municipal Unit" etc.
                 admin_name = address.get('municipality') or address.get('county')
-                
-                # 4. Filter out bureaucratic terms
-                blacklist = [
-                    r"Municipal Unit of", r"Regional Unit of", r"Gemeinde", r"Präfektur", 
-                    r"Regionalbezirk", r"Dimos", r"Decentralized Administration"
-                ]
-                
+                blacklist = [r"Municipal Unit of", r"Regional Unit of", r"Gemeinde", r"Präfektur", r"Regionalbezirk", r"Dimos", r"Decentralized Administration"]
                 parts = []
                 if name: parts.append(name)
                 if road: parts.append(road)
                 if suburb: parts.append(suburb)
                 if city: parts.append(city)
                 if not parts and admin_name: parts.append(admin_name)
-                
                 clean_parts = []
                 for p in parts:
                     p_clean = str(p)
                     for pattern in blacklist:
                         p_clean = re.sub(pattern, "", p_clean, flags=re.IGNORECASE).strip()
-                    
-                    # Deduplicate and avoid adding empty strings
                     if p_clean and p_clean not in clean_parts:
-                        # Avoid adding "Pythagoreio" if "Pythagorio" is already there (fuzzy)
                         is_duplicate = False
                         for existing in clean_parts:
                             if p_clean.lower() in existing.lower() or existing.lower() in p_clean.lower():
                                 is_duplicate = True
                                 break
-                        if not is_duplicate:
-                            clean_parts.append(p_clean)
-                
-                if clean_parts:
-                    return ", ".join(clean_parts[:2]) # Max 2 parts for brevity
-                
+                        if not is_duplicate: clean_parts.append(p_clean)
+                if clean_parts: return ", ".join(clean_parts[:2])
                 return location.address.split(",")[0]
         except Exception as e:
             logger.error(f"Geocoding error: {e}")
@@ -90,9 +68,7 @@ class TrackingProcessor:
 
     @classmethod
     def process_raw_points(cls):
-        """Processes all RAW tracking points and generates suggestions."""
         trips = Trip.objects.filter(tracking_points__status='RAW').distinct()
-        
         count = 0
         for trip in trips:
             count += cls._process_trip(trip)
@@ -110,14 +86,24 @@ class TrackingProcessor:
     def _process_trip(cls, trip):
         points = TrackingPoint.objects.filter(trip=trip, status='RAW').order_by('timestamp_local')
         if not points.exists(): return 0
+        
+        # Robust Day Mapping: Ensure points have a day assigned
+        for p in points:
+            if not p.day_id:
+                # Try matching by date
+                p.day = Day.objects.filter(trip=trip, date=p.timestamp_local.date()).first()
+                if p.day: p.save(update_fields=['day'])
+
         days_map = {}
         for p in points:
             if p.day_id:
                 days_map.setdefault(p.day_id, []).append(p)
+                
         suggestions_created = 0
         stay_dist = int(cls.get_setting(trip.user, 'tracking_stay_distance', '500'))
         stay_dur = int(cls.get_setting(trip.user, 'tracking_stay_duration', '20'))
         detect_transport = cls.get_setting(trip.user, 'tracking_detect_transport', '1') == '1'
+        
         for day_id, day_points in days_map.items():
             suggestions_created += cls._process_day_points(trip, day_id, day_points, stay_dist, stay_dur, detect_transport)
         return suggestions_created
@@ -129,7 +115,6 @@ class TrackingProcessor:
         transport_points = []
         current_cluster = []
         processed_ids = []
-        
         last_recorded_point = None
 
         for point in points:
@@ -200,20 +185,37 @@ class TrackingProcessor:
         return suggestions_created
 
     @classmethod
+    def _get_local_time(cls, point):
+        # Ensure we return the time as it was at the location
+        if not point.timezone: return point.timestamp_local
+        try:
+            tz = pytz.timezone(point.timezone)
+            return point.timestamp_utc.astimezone(tz)
+        except:
+            return point.timestamp_local
+
+    @classmethod
     def _create_stay_suggestion(cls, trip, day_id, points, explicit_end_time=None):
         if not points: return
         first = points[0]
         last = points[-1]
-        end_time = explicit_end_time or last.timestamp_local
+        
+        start_time = cls._get_local_time(first)
+        end_time_local = cls._get_local_time(last) if not explicit_end_time else explicit_end_time
+        
         avg_lat = sum(float(p.lat) for p in points) / len(points)
         avg_lon = sum(float(p.lon) for p in points) / len(points)
         place_name = cls.reverse_geocode(avg_lat, avg_lon)
-        duration_mins = int((end_time - first.timestamp_local).total_seconds() / 60)
+        
+        duration_mins = int((end_time_local - start_time).total_seconds() / 60)
         title = place_name or f"Aufenthalt ({duration_mins} Min)"
+        
+        maps_link = cls._get_maps_link(avg_lat, avg_lon)
+        
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='STAY',
-            start_time=first.timestamp_local, end_time=end_time, lat=avg_lat, lon=avg_lon,
-            notes=f"Aufenthalt in {place_name if place_name else 'diesem Ort'} von {first.timestamp_local.strftime('%H:%M')} bis {end_time.strftime('%H:%M')}."
+            start_time=start_time, end_time=end_time_local, lat=avg_lat, lon=avg_lon,
+            notes=f"Aufenthalt in [{place_name if place_name else 'diesem Ort'}]({maps_link}) von {start_time.strftime('%H:%M')} bis {end_time_local.strftime('%H:%M')}."
         )
 
     @classmethod
@@ -221,7 +223,11 @@ class TrackingProcessor:
         if not points: return
         first = points[0]
         last = points[-1]
-        duration_mins = int((last.timestamp_local - first.timestamp_local).total_seconds() / 60)
+        
+        start_time = cls._get_local_time(first)
+        end_time = cls._get_local_time(last)
+        
+        duration_mins = int((end_time - start_time).total_seconds() / 60)
         if duration_mins <= 0: duration_mins = 1
         dist_km = 0
         for i in range(1, len(points)):
@@ -232,15 +238,19 @@ class TrackingProcessor:
         elif avg_speed_kmh < 15: activity_type = "Jogging / Radtour"
         else: activity_type = "Fahrt"
 
+        start_name = cls.reverse_geocode(first.lat, first.lon)
         dest_name = cls.reverse_geocode(last.lat, last.lon)
-        if dest_name:
-            dest_short = dest_name.split(",")[0]
-            title = f"{activity_type} nach {dest_short}"
-        else:
-            title = f"{activity_type} ({dist_km:.1f} km)"
+        
+        start_short = start_name.split(",")[0] if start_name else "Start"
+        dest_short = dest_name.split(",")[0] if dest_name else "Ziel"
+        
+        start_link = cls._get_maps_link(first.lat, first.lon)
+        dest_link = cls._get_maps_link(last.lat, last.lon)
+        
+        title = f"{activity_type} von {start_short} nach {dest_short}"
         
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='TRANSPORT',
-            start_time=first.timestamp_local, end_time=last.timestamp_local, lat=last.lat, lon=last.lon,
-            notes=f"{activity_type}: ca. {dist_km:.1f} km in {duration_mins} Minuten nach {dest_name if dest_name else 'Zielort'}. (Schnitt: {avg_speed_kmh:.1f} km/h)"
+            start_time=start_time, end_time=end_time, lat=last.lat, lon=last.lon,
+            notes=f"{activity_type}: von [{start_short}]({start_link}) nach [{dest_short}]({dest_link}). ca. {dist_km:.1f} km in {duration_mins} Minuten. (Schnitt: {avg_speed_kmh:.1f} km/h)"
         )
