@@ -140,10 +140,8 @@ class Day(models.Model):
     @property
     def diary_preview(self):
         """Returns the diary text."""
-        entry = self.diary_entries.first()
-        if entry and entry.text:
-            # We return the HTML but handle truncation carefully if needed
-            return entry.text
+        if hasattr(self, 'diary') and self.diary.text:
+            return self.diary.text
         return ""
 
     @property
