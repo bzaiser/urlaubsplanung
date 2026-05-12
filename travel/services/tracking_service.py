@@ -25,8 +25,21 @@ class TrackingProcessor:
             location = geolocator.reverse((lat, lon), timeout=10, language='de,en')
             if location:
                 address = location.raw.get('address', {})
-                # Try to get something meaningful
-                name = address.get('amenity') or address.get('tourism') or address.get('historic') or address.get('shop')
+                
+                # Priority list for "What is here?"
+                poi_keys = [
+                    'amenity', 'tourism', 'historic', 'shop', 'leisure', 'office', 'craft',
+                    'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 
+                    'castle', 'monument', 'marina', 'pier', 'park', 'supermarket', 'mall'
+                ]
+                
+                name = None
+                for key in poi_keys:
+                    if key in address:
+                        name = address[key]
+                        break
+                
+                # Fallback to display name pieces if no specific POI found
                 city = address.get('city') or address.get('town') or address.get('village')
                 road = address.get('road')
                 
@@ -35,7 +48,14 @@ class TrackingProcessor:
                 if road: parts.append(road)
                 if city: parts.append(city)
                 
-                return ", ".join(parts) if parts else location.address
+                if parts:
+                    # Clean up: If the name is already in the string (e.g. "Airport Samos, Airport Samos"), deduplicate
+                    res = []
+                    for p in parts:
+                        if p not in res: res.append(p)
+                    return ", ".join(res)
+                
+                return location.address
         except Exception as e:
             logger.error(f"Geocoding error: {e}")
         return None
