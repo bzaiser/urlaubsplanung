@@ -154,6 +154,37 @@
                     </div>
                 </div>
 
+                <!-- Tracking Settings -->
+                <div class="card bg-dark border-secondary mb-3">
+                    <div class="card-body">
+                        <h6 class="text-warning small text-uppercase mb-3"><i class="bi bi-geo-alt"></i> Tracking &amp; Automatisierung</h6>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label small text-secondary">Aufenthalt-Radius (m)</label>
+                                <input type="number" name="tracking_stay_distance" value="{{ tracking_stay_distance }}" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-secondary">Aufenthalt-Dauer (Min)</label>
+                                <input type="number" name="tracking_stay_duration" value="{{ tracking_stay_duration }}" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-secondary">Löschen nach (Tage)</label>
+                                <input type="number" name="tracking_cleanup_days" value="{{ tracking_cleanup_days }}" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-secondary">Fahrten erkennen?</label>
+                                <select name="tracking_detect_transport" class="form-select form-select-sm">
+                                    <option value="1" {% if tracking_detect_transport == '1' %}selected{% endif %}>Ja</option>
+                                    <option value="0" {% if tracking_detect_transport == '0' %}selected{% endif %}>Nein</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-text small mt-2">
+                            Tracking-Daten werden bei Klick auf "Neu analysieren" bereinigt, wenn sie älter als die angegebene Anzahl an Tagen sind.
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Automated System Status Section -->
                 <div class="card bg-dark border-info border-opacity-25 mb-4 shadow-sm">
                     <div class="card-body py-3">
