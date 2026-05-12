@@ -80,7 +80,7 @@
                                     </small>
                                 </p>
                                 {% if sug.notes %}
-                                <small class="text-muted d-block mt-1">{{ sug.notes|magic_links }}</small>
+                                <small class="text-muted d-block mt-1">{{ sug.notes|magic_links|safe }}</small>
                                 {% endif %}
                                 {% if sug.lat and sug.lon %}
                                 <a href="https://www.google.com/maps/search/?api=1&query={{ sug.lat|stringformat:'f' }},{{ sug.lon|stringformat:'f' }}" target="_blank" class="badge bg-secondary text-decoration-none mt-2">

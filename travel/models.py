@@ -139,11 +139,12 @@ class Day(models.Model):
 
     @property
     def diary_preview(self):
-        """Returns a snippet of the diary text."""
-        if hasattr(self, 'diary') and self.diary.text:
-            text = self.diary.text
-            return (text[:150] + '...') if len(text) > 150 else text
-        return None
+        """Returns the diary text."""
+        entry = self.diary_entries.first()
+        if entry and entry.text:
+            # We return the HTML but handle truncation carefully if needed
+            return entry.text
+        return ""
 
     @property
     def total_cost(self):
