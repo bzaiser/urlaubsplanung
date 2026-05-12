@@ -425,18 +425,20 @@
         // --- Magic Link Fixer (converts [Name](URL) to clickable links) ---
         function parseMagicLinks(container) {
             if (!container) return;
-            const elements = container.querySelectorAll('.card-text, .list-group-item span, .stat-card, .diary-preview, .small, p');
+            // Target almost everything that could contain text, including small tags
+            const elements = container.querySelectorAll('.card-text, .list-group-item, .stat-card, .diary-preview, .small, small, p, span, .fw-medium');
             const markdownRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
 
             elements.forEach(el => {
-                if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return;
-                if (el.closest('textarea') || el.closest('input')) return;
+                // Skip inputs and textareas
+                if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.closest('textarea') || el.closest('input')) return;
                 
-                // Get text content to avoid infinite recursion or breaking HTML
+                // Get innerHTML and check if it contains the markdown pattern
                 let content = el.innerHTML;
                 if (content.includes('](') && content.match(markdownRegex)) {
                     el.innerHTML = content.replace(markdownRegex, (match, text, url) => {
-                        return `<a href="${url}" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline">${text}</a>`;
+                        // The magic: Replace with a clean link and stop HTMX from opening the modal
+                        return `<a href="${url}" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline fw-bold">${text}</a>`;
                     });
                 }
             });
