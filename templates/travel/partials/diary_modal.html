@@ -22,11 +22,11 @@
                     
                     <!-- Rich Text Editor Container -->
                     <div id="diary-editor-container" style="height: 400px; background: rgba(255,255,255,0.03); color: #fff; border-color: rgba(255,255,255,0.1);">
-                        {{ day.diary_entries.first.text|default:''|magic_links|safe }}
+                        {{ day.diary.text|default:''|magic_links|safe }}
                     </div>
                     
                     <!-- Hidden Textarea for Form Submission -->
-                    <textarea name="text" id="diary-textarea" class="d-none">{{ day.diary_entries.first.text|default:''|magic_links }}</textarea>
+                    <textarea name="text" id="diary-textarea" class="d-none">{{ day.diary.text|default:''|magic_links }}</textarea>
                 </div>
 
                 <style>
