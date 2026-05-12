@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load travel_extras %}
 
 {% block title %}Tracking Manager{% endblock %}
 
@@ -65,7 +66,7 @@
                                         {% else %}
                                             <i class="bi bi-car-front"></i>
                                         {% endif %}
-                                        {{ sug.title }}
+                                        {{ sug.title|magic_links }}
                                     </h6>
                                     <small class="text-muted">
                                         {{ sug.day.date|date:"d.m.Y" }}
@@ -79,7 +80,7 @@
                                     </small>
                                 </p>
                                 {% if sug.notes %}
-                                <small class="text-muted d-block mt-1">{{ sug.notes }}</small>
+                                <small class="text-muted d-block mt-1">{{ sug.notes|magic_links }}</small>
                                 {% endif %}
                                 {% if sug.lat and sug.lon %}
                                 <a href="https://www.google.com/maps/search/?api=1&query={{ sug.lat|stringformat:'f' }},{{ sug.lon|stringformat:'f' }}" target="_blank" class="badge bg-secondary text-decoration-none mt-2">
