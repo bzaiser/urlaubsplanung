@@ -25,14 +25,21 @@ class DayAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('title', 'get_user', 'type', 'day', 'time', 'cost_booked', 'is_paid')
-    list_filter = ('day__trip__user', 'type', 'is_paid')
+    list_display = ('title', 'get_user', 'type', 'get_day_short', 'time', 'cost_booked', 'is_paid')
+    list_filter = ('day__trip__user', 'type', 'is_paid', 'day__date')
     search_fields = ('title', 'notes')
+    autocomplete_fields = ['day']
 
     def get_user(self, obj):
         return obj.day.trip.user
     get_user.short_description = _("Benutzer")
     get_user.admin_order_field = 'day__trip__user'
+
+    def get_day_short(self, obj):
+        if obj.day:
+            return obj.day.date.strftime('%d.%m.')
+        return "-"
+    get_day_short.short_description = _("Tag")
 
 @admin.register(GlobalExpense)
 class GlobalExpenseAdmin(admin.ModelAdmin):
