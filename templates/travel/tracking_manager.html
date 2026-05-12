@@ -9,10 +9,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-geo-alt text-success"></i> Tracking Vorschläge</h2>
         <div>
-            <form method="post" class="d-inline">
+            <form method="post" class="d-inline" id="analyze-form">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="process">
-                <button type="submit" class="btn btn-primary shadow-sm">
+                <button type="submit" class="btn btn-primary shadow-sm" id="btn-analyze">
                     <i class="bi bi-cpu"></i> Neu analysieren
                 </button>
             </form>
@@ -25,6 +25,37 @@
             </form>
         </div>
     </div>
+
+    <!-- Loading Indicator / Progress Bar -->
+    <div id="processing-loader" style="display: none;" class="mb-4">
+        <div class="p-4 rounded-3 border border-warning border-opacity-25 bg-warning bg-opacity-10 animate__animated animate__fadeIn">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="spinner-border text-warning spinner-border-sm" role="status"></div>
+                <span class="fw-bold text-warning text-uppercase small">Analyse läuft... Suche präzise Orte über Nominatim & Photon (Komoot)</span>
+            </div>
+            <div class="progress bg-black bg-opacity-50" style="height: 10px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" style="width: 100%"></div>
+            </div>
+            <p class="text-secondary small mt-3 mb-0 text-italic">
+                <i class="bi bi-info-circle me-1"></i>
+                Dies kann je nach Anzahl der Punkte 1-2 Minuten dauern. Bitte das Fenster nicht schließen.
+            </p>
+        </div>
+    </div>
+
+    <style>
+        .progress-bar-animated {
+            animation: 2s linear infinite progress-bar-stripes;
+        }
+    </style>
+
+    <script>
+        document.getElementById('analyze-form').addEventListener('submit', function() {
+            document.getElementById('processing-loader').style.display = 'block';
+            document.getElementById('btn-analyze').disabled = true;
+            document.getElementById('btn-analyze').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Bitte warten...';
+        });
+    </script>
 
     {% if messages %}
         {% for message in messages %}
