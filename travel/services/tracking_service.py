@@ -246,9 +246,9 @@ class TrackingProcessor:
         dist_km = 0
         for i in range(1, len(points)):
             dist_km += geodesic((points[i-1].lat, points[i-1].lon), (points[i].lat, points[i].lon)).kilometers
-        avg_speed_kmh = (dist_km / (duration_mins / 60.0))
-        if avg_speed_kmh < 7: activity_type = "Spaziergang / Wanderung"
-        elif avg_speed_kmh < 15: activity_type = "Jogging / Radtour"
+        avg_speed_kmh = (dist_km / (duration_mins / 60.0)) if duration_mins > 0 else 0
+        if avg_speed_kmh < 6: activity_type = "Spaziergang / Wanderung"
+        elif avg_speed_kmh < 18: activity_type = "Jogging / Radtour"
         else: activity_type = "Fahrt"
         start_name = cls.reverse_geocode(first.lat, first.lon)
         dest_name = cls.reverse_geocode(last.lat, last.lon)

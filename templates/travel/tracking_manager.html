@@ -101,7 +101,9 @@
                                         {% if sug.suggestion_type == 'STAY' %}
                                             <i class="bi bi-house-door"></i>
                                         {% else %}
-                                            <i class="bi bi-car-front"></i>
+                                            {% if "Wanderung" in sug.title %}<i class="bi bi-person-walking"></i>
+                                            {% elif "Radtour" in sug.title %}<i class="bi bi-bicycle"></i>
+                                            {% else %}<i class="bi bi-car-front"></i>{% endif %}
                                         {% endif %}
                                         {{ sug.title|magic_links }}
                                     </h6>
