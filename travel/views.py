@@ -2065,7 +2065,7 @@ def tracking_ui_view(request):
                         type=event_type,
                         time=sug.start_time.time() if sug.start_time else None,
                         end_time=sug.end_time.time() if sug.end_time else None,
-                        location=f"{sug.lat}, {sug.lon}" if sug.lat else "",
+                        location=sug.title,
                         latitude=sug.lat,
                         longitude=sug.lon,
                         is_geocoded=True if sug.lat else False,
