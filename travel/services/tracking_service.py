@@ -31,23 +31,45 @@ class TrackingProcessor:
             if location:
                 raw = location.raw
                 address = raw.get('address', {})
-                poi_keys = ['amenity', 'tourism', 'historic', 'shop', 'leisure', 'office', 'craft', 'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 'castle', 'monument', 'marina', 'pier', 'park', 'supermarket', 'mall']
+                
+                # OUTDOOR & POI PRIORITY
+                poi_keys = [
+                    # Specific POIs
+                    'amenity', 'tourism', 'historic', 'shop', 'leisure', 'office', 'craft',
+                    # Outdoor & Natural features (High Priority for 'Pampa')
+                    'natural', 'peak', 'volcano', 'cave_entrance', 'water', 'beach', 
+                    'spring', 'viewpoint', 'rock', 'cliff', 'ridge', 'valley',
+                    'national_park', 'nature_reserve', 'park', 'forest', 'wood',
+                    # General POIs
+                    'restaurant', 'cafe', 'hotel', 'museum', 'attraction',
+                    'castle', 'monument', 'marina', 'pier', 'supermarket', 'mall'
+                ]
+                
                 name = None
                 for key in poi_keys:
                     if key in address:
                         name = address[key]
                         break
+                
+                # Fallback for hiking trails/paths if no POI found
+                if not name:
+                    if 'road' in address and address.get('road_type') in ['footway', 'path', 'track']:
+                        name = f"Wanderweg {address['road']}" if address['road'] != 'unnamed' else "Wanderweg"
+                
                 suburb = address.get('suburb') or address.get('city_district') or address.get('neighbourhood')
                 road = address.get('road')
                 city = address.get('city') or address.get('town') or address.get('village')
                 admin_name = address.get('municipality') or address.get('county')
+                
                 blacklist = [r"Municipal Unit of", r"Regional Unit of", r"Gemeinde", r"Präfektur", r"Regionalbezirk", r"Dimos", r"Decentralized Administration"]
+                
                 parts = []
                 if name: parts.append(name)
-                if road: parts.append(road)
+                if road and road != name: parts.append(road)
                 if suburb: parts.append(suburb)
                 if city: parts.append(city)
                 if not parts and admin_name: parts.append(admin_name)
+                
                 clean_parts = []
                 for p in parts:
                     p_clean = str(p)
@@ -60,7 +82,10 @@ class TrackingProcessor:
                                 is_duplicate = True
                                 break
                         if not is_duplicate: clean_parts.append(p_clean)
-                if clean_parts: return ", ".join(clean_parts[:2])
+                
+                if clean_parts:
+                    return ", ".join(clean_parts[:2])
+                
                 return location.address.split(",")[0]
         except Exception as e:
             logger.error(f"Geocoding error: {e}")
@@ -86,24 +111,18 @@ class TrackingProcessor:
     def _process_trip(cls, trip):
         points = TrackingPoint.objects.filter(trip=trip, status='RAW').order_by('timestamp_local')
         if not points.exists(): return 0
-        
-        # Robust Day Mapping: Ensure points have a day assigned
         for p in points:
             if not p.day_id:
-                # Try matching by date
                 p.day = Day.objects.filter(trip=trip, date=p.timestamp_local.date()).first()
                 if p.day: p.save(update_fields=['day'])
-
         days_map = {}
         for p in points:
             if p.day_id:
                 days_map.setdefault(p.day_id, []).append(p)
-                
         suggestions_created = 0
         stay_dist = int(cls.get_setting(trip.user, 'tracking_stay_distance', '500'))
         stay_dur = int(cls.get_setting(trip.user, 'tracking_stay_duration', '20'))
         detect_transport = cls.get_setting(trip.user, 'tracking_detect_transport', '1') == '1'
-        
         for day_id, day_points in days_map.items():
             suggestions_created += cls._process_day_points(trip, day_id, day_points, stay_dist, stay_dur, detect_transport)
         return suggestions_created
@@ -116,21 +135,17 @@ class TrackingProcessor:
         current_cluster = []
         processed_ids = []
         last_recorded_point = None
-
         for point in points:
             processed_ids.append(point.id)
             if last_recorded_point and not current_cluster:
                 move_dist = geodesic((last_recorded_point.lat, last_recorded_point.lon), (point.lat, point.lon)).meters
                 if move_dist < 10: continue
-            
             if not current_cluster:
                 current_cluster.append(point)
                 last_recorded_point = point
                 continue
-                
             first_point = current_cluster[0]
             dist = geodesic((first_point.lat, first_point.lon), (point.lat, point.lon)).meters
-            
             if dist <= stay_dist:
                 current_cluster.append(point)
             else:
@@ -144,7 +159,6 @@ class TrackingProcessor:
                     end_time = point.timestamp_local
                 elif time_spent_in_cluster >= timedelta(minutes=stay_dur):
                     is_stay = True
-                    
                 if is_stay:
                     if detect_transport and transport_points:
                         transport_points.append(first_point)
@@ -160,7 +174,6 @@ class TrackingProcessor:
                     transport_points.extend(current_cluster)
                     current_cluster = [point]
             last_recorded_point = point
-                
         if current_cluster:
             last_point = current_cluster[-1]
             first_point = current_cluster[0]
@@ -180,42 +193,40 @@ class TrackingProcessor:
                     if total_dur >= timedelta(minutes=5):
                         cls._create_transport_suggestion(trip, day_id, transport_points)
                         suggestions_created += 1
-        
         TrackingPoint.objects.filter(id__in=processed_ids).update(status='PROCESSED')
         return suggestions_created
 
     @classmethod
     def _get_local_time(cls, point):
-        # Ensure we return the time as it was at the location
         if not point.timezone: return point.timestamp_local
         try:
             tz = pytz.timezone(point.timezone)
             return point.timestamp_utc.astimezone(tz)
-        except:
-            return point.timestamp_local
+        except: return point.timestamp_local
 
     @classmethod
     def _create_stay_suggestion(cls, trip, day_id, points, explicit_end_time=None):
         if not points: return
         first = points[0]
         last = points[-1]
-        
         start_time = cls._get_local_time(first)
         end_time_local = cls._get_local_time(last) if not explicit_end_time else explicit_end_time
-        
         avg_lat = sum(float(p.lat) for p in points) / len(points)
         avg_lon = sum(float(p.lon) for p in points) / len(points)
+        avg_alt = sum(int(p.alt) if p.alt else 0 for p in points) / len(points)
+        
         place_name = cls.reverse_geocode(avg_lat, avg_lon)
         
+        # Add altitude if it's significant (e.g. > 50m)
+        alt_str = f" ({int(avg_alt)}m)" if avg_alt > 50 else ""
         duration_mins = int((end_time_local - start_time).total_seconds() / 60)
-        title = place_name or f"Aufenthalt ({duration_mins} Min)"
+        title = f"{place_name}{alt_str}" if place_name else f"Aufenthalt{alt_str} ({duration_mins} Min)"
         
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
-        
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='STAY',
             start_time=start_time, end_time=end_time_local, lat=avg_lat, lon=avg_lon,
-            notes=f"Aufenthalt in [{place_name if place_name else 'diesem Ort'}]({maps_link}) von {start_time.strftime('%H:%M')} bis {end_time_local.strftime('%H:%M')}."
+            notes=f"Aufenthalt in [{place_name if place_name else 'diesem Ort'}]({maps_link}){alt_str} von {start_time.strftime('%H:%M')} bis {end_time_local.strftime('%H:%M')}."
         )
 
     @classmethod
@@ -223,10 +234,8 @@ class TrackingProcessor:
         if not points: return
         first = points[0]
         last = points[-1]
-        
         start_time = cls._get_local_time(first)
         end_time = cls._get_local_time(last)
-        
         duration_mins = int((end_time - start_time).total_seconds() / 60)
         if duration_mins <= 0: duration_mins = 1
         dist_km = 0
@@ -248,7 +257,6 @@ class TrackingProcessor:
         dest_link = cls._get_maps_link(last.lat, last.lon)
         
         title = f"{activity_type} von {start_short} nach {dest_short}"
-        
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='TRANSPORT',
             start_time=start_time, end_time=end_time, lat=last.lat, lon=last.lon,
