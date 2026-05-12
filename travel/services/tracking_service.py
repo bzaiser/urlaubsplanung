@@ -101,15 +101,31 @@ class TrackingProcessor:
             if dist <= stay_dist:
                 current_cluster.append(point)
             else:
-                time_spent = current_cluster[-1].timestamp_local - first_point.timestamp_local
-                if time_spent >= timedelta(minutes=stay_dur):
-                    if detect_transport and len(transport_points) >= 2:
+                last_point = current_cluster[-1]
+                time_gap = point.timestamp_local - last_point.timestamp_local
+                time_spent_in_cluster = last_point.timestamp_local - first_point.timestamp_local
+                
+                is_stay = False
+                end_time = last_point.timestamp_local
+                
+                # Stay triggered by a long period without any movement updates (OwnTracks sparse mode)
+                if time_gap >= timedelta(minutes=stay_dur):
+                    is_stay = True
+                    end_time = point.timestamp_local
+                # Stay triggered by continuous updates within the radius
+                elif time_spent_in_cluster >= timedelta(minutes=stay_dur):
+                    is_stay = True
+                    
+                if is_stay:
+                    if detect_transport and transport_points:
+                        transport_points.append(first_point)
                         cls._create_transport_suggestion(trip, day_id, transport_points)
                         suggestions_created += 1
-                        transport_points = []
                     
-                    cls._create_stay_suggestion(trip, day_id, current_cluster)
+                    cls._create_stay_suggestion(trip, day_id, current_cluster, explicit_end_time=end_time)
                     suggestions_created += 1
+                    
+                    transport_points = [last_point]
                     current_cluster = [point]
                 else:
                     transport_points.extend(current_cluster)
@@ -117,16 +133,19 @@ class TrackingProcessor:
                 
         # End of day cleanup
         if current_cluster:
-            time_spent = current_cluster[-1].timestamp_local - current_cluster[0].timestamp_local
-            if time_spent >= timedelta(minutes=stay_dur):
-                if detect_transport and len(transport_points) >= 2:
+            last_point = current_cluster[-1]
+            first_point = current_cluster[0]
+            time_spent_in_cluster = last_point.timestamp_local - first_point.timestamp_local
+            
+            if time_spent_in_cluster >= timedelta(minutes=stay_dur):
+                if detect_transport and transport_points:
+                    transport_points.append(first_point)
                     cls._create_transport_suggestion(trip, day_id, transport_points)
                     suggestions_created += 1
                 cls._create_stay_suggestion(trip, day_id, current_cluster)
                 suggestions_created += 1
             else:
                 transport_points.extend(current_cluster)
-                # Only create transport if it spans more than a few minutes or some distance
                 if detect_transport and len(transport_points) >= 2:
                     total_dur = transport_points[-1].timestamp_local - transport_points[0].timestamp_local
                     if total_dur >= timedelta(minutes=5):
@@ -136,15 +155,17 @@ class TrackingProcessor:
         return suggestions_created
 
     @classmethod
-    def _create_stay_suggestion(cls, trip, day_id, points):
+    def _create_stay_suggestion(cls, trip, day_id, points, explicit_end_time=None):
         if not points: return
         first = points[0]
         last = points[-1]
         
+        end_time = explicit_end_time or last.timestamp_local
+        
         avg_lat = sum(float(p.lat) for p in points) / len(points)
         avg_lon = sum(float(p.lon) for p in points) / len(points)
         
-        duration_mins = int((last.timestamp_local - first.timestamp_local).total_seconds() / 60)
+        duration_mins = int((end_time - first.timestamp_local).total_seconds() / 60)
         title = f"Aufenthalt ({duration_mins} Min)"
         
         TrackingSuggestion.objects.create(
@@ -154,10 +175,10 @@ class TrackingProcessor:
             title=title,
             suggestion_type='STAY',
             start_time=first.timestamp_local,
-            end_time=last.timestamp_local,
+            end_time=end_time,
             lat=avg_lat,
             lon=avg_lon,
-            notes=f"Automatisch erkannter Aufenthalt von {first.timestamp_local.strftime('%H:%M')} bis {last.timestamp_local.strftime('%H:%M')}."
+            notes=f"Automatisch erkannter Aufenthalt von {first.timestamp_local.strftime('%H:%M')} bis {end_time.strftime('%H:%M')}."
         )
 
     @classmethod

@@ -999,7 +999,7 @@ def settings_modal(request):
     food_out_h = get_setting('food_out_high', '70')
 
     # Tracking Settings
-    trk_dist = get_setting('tracking_stay_distance', '150', user=request.user)
+    trk_dist = get_setting('tracking_stay_distance', '500', user=request.user)
     trk_dur = get_setting('tracking_stay_duration', '20', user=request.user)
     trk_clean = get_setting('tracking_cleanup_days', '30', user=request.user)
     trk_trans = get_setting('tracking_detect_transport', '1', user=request.user)
