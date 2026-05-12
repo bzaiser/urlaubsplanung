@@ -27,56 +27,68 @@ class TrackingProcessor:
     @classmethod
     def reverse_geocode(cls, lat, lon):
         try:
-            geolocator = Nominatim(user_agent="urlaubsplanung_app_v2")
-            # We use zoom=18 to get high precision (POIs)
+            geolocator = Nominatim(user_agent="urlaubsplanung_app_v3")
             location = geolocator.reverse((lat, lon), timeout=10, language='de,en', zoom=18)
             if location:
                 raw = location.raw
                 address = raw.get('address', {})
                 
-                # 1. Check for specific name in the raw display_name or address
-                # Nominatim often puts the POI name in specific keys
+                # Garbage words to remove
+                blacklist = [
+                    r"Municipal Unit of", r"Regional Unit of", r"Gemeinde", 
+                    r"Präfektur", r"Regionalbezirk", r"Dimos", 
+                    r"Decentralized Administration", r"Region of"
+                ]
+
+                def clean_text(text):
+                    if not text: return ""
+                    t = str(text)
+                    for pattern in blacklist:
+                        t = re.sub(pattern, "", t, flags=re.IGNORECASE).strip()
+                    return t
+
+                # Priority for specific POIs
                 poi_keys = [
                     'beach', 'tourism', 'amenity', 'leisure', 'historic', 'shop', 
                     'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 
-                    'castle', 'monument', 'marina', 'pier', 'park', 'natural', 'peak', 
-                    'village', 'hamlet'
+                    'castle', 'monument', 'marina', 'pier', 'park', 'natural', 'peak'
                 ]
                 
                 name = None
-                # First check: Is there a specific POI name?
                 for key in poi_keys:
                     if key in address:
-                        name = address[key]
+                        name = clean_text(address[key])
                         break
                 
-                # Second check: If no specific POI, maybe the first part of display_name is the POI
                 if not name:
                     display_parts = location.address.split(",")
                     if len(display_parts) > 0:
-                        potential_name = display_parts[0].strip()
-                        # If the potential name is NOT a city/town we already know
-                        city_parts = [address.get('city'), address.get('town'), address.get('village'), address.get('county')]
-                        if potential_name not in [p for p in city_parts if p]:
-                            name = potential_name
+                        potential = clean_text(display_parts[0])
+                        # Check if it's just a house number or broad city
+                        if not potential.isdigit():
+                            name = potential
 
-                # Clean up city names that are too broad (like "Vathy" for "Samos")
-                city = address.get('city') or address.get('town') or address.get('village')
-                road = address.get('road')
-                suburb = address.get('suburb') or address.get('city_district')
+                city = clean_text(address.get('city') or address.get('town') or address.get('village'))
+                road = clean_text(address.get('road'))
                 
-                parts = []
-                if name: parts.append(name)
-                if road and road != name: parts.append(road)
-                if city and city != name: parts.append(city)
+                # Build result parts with deduplication
+                result_parts = []
+                if name: result_parts.append(name)
                 
-                # Final filtering: If we have a POI name, we often don't want the city if it's broad
-                if name and city and name != city:
-                    # If POI is found, we only show POI + Road/City if it's not too long
-                    return ", ".join(parts[:2])
+                if road and road not in result_parts:
+                    # Check if road is not just a substring of name
+                    if not any(road.lower() in r.lower() for r in result_parts):
+                        result_parts.append(road)
                 
-                if parts: return ", ".join(parts[:2])
-                return location.address.split(",")[0]
+                if city and city not in result_parts:
+                    if not any(city.lower() in r.lower() for r in result_parts):
+                        result_parts.append(city)
+                
+                # If we have too many parts, focus on the most specific ones
+                if len(result_parts) > 2:
+                    return ", ".join(result_parts[:2])
+                
+                return ", ".join(result_parts) if result_parts else location.address.split(",")[0]
         except Exception as e:
             logger.error(f"Geocoding error: {e}")
         return None
