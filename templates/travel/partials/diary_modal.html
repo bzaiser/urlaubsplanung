@@ -42,7 +42,11 @@
 
                 <script>
                     (function() {
-                        var quill = new Quill('#diary-editor-container', {
+                        var container = document.getElementById('diary-editor-container');
+                        var textarea = document.getElementById('diary-textarea');
+                        if (!container || !textarea || typeof Quill === 'undefined') return;
+
+                        var diaryQuill = new Quill(container, {
                             theme: 'snow',
                             placeholder: '{% trans "Schreibe hier deine Erlebnisse auf..." %}',
                             modules: {
@@ -54,14 +58,19 @@
                             }
                         });
 
-                        quill.on('text-change', function() {
-                            document.getElementById('diary-textarea').value = quill.root.innerHTML;
-                            saveDraft("{{ day.id }}", quill.root.innerHTML);
+                        diaryQuill.on('text-change', function() {
+                            textarea.value = diaryQuill.root.innerHTML;
+                            if (typeof saveDraft === 'function') {
+                                saveDraft("{{ day.id }}", diaryQuill.root.innerHTML);
+                            }
                         });
 
-                        document.getElementById('diary-form').addEventListener('submit', function() {
-                            document.getElementById('diary-textarea').value = quill.root.innerHTML;
-                        });
+                        var form = document.getElementById('diary-form');
+                        if (form) {
+                            form.addEventListener('submit', function() {
+                                textarea.value = diaryQuill.root.innerHTML;
+                            });
+                        }
                     })();
                 </script>
 

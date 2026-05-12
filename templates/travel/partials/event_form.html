@@ -242,7 +242,11 @@
 
                 <script>
                     (function() {
-                        var quillEvent = new Quill('#event-editor-container', {
+                        var container = document.getElementById('event-editor-container');
+                        var textarea = document.getElementById('event-notes-textarea');
+                        if (!container || !textarea || typeof Quill === 'undefined') return;
+
+                        var quillEvent = new Quill(container, {
                             theme: 'snow',
                             placeholder: 'Zusätzliche Details...',
                             modules: {
@@ -251,12 +255,17 @@
                                 ]
                             }
                         });
+                        
                         quillEvent.on('text-change', function() {
-                            document.getElementById('event-notes-textarea').value = quillEvent.root.innerHTML;
+                            textarea.value = quillEvent.root.innerHTML;
                         });
-                        document.querySelector('#modal-container form').addEventListener('submit', function() {
-                            document.getElementById('event-notes-textarea').value = quillEvent.root.innerHTML;
-                        });
+
+                        var form = container.closest('form');
+                        if (form) {
+                            form.addEventListener('submit', function() {
+                                textarea.value = quillEvent.root.innerHTML;
+                            });
+                        }
                     })();
                 </script>
 
