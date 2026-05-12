@@ -20,8 +20,9 @@ class TrackingProcessor:
     @classmethod
     def reverse_geocode(cls, lat, lon):
         try:
+            # We request German or English to avoid local scripts (like Greek)
             geolocator = Nominatim(user_agent="urlaubsplanung_app")
-            location = geolocator.reverse((lat, lon), timeout=10)
+            location = geolocator.reverse((lat, lon), timeout=10, language='de,en')
             if location:
                 address = location.raw.get('address', {})
                 # Try to get something meaningful
