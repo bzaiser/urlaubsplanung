@@ -520,13 +520,18 @@
                             if (p.data.is_day_header || p.data.is_station_header) return p.value;
                             
                             const d = p.data;
+                            const parseLinks = (text) => {
+                                if (!text) return '';
+                                return text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline">$1</a>');
+                            };
+
                             if (d.is_global_expense) {
-                                let gHtml = `<div class="fw-medium" style="color: var(--accent-gold);">${d.title || ''}</div>`;
+                                let gHtml = `<div class="fw-medium" style="color: var(--accent-gold);">${parseLinks(d.title)}</div>`;
                                 gHtml += `<div class="small opacity-75" style="color: var(--text-secondary);">${d.units} x ${formatCurrency(d.unit_price)}</div>`;
                                 return gHtml;
                             }
 
-                            let html = `<div class="fw-medium lh-sm mb-1" style="color: var(--accent-teal);">${d.title || ''}</div>`;
+                            let html = `<div class="fw-medium lh-sm mb-1" style="color: var(--accent-teal);">${parseLinks(d.title)}</div>`;
                             if (d.nights && d.is_checkin) {
                                 const label = d.nights === 1 ? 'Nacht' : 'Nächte';
                                 html += `<div class="d-block lh-1 mb-1">

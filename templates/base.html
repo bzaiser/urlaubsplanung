@@ -422,6 +422,29 @@
             showToast(`⚠️ Server-Fehler (${e.detail.xhr.status})`, true);
         });
 
+        // --- Magic Link Fixer (converts [Name](URL) to clickable links) ---
+        function parseMagicLinks(container) {
+            if (!container) return;
+            const elements = container.querySelectorAll('.card-text, .list-group-item span, .stat-card, .diary-preview, .small, p');
+            const markdownRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+
+            elements.forEach(el => {
+                if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return;
+                if (el.closest('textarea') || el.closest('input')) return;
+                
+                // Get text content to avoid infinite recursion or breaking HTML
+                let content = el.innerHTML;
+                if (content.includes('](') && content.match(markdownRegex)) {
+                    el.innerHTML = content.replace(markdownRegex, (match, text, url) => {
+                        return `<a href="${url}" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline">${text}</a>`;
+                    });
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => parseMagicLinks(document.body));
+        document.body.addEventListener('htmx:afterOnLoad', (e) => parseMagicLinks(e.detail.target || document.body));
+
         // --- PWA Reliability: Force Service Worker Check ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
