@@ -2028,6 +2028,12 @@ def tracking_ui_view(request):
             messages.success(request, f"{count} neue Tracking-Vorschläge wurden generiert.")
             return redirect('travel:tracking_ui')
             
+        elif action == 'reset':
+            TrackingPoint.objects.filter(user=request.user).update(status='RAW')
+            TrackingSuggestion.objects.filter(user=request.user, is_accepted=False).delete()
+            messages.warning(request, "Alle Tracking-Daten wurden zurückgesetzt und können neu analysiert werden.")
+            return redirect('travel:tracking_ui')
+            
         elif action in ['import', 'ignore']:
             suggestion_ids = request.POST.getlist('suggestion_ids')
             suggestions = TrackingSuggestion.objects.filter(id__in=suggestion_ids, user=request.user)

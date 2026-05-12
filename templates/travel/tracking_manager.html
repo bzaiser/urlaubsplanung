@@ -11,8 +11,15 @@
             <form method="post" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="process">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-arrow-repeat"></i> Neu analysieren
+                <button type="submit" class="btn btn-primary shadow-sm">
+                    <i class="bi bi-cpu"></i> Neu analysieren
+                </button>
+            </form>
+            <form method="post" class="d-inline ms-2">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reset">
+                <button type="submit" class="btn btn-outline-danger shadow-sm" onclick="return confirm('Möchtest du wirklich alle Punkte auf NEU setzen und ungenutzte Vorschläge löschen?')">
+                    <i class="bi bi-trash"></i> Reset (Alles auf Anfang)
                 </button>
             </form>
         </div>
