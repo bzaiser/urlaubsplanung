@@ -2055,6 +2055,8 @@ def tracking_ui_view(request):
                     
                     # Create Event (Action)
                     event_type = 'ACTIVITY' if sug.suggestion_type == 'STAY' else 'OTHER'
+                    if 'Fahrt' in sug.title:
+                        event_type = 'CAR' # Default to car for transport
                     
                     from travel.models import Event
                     Event.objects.create(
@@ -2063,12 +2065,16 @@ def tracking_ui_view(request):
                         type=event_type,
                         time=sug.start_time.time() if sug.start_time else None,
                         end_time=sug.end_time.time() if sug.end_time else None,
-                        location=f"{sug.lat}, {sug.lon}" if sug.lat else "",
-                        notes=f"{sug.notes}\nLink: https://www.google.com/maps/search/?api=1&query={sug.lat},{sug.lon}" if sug.lat else sug.notes
+                        location=sug.title if sug.suggestion_type == 'STAY' else "",
+                        notes=f"{sug.notes}\nGoogle Maps: https://www.google.com/maps/search/?api=1&query={sug.lat},{sug.lon}" if sug.lat else sug.notes
                     )
 
-                    # Simple summary for Diary (no technical logs)
-                    summary = f"\n- {sug.title}"
+                    # Human-readable summary for Diary
+                    if sug.suggestion_type == 'STAY':
+                        summary = f"\n- Aufenthalt: {sug.title} ({int((sug.end_time - sug.start_time).total_seconds() / 60)} Min)"
+                    else:
+                        summary = f"\n- {sug.title}"
+                    
                     if not diary.text:
                         diary.text = summary.strip()
                     else:
