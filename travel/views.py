@@ -2056,8 +2056,8 @@ def tracking_ui_view(request):
                     
                     # Create Event (Action)
                     event_type = 'ACTIVITY' if sug.suggestion_type == 'STAY' else 'OTHER'
-                    if 'Fahrt' in sug.title:
-                        event_type = 'CAR'
+                    if 'Fahrt' in sug.title or 'Spaziergang' in sug.title or 'Wanderung' in sug.title:
+                        event_type = 'ACTIVITY'
                     
                     from travel.models import Event
                     Event.objects.create(
@@ -2070,11 +2070,11 @@ def tracking_ui_view(request):
                         latitude=sug.lat,
                         longitude=sug.lon,
                         is_geocoded=True if sug.lat else False,
-                        notes=f"{sug.notes}\nGoogle Maps: https://www.google.com/maps/search/?api=1&query={sug.lat},{sug.lon}" if sug.lat else sug.notes
+                        notes=sug.notes # Use HTML notes directly from suggestion
                     )
 
                     # Human-readable summary for Diary
-                    summary = f"\n- {sug.notes}"
+                    summary = f"<p>{sug.notes}</p>"
                     
                     if not diary.text:
                         diary.text = summary.strip()
