@@ -26,72 +26,57 @@ class TrackingProcessor:
 
     @classmethod
     def reverse_geocode(cls, lat, lon):
+        from geopy.geocoders import Photon, Nominatim
+        name_parts = []
+        
+        # 1. Try Nominatim for reliable administrative address
         try:
-            geolocator = Nominatim(user_agent="urlaubsplanung_app_v3")
-            location = geolocator.reverse((lat, lon), timeout=10, language='de,en', zoom=18)
-            if location:
-                raw = location.raw
-                address = raw.get('address', {})
-                
-                # Garbage words to remove
-                blacklist = [
-                    r"Municipal Unit of", r"Regional Unit of", r"Gemeinde", 
-                    r"Präfektur", r"Regionalbezirk", r"Dimos", 
-                    r"Decentralized Administration", r"Region of"
-                ]
-
-                def clean_text(text):
-                    if not text: return ""
-                    t = str(text)
-                    for pattern in blacklist:
-                        t = re.sub(pattern, "", t, flags=re.IGNORECASE).strip()
-                    return t
-
-                # Priority for specific POIs
-                poi_keys = [
-                    'beach', 'tourism', 'amenity', 'leisure', 'historic', 'shop', 
-                    'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 
-                    'castle', 'monument', 'marina', 'pier', 'park', 'natural', 'peak'
-                ]
-                
-                name = None
+            nom = Nominatim(user_agent="urlaubsplanung_app_v4")
+            loc_nom = nom.reverse((lat, lon), timeout=5, language='de,en', zoom=18)
+            if loc_nom:
+                addr = loc_nom.raw.get('address', {})
+                # Get specific POI if available
+                poi_keys = ['beach', 'tourism', 'amenity', 'leisure', 'historic', 'shop', 'restaurant', 'natural', 'peak']
                 for key in poi_keys:
-                    if key in address:
-                        name = clean_text(address[key])
+                    if key in addr:
+                        name_parts.append(addr[key])
                         break
                 
-                if not name:
-                    display_parts = location.address.split(",")
-                    if len(display_parts) > 0:
-                        potential = clean_text(display_parts[0])
-                        # Check if it's just a house number or broad city
-                        if not potential.isdigit():
-                            name = potential
+                # Add road and city/village
+                road = addr.get('road')
+                city = addr.get('city') or addr.get('town') or addr.get('village')
+                if road and road not in name_parts: name_parts.append(road)
+                if city and city not in name_parts: name_parts.append(city)
+        except: pass
 
-                city = clean_text(address.get('city') or address.get('town') or address.get('village'))
-                road = clean_text(address.get('road'))
-                
-                # Build result parts with deduplication
-                result_parts = []
-                if name: result_parts.append(name)
-                
-                if road and road not in result_parts:
-                    # Check if road is not just a substring of name
-                    if not any(road.lower() in r.lower() for r in result_parts):
-                        result_parts.append(road)
-                
-                if city and city not in result_parts:
-                    if not any(city.lower() in r.lower() for r in result_parts):
-                        result_parts.append(city)
-                
-                # If we have too many parts, focus on the most specific ones
-                if len(result_parts) > 2:
-                    return ", ".join(result_parts[:2])
-                
-                return ", ".join(result_parts) if result_parts else location.address.split(",")[0]
-        except Exception as e:
-            logger.error(f"Geocoding error: {e}")
-        return None
+        # 2. Try Photon (Komoot) for better "Outdoor" POIs (Hiking, Biking, Remote)
+        try:
+            phot = Photon(user_agent="urlaubsplanung_app_photon")
+            loc_phot = phot.reverse((lat, lon), timeout=5, language='de')
+            if loc_phot:
+                p_name = loc_phot.raw.get('properties', {}).get('name')
+                if p_name and p_name not in name_parts:
+                    # If Photon found a name, it's often a very good POI
+                    name_parts.insert(0, p_name)
+        except: pass
+
+        # Cleanup and Deduplicate
+        clean_parts = []
+        blacklist = [r"Municipal Unit of", r"Regional Unit of", r"Decentralized Administration"]
+        for p in name_parts:
+            p_clean = str(p)
+            for pattern in blacklist:
+                p_clean = re.sub(pattern, "", p_clean, flags=re.IGNORECASE).strip()
+            
+            if p_clean and p_clean not in clean_parts:
+                # Check if it's not a substring of something already there
+                if not any(p_clean.lower() in existing.lower() for existing in clean_parts):
+                    clean_parts.append(p_clean)
+        
+        if clean_parts:
+            return ", ".join(clean_parts[:3]) # Show up to 3 parts for more detail
+            
+        return "Unbekannter Ort"
 
     @classmethod
     def process_raw_points(cls):
