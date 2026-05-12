@@ -1,283 +1,110 @@
-{% load i18n %}{% load static %}
-<div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 95%;">
-    <div class="modal-content bg-dark border">
-        <!-- Header -->
-        <div class="modal-header border-0 pb-3">
-            <div class="flex-grow-1">
-                <h5 class="modal-title text-warning mb-0">📖 {{ day.date|date:"d. M" }}</h5>
-                <small class="text-secondary">{{ day.location }}</small>
-            </div>
+{% load i18n %}{% load travel_extras %}
+<div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-dark text-light border-secondary shadow-lg animate__animated animate__fadeInUp">
+        <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold text-warning d-flex align-items-center gap-2">
+                <i class="bi bi-journal-text fs-4"></i>
+                {% trans "Tagebuch" %} — {{ day.date|date:"l, d. F Y" }}
+            </h5>
             <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
         </div>
-
-        <script>
-            function openDiaryGallery(clickedImg) {
-                // Find all gallery images in this modal
-                const images = Array.from(document.querySelectorAll('#diary-form .diary-gallery-img')).map(img => ({
-                    src: img.src,
-                    caption: img.alt
-                }));
-                // Find index of clicked image
-                const index = images.findIndex(img => img.src === clickedImg.src);
-                openLightboxGallery(images, index !== -1 ? index : 0);
-            }
-        </script>
-
-        <form hx-post="{% url 'travel:edit_diary' day.id %}" 
-              hx-encoding="multipart/form-data" 
-              hx-target="#modal-container" 
-              hx-swap="innerHTML"
-              id="diary-form">
+        
+        <form id="diary-form" hx-post="{% url 'travel:edit_diary' day.id %}" hx-target="#trip-overview" hx-on::after-request="if(event.detail.successful) closeModal()" hx-encoding="multipart/form-data">
             {% csrf_token %}
             
             <div class="modal-body">
-                <!-- Text Area -->
-                        <div class="mb-3">
-                        <label class="form-label d-flex justify-content-between align-items-center">
-                            <span class="text-secondary small text-uppercase fw-bold">{% trans "Was hast du erlebt?" %}</span>
-                            <span id="save-status" class="x-small text-success opacity-0 transition-all">✓ {% trans "Gespeichert" %}</span>
-                        </label>
-                        
-                        <!-- Rich Text Editor Container -->
-                        <div id="diary-editor-container" style="height: 300px; background: rgba(255,255,255,0.03); color: #fff; border-color: rgba(255,255,255,0.1);">
-                            {{ day.diary_entries.first.text|default:''|safe }}
-                        </div>
-                        
-                        <!-- Hidden Textarea for Form Submission -->
-                        <textarea name="text" id="diary-textarea" class="d-none">{{ day.diary_entries.first.text|default:'' }}</textarea>
+                <!-- Text Area with Quill -->
+                <div class="mb-4">
+                    <label class="form-label d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-secondary small text-uppercase fw-bold">{% trans "Was hast du erlebt?" %}</span>
+                        <span id="save-status" class="x-small text-success opacity-0 transition-all">✓ {% trans "Gespeichert" %}</span>
+                    </label>
+                    
+                    <!-- Rich Text Editor Container -->
+                    <div id="diary-editor-container" style="height: 400px; background: rgba(255,255,255,0.03); color: #fff; border-color: rgba(255,255,255,0.1);">
+                        {{ day.diary_entries.first.text|default:''|magic_links|safe }}
                     </div>
+                    
+                    <!-- Hidden Textarea for Form Submission -->
+                    <textarea name="text" id="diary-textarea" class="d-none">{{ day.diary_entries.first.text|default:''|magic_links }}</textarea>
+                </div>
 
-                    <style>
-                        /* Dark Mode for Quill */
-                        .ql-toolbar.ql-snow { border-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); }
-                        .ql-container.ql-snow { border-color: rgba(255,255,255,0.1); font-family: 'Inter', sans-serif; font-size: 14px; }
-                        .ql-snow .ql-stroke { stroke: #adb5bd; }
-                        .ql-snow .ql-fill { fill: #adb5bd; }
-                        .ql-snow .ql-picker { color: #adb5bd; }
-                        .ql-editor.ql-blank::before { color: rgba(255,255,255,0.3); font-style: normal; }
-                    </style>
+                <style>
+                    /* Dark Mode for Quill */
+                    .ql-toolbar.ql-snow { border-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); border-top-left-radius: 4px; border-top-right-radius: 4px; }
+                    .ql-container.ql-snow { border-color: rgba(255,255,255,0.1); font-family: 'Inter', sans-serif; font-size: 15px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+                    .ql-snow .ql-stroke { stroke: #adb5bd; }
+                    .ql-snow .ql-fill { fill: #adb5bd; }
+                    .ql-snow .ql-picker { color: #adb5bd; }
+                    .ql-editor.ql-blank::before { color: rgba(255,255,255,0.3); font-style: normal; }
+                    .ql-editor { line-height: 1.6; }
+                </style>
 
-                    <script>
-                        (function() {
-                            var quill = new Quill('#diary-editor-container', {
-                                theme: 'snow',
-                                placeholder: '{% trans "Schreibe hier deine Erlebnisse auf..." %}',
-                                modules: {
-                                    toolbar: [
-                                        ['bold', 'italic', 'underline'],
-                                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                        ['link', 'clean']
-                                    ]
-                                }
-                            });
+                <script>
+                    (function() {
+                        var quill = new Quill('#diary-editor-container', {
+                            theme: 'snow',
+                            placeholder: '{% trans "Schreibe hier deine Erlebnisse auf..." %}',
+                            modules: {
+                                toolbar: [
+                                    ['bold', 'italic', 'underline'],
+                                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                    ['link', 'clean']
+                                ]
+                            }
+                        });
 
-                            // Sync Quill to Textarea on every change
-                            quill.on('text-change', function() {
-                                document.getElementById('diary-textarea').value = quill.root.innerHTML;
-                                // Save draft
-                                saveDraft("{{ day.id }}", quill.root.innerHTML);
-                            });
+                        quill.on('text-change', function() {
+                            document.getElementById('diary-textarea').value = quill.root.innerHTML;
+                            saveDraft("{{ day.id }}", quill.root.innerHTML);
+                        });
 
-                            // Re-sync before form submit (just in case)
-                            document.getElementById('diary-form').addEventListener('submit', function() {
-                                document.getElementById('diary-textarea').value = quill.root.innerHTML;
-                            });
-                        })();
-                    </script>
+                        document.getElementById('diary-form').addEventListener('submit', function() {
+                            document.getElementById('diary-textarea').value = quill.root.innerHTML;
+                        });
+                    })();
+                </script>
 
-                <!-- Gallery Section -->
-                <div class="mb-3">
-                    <label class="form-label small text-uppercase text-warning fw-bold">📸 Fotos des Tages</label>
-                    <div class="row row-cols-2 row-cols-md-3 g-3 mb-3">
-                        {{ formset.management_form }}
-                        {% for f in formset %}
-                            {% if f.instance.id %}
-                            <div class="col" id="image-{{ f.instance.id }}">
-                                <div class="card bg-dark border-secondary h-100 overflow-hidden shadow-sm">
-                                    <div class="position-relative">
-                                        <img src="{{ f.instance.get_url }}" alt="{{ f.instance.caption }}" 
-                                             class="card-img-top object-fit-cover shadow-sm diary-gallery-img" style="aspect-ratio: 4/3; cursor: pointer;"
-                                             loading="lazy"
-                                             onclick="openDiaryGallery(this)">
-                                        
-                                        <!-- Primary Star -->
-                                        <div class="position-absolute top-0 start-0 m-1">
-                                            <button type="button" 
-                                                    hx-post="{% url 'travel:set_diary_image_primary' f.instance.id %}"
-                                                    hx-target="#modal-container"
-                                                    hx-swap="innerHTML"
-                                                    class="btn btn-sm {% if f.instance.is_primary %}btn-warning{% else %}btn-dark bg-opacity-75 text-warning{% endif %} rounded-pill p-1 d-flex align-items-center justify-content-center"
-                                                    style="width: 24px; height: 24px;"
-                                                    title="Als Hauptbild setzen">
-                                                <i class="bi {% if f.instance.is_primary %}bi-star-fill{% else %}bi-star{% endif %} small"></i>
+                <!-- Existing Gallery and Image Upload parts -->
+                <div class="mb-3 mt-4">
+                    <label class="form-label small text-uppercase text-warning fw-bold mb-3">
+                        <i class="bi bi-images me-1"></i>{% trans "Fotos von diesem Tag" %}
+                    </label>
+                    
+                    <div class="row row-cols-3 row-cols-md-4 g-2 mb-3" id="diary-gallery">
+                        {% for entry in day.diary_entries.all %}
+                            {% if entry.images.all %}
+                                {% for img in entry.images.all %}
+                                <div class="col" id="image-{{ img.id }}">
+                                    <div class="card bg-dark border-secondary h-100 overflow-hidden group">
+                                        <img src="{{ img.image.url }}" class="card-img-top object-fit-cover shadow-sm" style="aspect-ratio: 1;" onclick="openLightbox('{{ img.image.url }}', '{{ day.date }}')">
+                                        <div class="position-absolute top-0 end-0 m-1 opacity-0 group-hover-opacity-100 transition-all">
+                                            <button type="button" class="btn btn-danger btn-xs rounded-circle shadow-sm" 
+                                                    hx-post="{% url 'travel:delete_diary_image' img.id %}" 
+                                                    hx-target="#image-{{ img.id }}" 
+                                                    hx-swap="outerHTML"
+                                                    hx-confirm="{% trans 'Bild wirklich löschen?' %}">
+                                                <i class="bi bi-trash"></i>
                                             </button>
-                                        </div>
-
-                                        <!-- EXIF Info Badge -->
-                                        {% if f.instance.exif_data %}
-                                        <div class="position-absolute bottom-0 start-0 m-1">
-                                            <button type="button" 
-                                                  class="btn btn-xs btn-dark bg-opacity-75 border-secondary text-white x-small d-flex align-items-center gap-1"
-                                                  onclick="showExifInfo('{{ f.instance.exif_data.date|escapejs }}', '{{ f.instance.exif_data.model|escapejs }}', '{{ f.instance.exif_data.width }}', '{{ f.instance.exif_data.height }}')"
-                                                  title="Klicken für Details">
-                                                <i class="bi bi-info-circle"></i>INFO
-                                            </button>
-                                        </div>
-                                        {% endif %}
-
-                                        <!-- Delete Button -->
-                                        <button type="button" 
-                                                hx-post="{% url 'travel:delete_diary_image' f.instance.id %}" 
-                                                hx-target="#image-{{ f.instance.id }}" 
-                                                hx-swap="outerHTML"
-                                                hx-confirm="Bild wirklich löschen?"
-                                                class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-2 p-1 d-flex align-items-center justify-content-center"
-                                                style="width: 24px; height: 24px;">
-                                            <i class="bi bi-trash small"></i>
-                                        </button>
-                                    </div>
-                                    <div class="card-footer p-2 border-top border-secondary bg-dark bg-opacity-25">
-                                        <div class="caption-input-container">
-                                            {{ f.caption }}
-                                            {{ f.id }}
-                                            {% if f.instance.is_primary %}
-                                                <div class="text-warning x-small fw-bold mt-1 text-uppercase text-center"><i class="bi bi-star-fill me-1"></i>Tagesbild</div>
-                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                                {% endfor %}
                             {% endif %}
                         {% endfor %}
                     </div>
 
-                    <!-- Preview Container -->
                     <div id="image-preview-container" class="row row-cols-3 row-cols-md-4 g-2 mb-3"></div>
 
-                    <!-- Simplified Multiple Upload -->
                     <div class="upload-zone border border-secondary border-dashed rounded-3 p-4 text-center mb-0" 
                          onclick="document.getElementById('image-upload').click()" 
                          style="cursor: pointer; background: rgba(255,255,255,0.02); transition: background 0.2s;">
-                        <input type="file" name="images" id="image-upload" multiple class="d-none" accept="image/*"
-                               onchange="previewImages(this)">
+                        <input type="file" name="images" id="image-upload" multiple class="d-none" accept="image/*" onchange="previewImages(this)">
                         <i class="bi bi-cloud-upload fs-2 text-secondary mb-2 d-block"></i>
                         <span class="d-block small fw-bold text-uppercase opacity-75">Weitere Fotos hinzufügen</span>
-                        <span class="d-block x-small text-secondary mt-1">Du kannst mehrere Bilder gleichzeitig aus deiner Galerie wählen</span>
                     </div>
                 </div>
             </div>
-
-            <script>
-                function previewImages(input) {
-                    const container = document.getElementById('image-preview-container');
-                    container.innerHTML = ''; // Clear old previews
-                    if (input.files) {
-                        Array.from(input.files).forEach(file => {
-                            const reader = new FileReader();
-                            reader.onload = function(e) {
-                                const div = document.createElement('div');
-                                div.className = 'col';
-                                div.innerHTML = `
-                                    <div class="card bg-dark border-warning h-100 overflow-hidden">
-                                        <img src="${e.target.result}" class="card-img-top object-fit-cover shadow-sm" style="aspect-ratio: 1; opacity: 0.6;">
-                                        <div class="position-absolute top-50 start-50 translate-middle">
-                                            <span class="badge bg-warning text-dark x-small">NEU</span>
-                                        </div>
-                                    </div>
-                                `;
-                                container.appendChild(div);
-                            }
-                            reader.readAsDataURL(file);
-                        });
-                    }
-                }
-
-                // --- Automated Offline & Safety Net Intercept Logic ---
-                document.getElementById('diary-form').addEventListener('submit', async function(e) {
-                    // Always intercept if offline - Zero configuration, just works.
-                    if (!navigator.onLine) {
-                        e.preventDefault();
-                        e.stopImmediatePropagation();
-                        
-                        showToast("📡 Verbindung unterbrochen – keine Sorge, dein Tagebuch-Eintrag ist lokal gesichert.", false);
-                        
-                        const form = e.target;
-                        const formData = new FormData(form);
-                        const dayId = "{{ day.id }}";
-                        const imageInput = document.getElementById('image-upload');
-                        
-                        let processedImages = [];
-                        
-                        // Process images if any
-                        if (imageInput.files.length > 0) {
-                            for (let file of imageInput.files) {
-                                try {
-                                    const resizedBlob = await resizeImage(file, 1280);
-                                    processedImages.push({
-                                        name: file.name,
-                                        type: file.type,
-                                        blob: resizedBlob
-                                    });
-                                } catch (err) {
-                                    console.error("Image resize failed", err);
-                                    processedImages.push({ name: file.name, type: file.type, blob: file });
-                                }
-                            }
-                        }
-                        
-                        await queueEntry(dayId, formData, processedImages);
-                        
-                        // Clear draft after successful queuing
-                        localStorage.removeItem('diary_draft_' + dayId);
-                        
-                        showToast("✓ Sicher verwahrt. Upload erfolgt automatisch bei Netzempfang.");
-                        closeModal();
-                    }
-                });
-
-                // --- Draft Recovery & Auto-Save ---
-                function saveDraft(dayId, text) {
-                    localStorage.setItem('diary_draft_' + dayId, text);
-                }
-
-                (function() {
-                    const dayId = "{{ day.id }}";
-                    const savedText = localStorage.getItem('diary_draft_' + dayId);
-                    const textarea = document.getElementById('diary-textarea');
-                    if (savedText && textarea && !textarea.value) {
-                        textarea.value = savedText;
-                        showToast("✨ Entwurf wiederhergestellt");
-                    }
-                })();
-
-                // Helper to resize images before offline storage
-                function resizeImage(file, maxSide) {
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.readAsDataURL(file);
-                        reader.onload = imgEvent => {
-                            const img = new Image();
-                            img.src = imgEvent.target.result;
-                            img.onload = () => {
-                                let width = img.width;
-                                let height = img.height;
-                                if (width > height) {
-                                    if (width > maxSide) { height *= maxSide / width; width = maxSide; }
-                                } else {
-                                    if (height > maxSide) { width *= maxSide / height; height = maxSide; }
-                                }
-                                const canvas = document.createElement('canvas');
-                                canvas.width = width; canvas.height = height;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(img, 0, 0, width, height);
-                                canvas.toBlob(resolve, 'image/jpeg', 0.8);
-                            };
-                            img.onerror = reject;
-                        };
-                        reader.onerror = reject;
-                    });
-                }
-            </script>
 
             <div class="modal-footer border-0 pt-4 gap-2">
                 <button type="submit" class="btn btn-premium-gold px-4">
@@ -290,3 +117,38 @@
         </form>
     </div>
 </div>
+
+<script>
+    function previewImages(input) {
+        const container = document.getElementById('image-preview-container');
+        container.innerHTML = '';
+        if (input.files) {
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'col';
+                    div.innerHTML = `
+                        <div class="card bg-dark border-warning h-100 overflow-hidden">
+                            <img src="${e.target.result}" class="card-img-top object-fit-cover shadow-sm" style="aspect-ratio: 1; opacity: 0.6;">
+                            <div class="position-absolute top-50 start-50 translate-middle">
+                                <span class="badge bg-warning text-dark x-small">NEU</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                }
+                reader.readAsDataURL(file);
+            });
+        }
+    }
+
+    function saveDraft(dayId, text) {
+        localStorage.setItem('diary_draft_' + dayId, text);
+        const status = document.getElementById('save-status');
+        if (status) {
+            status.classList.remove('opacity-0');
+            setTimeout(() => status.classList.add('opacity-0'), 2000);
+        }
+    }
+</script>

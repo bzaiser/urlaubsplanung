@@ -228,33 +228,34 @@
                 <div class="row g-2 mb-2">
                     <div class="col-12">
                         <label class="form-label small text-uppercase text-secondary">{% trans "Notizen / Details" %}</label>
-                        <div id="event-editor-container" style="height: 120px; background: rgba(255,255,255,0.03); color: #fff; border-color: rgba(255,255,255,0.1);">
-                            {{ form.notes.value|default:''|safe }}
+                        <div id="event-editor-container" style="height: 200px; background: rgba(255,255,255,0.03); color: #fff; border-color: rgba(255,255,255,0.1);">
+                            {{ form.notes.value|default:''|magic_links|safe }}
                         </div>
-                        <textarea name="notes" id="event-notes-textarea" class="d-none">{{ form.notes.value|default:'' }}</textarea>
+                        <textarea name="notes" id="event-notes-textarea" class="d-none">{{ form.notes.value|default:''|magic_links }}</textarea>
                     </div>
                 </div>
 
                 <style>
                     .ql-toolbar.ql-snow { border-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); }
-                    .ql-container.ql-snow { border-color: rgba(255,255,255,0.1); font-family: 'Inter', sans-serif; }
+                    .ql-container.ql-snow { border-color: rgba(255,255,255,0.1); font-family: 'Inter', sans-serif; font-size: 14px; }
                 </style>
 
                 <script>
                     (function() {
-                        var quill = new Quill('#event-editor-container', {
+                        var quillEvent = new Quill('#event-editor-container', {
                             theme: 'snow',
+                            placeholder: 'Zusätzliche Details...',
                             modules: {
                                 toolbar: [
                                     ['bold', 'italic', 'link', 'clean']
                                 ]
                             }
                         });
-                        quill.on('text-change', function() {
-                            document.getElementById('event-notes-textarea').value = quill.root.innerHTML;
+                        quillEvent.on('text-change', function() {
+                            document.getElementById('event-notes-textarea').value = quillEvent.root.innerHTML;
                         });
                         document.querySelector('#modal-container form').addEventListener('submit', function() {
-                            document.getElementById('event-notes-textarea').value = quill.root.innerHTML;
+                            document.getElementById('event-notes-textarea').value = quillEvent.root.innerHTML;
                         });
                     })();
                 </script>
