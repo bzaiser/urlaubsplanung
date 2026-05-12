@@ -215,14 +215,15 @@ class TrackingProcessor:
         duration_mins = int((end_time_local - start_time).total_seconds() / 60)
         
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
-        # Generate clean HTML links for the Rich Text Editor
-        display_name = place_name if place_name else "Ort"
-        title = f'<a href="{maps_link}" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline fw-bold">{display_name}</a>{alt_str}'
+        # Plain text title as requested
+        title = f"{place_name if place_name else 'Aufenthalt'}{alt_str}"
+        # Links only in the NOTES (for WYSIWYG editor)
+        notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
         
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='STAY',
             start_time=start_time, end_time=end_time_local, lat=avg_lat, lon=avg_lon,
-            notes=f"Aufenthalt von {start_time.strftime('%H:%M')} bis {end_time_local.strftime('%H:%M')}."
+            notes=notes
         )
 
     @classmethod
@@ -248,11 +249,13 @@ class TrackingProcessor:
         start_link = cls._get_maps_link(first.lat, first.lon)
         dest_link = cls._get_maps_link(last.lat, last.lon)
         
-        # Generate clean HTML links for the Rich Text Editor
-        title = f'{activity_type} von <a href="{start_link}" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline fw-bold">{start_short}</a> nach <a href="{dest_link}" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline fw-bold">{dest_short}</a>'
+        # Plain text title as requested
+        title = f"{activity_type} von {start_short} nach {dest_short}"
+        # Links only in the NOTES (for WYSIWYG editor)
+        notes = f'Von <a href="{start_link}" target="_blank"><b>{start_short}</b></a> nach <a href="{dest_link}" target="_blank"><b>{dest_short}</b></a>. Ca. {dist_km:.1f} km in {duration_mins} Minuten.'
         
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='TRANSPORT',
             start_time=start_time, end_time=end_time, lat=last.lat, lon=last.lon,
-            notes=f"Ca. {dist_km:.1f} km in {duration_mins} Minuten. (Schnitt: {avg_speed_kmh:.1f} km/h)"
+            notes=notes
         )
