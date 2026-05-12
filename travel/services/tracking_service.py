@@ -90,17 +90,12 @@ class TrackingProcessor:
     def _process_trip(cls, trip):
         points = TrackingPoint.objects.filter(trip=trip, status='RAW').order_by('timestamp_local')
         if not points.exists(): return 0
-        
-        # SELF-HEALING: Fix timezone and day matching for all raw points
         tf = TimezoneFinder()
         for p in points:
             updated = False
-            # 1. Force timezone calculation if missing
             if not p.timezone:
                 p.timezone = tf.timezone_at(lng=float(p.lon), lat=float(p.lat))
                 updated = True
-            
-            # 2. Recalculate local time based on UTC and Timezone (to fix DB conversion shifts)
             if p.timezone:
                 try:
                     local_tz = pytz.timezone(p.timezone)
@@ -109,27 +104,21 @@ class TrackingProcessor:
                         p.timestamp_local = new_local_time
                         updated = True
                 except: pass
-            
-            # 3. Correct the day assignment based on the fixed local time
             if p.timestamp_local:
                 correct_day = Day.objects.filter(trip=trip, date=p.timestamp_local.date()).first()
                 if p.day != correct_day:
                     p.day = correct_day
                     updated = True
-            
             if updated:
                 p.save(update_fields=['timezone', 'timestamp_local', 'day'])
-
         days_map = {}
         for p in points:
             if p.day_id:
                 days_map.setdefault(p.day_id, []).append(p)
-                
         suggestions_created = 0
         stay_dist = int(cls.get_setting(trip.user, 'tracking_stay_distance', '500'))
         stay_dur = int(cls.get_setting(trip.user, 'tracking_stay_duration', '20'))
         detect_transport = cls.get_setting(trip.user, 'tracking_detect_transport', '1') == '1'
-        
         for day_id, day_points in days_map.items():
             suggestions_created += cls._process_day_points(trip, day_id, day_points, stay_dist, stay_dur, detect_transport)
         return suggestions_created
@@ -224,12 +213,16 @@ class TrackingProcessor:
         place_name = cls.reverse_geocode(avg_lat, avg_lon)
         alt_str = f" ({int(avg_alt)}m)" if avg_alt > 50 else ""
         duration_mins = int((end_time_local - start_time).total_seconds() / 60)
-        title = f"{place_name}{alt_str}" if place_name else f"Aufenthalt{alt_str} ({duration_mins} Min)"
+        
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
+        # Generate clean HTML links for the Rich Text Editor
+        display_name = place_name if place_name else "Ort"
+        title = f'<a href="{maps_link}" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline fw-bold">{display_name}</a>{alt_str}'
+        
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='STAY',
             start_time=start_time, end_time=end_time_local, lat=avg_lat, lon=avg_lon,
-            notes=f"Aufenthalt in [{place_name if place_name else 'diesem Ort'}]({maps_link}){alt_str} von {start_time.strftime('%H:%M')} bis {end_time_local.strftime('%H:%M')}."
+            notes=f"Aufenthalt von {start_time.strftime('%H:%M')} bis {end_time_local.strftime('%H:%M')}."
         )
 
     @classmethod
@@ -254,9 +247,12 @@ class TrackingProcessor:
         dest_short = dest_name.split(",")[0] if dest_name else "Ziel"
         start_link = cls._get_maps_link(first.lat, first.lon)
         dest_link = cls._get_maps_link(last.lat, last.lon)
-        title = f"{activity_type} von {start_short} nach {dest_short}"
+        
+        # Generate clean HTML links for the Rich Text Editor
+        title = f'{activity_type} von <a href="{start_link}" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline fw-bold">{start_short}</a> nach <a href="{dest_link}" target="_blank" onclick="event.stopPropagation()" class="text-warning text-decoration-underline fw-bold">{dest_short}</a>'
+        
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='TRANSPORT',
             start_time=start_time, end_time=end_time, lat=last.lat, lon=last.lon,
-            notes=f"{activity_type}: von [{start_short}]({start_link}) nach [{dest_short}]({dest_link}). ca. {dist_km:.1f} km in {duration_mins} Minuten. (Schnitt: {avg_speed_kmh:.1f} km/h)"
+            notes=f"Ca. {dist_km:.1f} km in {duration_mins} Minuten. (Schnitt: {avg_speed_kmh:.1f} km/h)"
         )

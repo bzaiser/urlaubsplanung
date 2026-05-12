@@ -76,7 +76,7 @@
                                 </div>
                                 
                                 {% if day.diary_preview %}
-                                <p class="card-text text-light small mb-0 opacity-75">{{ day.diary_preview|magic_links }}</p>
+                                <p class="card-text text-light small mb-0 opacity-75">{{ day.diary_preview|safe }}</p>
                                 {% else %}
                                 <p class="card-text text-secondary x-small mb-0 italic opacity-50">{% trans "Kein Tagebucheintrag vorhanden..." %}</p>
                                 {% endif %}
@@ -125,7 +125,7 @@
                                             <span class="small">
                                                 {% if event.type == 'FLIGHT' %}✈️{% elif event.type == 'HOTEL' %}🏨{% elif event.type == 'CAMPING' %}⛺{% elif event.type == 'PITCH' %}🚐📍{% elif event.type == 'CAMPER' %}🚐{% elif event.type == 'BUNGALOW' %}🏡{% elif event.type == 'CAR' %}🚗{% elif event.type == 'TRAIN' %}🚆{% elif event.type == 'BUS' %}🚌{% elif event.type == 'FERRY' %}⛴️{% elif event.type == 'RESTAURANT' %}🍽️{% elif event.type == 'ACTIVITY' %}🎒{% elif event.type == 'RENTAL_CAR' %}🔑{% elif event.type == 'METRO' %}🚇{% elif event.type == 'TRAM' %}🚋{% elif event.type == 'SCOOTER' %}🛵{% elif event.type == 'TAXI' %}🚕{% elif event.type == 'BOAT' %}🛥️{% elif event.type == 'FOOD' %}🍕{% elif event.type == 'FEE' %}🎟️{% elif event.type == 'RENTAL' %}🛴{% else %}🔹{% endif %}
                                             </span>
-                                            <span class="small text-truncate flex-grow-1" title="{{ event.title }}">{{ event.title|magic_links }}</span>
+                                            <span class="small text-truncate flex-grow-1" title="{{ event.title }}">{{ event.title|safe }}</span>
                                         </div>
                                     </li>
                                     {% empty %}

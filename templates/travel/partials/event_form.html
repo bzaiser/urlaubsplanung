@@ -224,13 +224,40 @@
                     </div>
                 </div>
 
-                <!-- Notes -->
+                <!-- Notes with Quill -->
                 <div class="row g-2 mb-2">
                     <div class="col-12">
                         <label class="form-label small text-uppercase text-secondary">{% trans "Notizen / Details" %}</label>
-                        <textarea name="notes" rows="2" class="form-control form-control-sm">{{ form.notes.value|default:'' }}</textarea>
+                        <div id="event-editor-container" style="height: 120px; background: rgba(255,255,255,0.03); color: #fff; border-color: rgba(255,255,255,0.1);">
+                            {{ form.notes.value|default:''|safe }}
+                        </div>
+                        <textarea name="notes" id="event-notes-textarea" class="d-none">{{ form.notes.value|default:'' }}</textarea>
                     </div>
                 </div>
+
+                <style>
+                    .ql-toolbar.ql-snow { border-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); }
+                    .ql-container.ql-snow { border-color: rgba(255,255,255,0.1); font-family: 'Inter', sans-serif; }
+                </style>
+
+                <script>
+                    (function() {
+                        var quill = new Quill('#event-editor-container', {
+                            theme: 'snow',
+                            modules: {
+                                toolbar: [
+                                    ['bold', 'italic', 'link', 'clean']
+                                ]
+                            }
+                        });
+                        quill.on('text-change', function() {
+                            document.getElementById('event-notes-textarea').value = quill.root.innerHTML;
+                        });
+                        document.querySelector('#modal-container form').addEventListener('submit', function() {
+                            document.getElementById('event-notes-textarea').value = quill.root.innerHTML;
+                        });
+                    })();
+                </script>
 
                 <!-- Media & Files: Multi-Attachment System -->
                 <div class="border border-secondary border-dashed rounded-3 p-3 mb-2 bg-black bg-opacity-25">

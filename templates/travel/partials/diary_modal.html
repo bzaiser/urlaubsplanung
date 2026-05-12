@@ -32,10 +32,58 @@
             
             <div class="modal-body">
                 <!-- Text Area -->
-                <div class="mb-3">
-                    <label class="form-label small text-uppercase text-warning fw-bold">Meine Erlebnisse</label>
-                    <textarea name="text" id="diary-textarea" class="form-control" rows="10" placeholder="Was hast du heute Schönes erlebt?" oninput="saveDraft('{{ day.id }}', this.value)">{{ form.text.value|default:"" }}</textarea>
-                </div>
+                        <div class="mb-3">
+                        <label class="form-label d-flex justify-content-between align-items-center">
+                            <span class="text-secondary small text-uppercase fw-bold">{% trans "Was hast du erlebt?" %}</span>
+                            <span id="save-status" class="x-small text-success opacity-0 transition-all">✓ {% trans "Gespeichert" %}</span>
+                        </label>
+                        
+                        <!-- Rich Text Editor Container -->
+                        <div id="diary-editor-container" style="height: 300px; background: rgba(255,255,255,0.03); color: #fff; border-color: rgba(255,255,255,0.1);">
+                            {{ day.diary_entries.first.text|default:''|safe }}
+                        </div>
+                        
+                        <!-- Hidden Textarea for Form Submission -->
+                        <textarea name="text" id="diary-textarea" class="d-none">{{ day.diary_entries.first.text|default:'' }}</textarea>
+                    </div>
+
+                    <style>
+                        /* Dark Mode for Quill */
+                        .ql-toolbar.ql-snow { border-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); }
+                        .ql-container.ql-snow { border-color: rgba(255,255,255,0.1); font-family: 'Inter', sans-serif; font-size: 14px; }
+                        .ql-snow .ql-stroke { stroke: #adb5bd; }
+                        .ql-snow .ql-fill { fill: #adb5bd; }
+                        .ql-snow .ql-picker { color: #adb5bd; }
+                        .ql-editor.ql-blank::before { color: rgba(255,255,255,0.3); font-style: normal; }
+                    </style>
+
+                    <script>
+                        (function() {
+                            var quill = new Quill('#diary-editor-container', {
+                                theme: 'snow',
+                                placeholder: '{% trans "Schreibe hier deine Erlebnisse auf..." %}',
+                                modules: {
+                                    toolbar: [
+                                        ['bold', 'italic', 'underline'],
+                                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                        ['link', 'clean']
+                                    ]
+                                }
+                            });
+
+                            // Sync Quill to Textarea on every change
+                            quill.on('text-change', function() {
+                                document.getElementById('diary-textarea').value = quill.root.innerHTML;
+                                // Save draft
+                                saveDraft("{{ day.id }}", quill.root.innerHTML);
+                            });
+
+                            // Re-sync before form submit (just in case)
+                            document.getElementById('diary-form').addEventListener('submit', function() {
+                                document.getElementById('diary-textarea').value = quill.root.innerHTML;
+                            });
+                        })();
+                    </script>
 
                 <!-- Gallery Section -->
                 <div class="mb-3">
