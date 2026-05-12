@@ -2056,7 +2056,7 @@ def tracking_ui_view(request):
                     # Create Event (Action)
                     event_type = 'ACTIVITY' if sug.suggestion_type == 'STAY' else 'OTHER'
                     if 'Fahrt' in sug.title:
-                        event_type = 'CAR' # Default to car for transport
+                        event_type = 'CAR'
                     
                     from travel.models import Event
                     Event.objects.create(
@@ -2065,7 +2065,10 @@ def tracking_ui_view(request):
                         type=event_type,
                         time=sug.start_time.time() if sug.start_time else None,
                         end_time=sug.end_time.time() if sug.end_time else None,
-                        location=sug.title if sug.suggestion_type == 'STAY' else "",
+                        location=f"{sug.lat}, {sug.lon}" if sug.lat else "",
+                        latitude=sug.lat,
+                        longitude=sug.lon,
+                        is_geocoded=True if sug.lat else False,
                         notes=f"{sug.notes}\nGoogle Maps: https://www.google.com/maps/search/?api=1&query={sug.lat},{sug.lon}" if sug.lat else sug.notes
                     )
 
