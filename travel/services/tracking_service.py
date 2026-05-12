@@ -6,6 +6,7 @@ from datetime import timedelta
 from django.utils import timezone
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
+from timezonefinder import TimezoneFinder
 from travel.models import TrackingPoint, TrackingSuggestion, Trip, GlobalSetting, Day
 
 logger = logging.getLogger(__name__)
@@ -31,45 +32,26 @@ class TrackingProcessor:
             if location:
                 raw = location.raw
                 address = raw.get('address', {})
-                
-                # OUTDOOR & POI PRIORITY
-                poi_keys = [
-                    # Specific POIs
-                    'amenity', 'tourism', 'historic', 'shop', 'leisure', 'office', 'craft',
-                    # Outdoor & Natural features (High Priority for 'Pampa')
-                    'natural', 'peak', 'volcano', 'cave_entrance', 'water', 'beach', 
-                    'spring', 'viewpoint', 'rock', 'cliff', 'ridge', 'valley',
-                    'national_park', 'nature_reserve', 'park', 'forest', 'wood',
-                    # General POIs
-                    'restaurant', 'cafe', 'hotel', 'museum', 'attraction',
-                    'castle', 'monument', 'marina', 'pier', 'supermarket', 'mall'
-                ]
-                
+                poi_keys = ['amenity', 'tourism', 'historic', 'shop', 'leisure', 'office', 'craft', 'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 'castle', 'monument', 'marina', 'pier', 'park', 'supermarket', 'mall', 'natural', 'peak', 'volcano', 'cave_entrance', 'water', 'beach', 'spring', 'rock', 'cliff', 'ridge', 'valley', 'national_park', 'nature_reserve', 'forest', 'wood']
                 name = None
                 for key in poi_keys:
                     if key in address:
                         name = address[key]
                         break
-                
-                # Fallback for hiking trails/paths if no POI found
                 if not name:
                     if 'road' in address and address.get('road_type') in ['footway', 'path', 'track']:
                         name = f"Wanderweg {address['road']}" if address['road'] != 'unnamed' else "Wanderweg"
-                
                 suburb = address.get('suburb') or address.get('city_district') or address.get('neighbourhood')
                 road = address.get('road')
                 city = address.get('city') or address.get('town') or address.get('village')
                 admin_name = address.get('municipality') or address.get('county')
-                
                 blacklist = [r"Municipal Unit of", r"Regional Unit of", r"Gemeinde", r"Präfektur", r"Regionalbezirk", r"Dimos", r"Decentralized Administration"]
-                
                 parts = []
                 if name: parts.append(name)
                 if road and road != name: parts.append(road)
                 if suburb: parts.append(suburb)
                 if city: parts.append(city)
                 if not parts and admin_name: parts.append(admin_name)
-                
                 clean_parts = []
                 for p in parts:
                     p_clean = str(p)
@@ -82,10 +64,7 @@ class TrackingProcessor:
                                 is_duplicate = True
                                 break
                         if not is_duplicate: clean_parts.append(p_clean)
-                
-                if clean_parts:
-                    return ", ".join(clean_parts[:2])
-                
+                if clean_parts: return ", ".join(clean_parts[:2])
                 return location.address.split(",")[0]
         except Exception as e:
             logger.error(f"Geocoding error: {e}")
@@ -111,18 +90,46 @@ class TrackingProcessor:
     def _process_trip(cls, trip):
         points = TrackingPoint.objects.filter(trip=trip, status='RAW').order_by('timestamp_local')
         if not points.exists(): return 0
+        
+        # SELF-HEALING: Fix timezone and day matching for all raw points
+        tf = TimezoneFinder()
         for p in points:
-            if not p.day_id:
-                p.day = Day.objects.filter(trip=trip, date=p.timestamp_local.date()).first()
-                if p.day: p.save(update_fields=['day'])
+            updated = False
+            # 1. Force timezone calculation if missing
+            if not p.timezone:
+                p.timezone = tf.timezone_at(lng=float(p.lon), lat=float(p.lat))
+                updated = True
+            
+            # 2. Recalculate local time based on UTC and Timezone (to fix DB conversion shifts)
+            if p.timezone:
+                try:
+                    local_tz = pytz.timezone(p.timezone)
+                    new_local_time = p.timestamp_utc.astimezone(local_tz)
+                    if p.timestamp_local != new_local_time:
+                        p.timestamp_local = new_local_time
+                        updated = True
+                except: pass
+            
+            # 3. Correct the day assignment based on the fixed local time
+            if p.timestamp_local:
+                correct_day = Day.objects.filter(trip=trip, date=p.timestamp_local.date()).first()
+                if p.day != correct_day:
+                    p.day = correct_day
+                    updated = True
+            
+            if updated:
+                p.save(update_fields=['timezone', 'timestamp_local', 'day'])
+
         days_map = {}
         for p in points:
             if p.day_id:
                 days_map.setdefault(p.day_id, []).append(p)
+                
         suggestions_created = 0
         stay_dist = int(cls.get_setting(trip.user, 'tracking_stay_distance', '500'))
         stay_dur = int(cls.get_setting(trip.user, 'tracking_stay_duration', '20'))
         detect_transport = cls.get_setting(trip.user, 'tracking_detect_transport', '1') == '1'
+        
         for day_id, day_points in days_map.items():
             suggestions_created += cls._process_day_points(trip, day_id, day_points, stay_dist, stay_dur, detect_transport)
         return suggestions_created
@@ -214,14 +221,10 @@ class TrackingProcessor:
         avg_lat = sum(float(p.lat) for p in points) / len(points)
         avg_lon = sum(float(p.lon) for p in points) / len(points)
         avg_alt = sum(int(p.alt) if p.alt else 0 for p in points) / len(points)
-        
         place_name = cls.reverse_geocode(avg_lat, avg_lon)
-        
-        # Add altitude if it's significant (e.g. > 50m)
         alt_str = f" ({int(avg_alt)}m)" if avg_alt > 50 else ""
         duration_mins = int((end_time_local - start_time).total_seconds() / 60)
         title = f"{place_name}{alt_str}" if place_name else f"Aufenthalt{alt_str} ({duration_mins} Min)"
-        
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='STAY',
@@ -241,21 +244,16 @@ class TrackingProcessor:
         dist_km = 0
         for i in range(1, len(points)):
             dist_km += geodesic((points[i-1].lat, points[i-1].lon), (points[i].lat, points[i].lon)).kilometers
-        
         avg_speed_kmh = (dist_km / (duration_mins / 60.0))
         if avg_speed_kmh < 7: activity_type = "Spaziergang / Wanderung"
         elif avg_speed_kmh < 15: activity_type = "Jogging / Radtour"
         else: activity_type = "Fahrt"
-
         start_name = cls.reverse_geocode(first.lat, first.lon)
         dest_name = cls.reverse_geocode(last.lat, last.lon)
-        
         start_short = start_name.split(",")[0] if start_name else "Start"
         dest_short = dest_name.split(",")[0] if dest_name else "Ziel"
-        
         start_link = cls._get_maps_link(first.lat, first.lon)
         dest_link = cls._get_maps_link(last.lat, last.lon)
-        
         title = f"{activity_type} von {start_short} nach {dest_short}"
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='TRANSPORT',
