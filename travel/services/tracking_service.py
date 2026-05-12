@@ -1,5 +1,6 @@
 import logging
 import time
+import re
 from datetime import timedelta
 from django.utils import timezone
 from geopy.distance import geodesic
@@ -21,31 +22,68 @@ class TrackingProcessor:
     def reverse_geocode(cls, lat, lon):
         try:
             geolocator = Nominatim(user_agent="urlaubsplanung_app")
+            # Force language to German/English
             location = geolocator.reverse((lat, lon), timeout=10, language='de,en')
             if location:
-                address = location.raw.get('address', {})
+                raw = location.raw
+                address = raw.get('address', {})
+                
+                # 1. Try to find a real name (POI)
                 poi_keys = [
                     'amenity', 'tourism', 'historic', 'shop', 'leisure', 'office', 'craft',
                     'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 
                     'castle', 'monument', 'marina', 'pier', 'park', 'supermarket', 'mall'
                 ]
+                
                 name = None
                 for key in poi_keys:
                     if key in address:
                         name = address[key]
                         break
-                city = address.get('city') or address.get('town') or address.get('village')
+                
+                # 2. Get specific location parts
+                suburb = address.get('suburb') or address.get('city_district') or address.get('neighbourhood')
                 road = address.get('road')
+                city = address.get('city') or address.get('town') or address.get('village')
+                
+                # 3. Handle administrative names as last resort
+                # If we only have administrative names, they often contain "Municipal Unit" etc.
+                admin_name = address.get('municipality') or address.get('county')
+                
+                # 4. Filter out bureaucratic terms
+                blacklist = [
+                    r"Municipal Unit of", r"Regional Unit of", r"Gemeinde", r"Präfektur", 
+                    r"Regionalbezirk", r"Dimos", r"Decentralized Administration"
+                ]
+                
                 parts = []
                 if name: parts.append(name)
                 if road: parts.append(road)
+                if suburb: parts.append(suburb)
                 if city: parts.append(city)
-                if parts:
-                    res = []
-                    for p in parts:
-                        if p not in res: res.append(p)
-                    return ", ".join(res)
-                return location.address
+                if not parts and admin_name: parts.append(admin_name)
+                
+                clean_parts = []
+                for p in parts:
+                    p_clean = str(p)
+                    for pattern in blacklist:
+                        p_clean = re.sub(pattern, "", p_clean, flags=re.IGNORECASE).strip()
+                    
+                    # Deduplicate and avoid adding empty strings
+                    if p_clean and p_clean not in clean_parts:
+                        # Avoid adding "Pythagoreio" if "Pythagorio" is already there (fuzzy)
+                        is_duplicate = False
+                        for existing in clean_parts:
+                            if p_clean.lower() in existing.lower() or existing.lower() in p_clean.lower():
+                                is_duplicate = True
+                                break
+                        if not is_duplicate:
+                            clean_parts.append(p_clean)
+                
+                if clean_parts:
+                    return ", ".join(clean_parts[:2]) # Max 2 parts for brevity
+                
+                return location.address.split(",")[0]
         except Exception as e:
             logger.error(f"Geocoding error: {e}")
         return None
@@ -96,13 +134,9 @@ class TrackingProcessor:
 
         for point in points:
             processed_ids.append(point.id)
-            
-            # 10m Downsampling: Skip points that are too close to the previous one
-            # (Only during movement, we keep all points in clusters for duration accuracy)
             if last_recorded_point and not current_cluster:
                 move_dist = geodesic((last_recorded_point.lat, last_recorded_point.lon), (point.lat, point.lon)).meters
-                if move_dist < 10:
-                    continue
+                if move_dist < 10: continue
             
             if not current_cluster:
                 current_cluster.append(point)
@@ -118,7 +152,6 @@ class TrackingProcessor:
                 last_point = current_cluster[-1]
                 time_gap = point.timestamp_local - last_point.timestamp_local
                 time_spent_in_cluster = last_point.timestamp_local - first_point.timestamp_local
-                
                 is_stay = False
                 end_time = last_point.timestamp_local
                 if time_gap >= timedelta(minutes=stay_dur):
@@ -141,7 +174,6 @@ class TrackingProcessor:
                 else:
                     transport_points.extend(current_cluster)
                     current_cluster = [point]
-            
             last_recorded_point = point
                 
         if current_cluster:
@@ -164,7 +196,6 @@ class TrackingProcessor:
                         cls._create_transport_suggestion(trip, day_id, transport_points)
                         suggestions_created += 1
         
-        # BULK UPDATE: Set all points of this day to PROCESSED at once
         TrackingPoint.objects.filter(id__in=processed_ids).update(status='PROCESSED')
         return suggestions_created
 
@@ -192,24 +223,19 @@ class TrackingProcessor:
         last = points[-1]
         duration_mins = int((last.timestamp_local - first.timestamp_local).total_seconds() / 60)
         if duration_mins <= 0: duration_mins = 1
-        
         dist_km = 0
         for i in range(1, len(points)):
             dist_km += geodesic((points[i-1].lat, points[i-1].lon), (points[i].lat, points[i].lon)).kilometers
         
-        # SPEED DETECTION
         avg_speed_kmh = (dist_km / (duration_mins / 60.0))
-        
-        if avg_speed_kmh < 7:
-            activity_type = "Spaziergang / Wanderung"
-        elif avg_speed_kmh < 15:
-            activity_type = "Jogging / Radtour"
-        else:
-            activity_type = "Fahrt"
+        if avg_speed_kmh < 7: activity_type = "Spaziergang / Wanderung"
+        elif avg_speed_kmh < 15: activity_type = "Jogging / Radtour"
+        else: activity_type = "Fahrt"
 
         dest_name = cls.reverse_geocode(last.lat, last.lon)
         if dest_name:
-            title = f"{activity_type} nach {dest_name.split(',')[0]}"
+            dest_short = dest_name.split(",")[0]
+            title = f"{activity_type} nach {dest_short}"
         else:
             title = f"{activity_type} ({dist_km:.1f} km)"
         
