@@ -27,44 +27,55 @@ class TrackingProcessor:
     @classmethod
     def reverse_geocode(cls, lat, lon):
         try:
-            geolocator = Nominatim(user_agent="urlaubsplanung_app")
-            location = geolocator.reverse((lat, lon), timeout=10, language='de,en')
+            geolocator = Nominatim(user_agent="urlaubsplanung_app_v2")
+            # We use zoom=18 to get high precision (POIs)
+            location = geolocator.reverse((lat, lon), timeout=10, language='de,en', zoom=18)
             if location:
                 raw = location.raw
                 address = raw.get('address', {})
-                poi_keys = ['amenity', 'tourism', 'historic', 'shop', 'leisure', 'office', 'craft', 'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 'castle', 'monument', 'marina', 'pier', 'park', 'supermarket', 'mall', 'natural', 'peak', 'volcano', 'cave_entrance', 'water', 'beach', 'spring', 'rock', 'cliff', 'ridge', 'valley', 'national_park', 'nature_reserve', 'forest', 'wood']
+                
+                # 1. Check for specific name in the raw display_name or address
+                # Nominatim often puts the POI name in specific keys
+                poi_keys = [
+                    'beach', 'tourism', 'amenity', 'leisure', 'historic', 'shop', 
+                    'restaurant', 'cafe', 'hotel', 'museum', 'attraction', 'viewpoint', 
+                    'castle', 'monument', 'marina', 'pier', 'park', 'natural', 'peak', 
+                    'village', 'hamlet'
+                ]
+                
                 name = None
+                # First check: Is there a specific POI name?
                 for key in poi_keys:
                     if key in address:
                         name = address[key]
                         break
+                
+                # Second check: If no specific POI, maybe the first part of display_name is the POI
                 if not name:
-                    if 'road' in address and address.get('road_type') in ['footway', 'path', 'track']:
-                        name = f"Wanderweg {address['road']}" if address['road'] != 'unnamed' else "Wanderweg"
-                suburb = address.get('suburb') or address.get('city_district') or address.get('neighbourhood')
-                road = address.get('road')
+                    display_parts = location.address.split(",")
+                    if len(display_parts) > 0:
+                        potential_name = display_parts[0].strip()
+                        # If the potential name is NOT a city/town we already know
+                        city_parts = [address.get('city'), address.get('town'), address.get('village'), address.get('county')]
+                        if potential_name not in [p for p in city_parts if p]:
+                            name = potential_name
+
+                # Clean up city names that are too broad (like "Vathy" for "Samos")
                 city = address.get('city') or address.get('town') or address.get('village')
-                admin_name = address.get('municipality') or address.get('county')
-                blacklist = [r"Municipal Unit of", r"Regional Unit of", r"Gemeinde", r"Präfektur", r"Regionalbezirk", r"Dimos", r"Decentralized Administration"]
+                road = address.get('road')
+                suburb = address.get('suburb') or address.get('city_district')
+                
                 parts = []
                 if name: parts.append(name)
                 if road and road != name: parts.append(road)
-                if suburb: parts.append(suburb)
-                if city: parts.append(city)
-                if not parts and admin_name: parts.append(admin_name)
-                clean_parts = []
-                for p in parts:
-                    p_clean = str(p)
-                    for pattern in blacklist:
-                        p_clean = re.sub(pattern, "", p_clean, flags=re.IGNORECASE).strip()
-                    if p_clean and p_clean not in clean_parts:
-                        is_duplicate = False
-                        for existing in clean_parts:
-                            if p_clean.lower() in existing.lower() or existing.lower() in p_clean.lower():
-                                is_duplicate = True
-                                break
-                        if not is_duplicate: clean_parts.append(p_clean)
-                if clean_parts: return ", ".join(clean_parts[:2])
+                if city and city != name: parts.append(city)
+                
+                # Final filtering: If we have a POI name, we often don't want the city if it's broad
+                if name and city and name != city:
+                    # If POI is found, we only show POI + Road/City if it's not too long
+                    return ", ".join(parts[:2])
+                
+                if parts: return ", ".join(parts[:2])
                 return location.address.split(",")[0]
         except Exception as e:
             logger.error(f"Geocoding error: {e}")
