@@ -16,6 +16,7 @@ class TripAdmin(admin.ModelAdmin):
 class DayAdmin(admin.ModelAdmin):
     list_display = ('date', 'get_user', 'location', 'trip')
     list_filter = ('trip__user', 'date')
+    search_fields = ('date', 'location')
     
     def get_user(self, obj):
         return obj.trip.user
@@ -87,10 +88,17 @@ class ChecklistItemTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(TrackingPoint)
 class TrackingPointAdmin(admin.ModelAdmin):
-    list_display = ('timestamp_local', 'user', 'trip', 'day', 'status', 'lat', 'lon', 'speed')
-    list_filter = ('user', 'status', 'trip', 'day')
+    list_display = ('timestamp_local', 'user', 'trip', 'get_day_short', 'status', 'lat', 'lon', 'speed')
+    list_filter = ('user', 'status', 'trip', 'day__date')
     search_fields = ('raw_data',)
     readonly_fields = ('created_at',)
+    autocomplete_fields = ['day', 'trip']
+
+    def get_day_short(self, obj):
+        if obj.day:
+            return obj.day.date.strftime('%d.%m.')
+        return "-"
+    get_day_short.short_description = _("Tag")
 
 @admin.register(TrackingSuggestion)
 class TrackingSuggestionAdmin(admin.ModelAdmin):
