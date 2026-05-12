@@ -87,8 +87,8 @@ class ChecklistItemTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(TrackingPoint)
 class TrackingPointAdmin(admin.ModelAdmin):
-    list_display = ('timestamp_local', 'user', 'trip', 'status', 'lat', 'lon', 'speed')
-    list_filter = ('user', 'status', 'trip')
+    list_display = ('timestamp_local', 'user', 'trip', 'day', 'status', 'lat', 'lon', 'speed')
+    list_filter = ('user', 'status', 'trip', 'day')
     search_fields = ('raw_data',)
     readonly_fields = ('created_at',)
 
