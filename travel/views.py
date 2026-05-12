@@ -2053,21 +2053,27 @@ def tracking_ui_view(request):
                         defaults={'text': ''}
                     )
                     
-                    # Append to diary
-                    time_str = ""
-                    if sug.start_time and sug.end_time:
-                        time_str = f"[{sug.start_time.strftime('%H:%M')} - {sug.end_time.strftime('%H:%M')}] "
-                        
-                    append_text = f"\n\n--- Automatische Ergänzung ---\n{time_str}{sug.title}"
-                    if sug.notes:
-                        append_text += f"\n{sug.notes}"
-                    if sug.lat and sug.lon:
-                        append_text += f"\nLink: https://www.google.com/maps/search/?api=1&query={sug.lat},{sug.lon}"
-                        
+                    # Create Event (Action)
+                    event_type = 'ACTIVITY' if sug.suggestion_type == 'STAY' else 'OTHER'
+                    
+                    from travel.models import Event
+                    Event.objects.create(
+                        day=sug.day,
+                        title=sug.title,
+                        type=event_type,
+                        time=sug.start_time.time() if sug.start_time else None,
+                        end_time=sug.end_time.time() if sug.end_time else None,
+                        location=f"{sug.lat}, {sug.lon}" if sug.lat else "",
+                        notes=f"{sug.notes}\nLink: https://www.google.com/maps/search/?api=1&query={sug.lat},{sug.lon}" if sug.lat else sug.notes
+                    )
+
+                    # Simple summary for Diary (no technical logs)
+                    summary = f"\n- {sug.title}"
                     if not diary.text:
-                        diary.text = append_text.strip()
+                        diary.text = summary.strip()
                     else:
-                        diary.text += append_text
+                        if summary.strip() not in diary.text:
+                            diary.text += summary
                         
                     diary.save()
                     
@@ -2076,7 +2082,7 @@ def tracking_ui_view(request):
                     sug.save()
                     count += 1
                     
-                messages.success(request, f"{count} Vorschläge wurden ins Tagebuch übernommen.")
+                messages.success(request, f"{count} Vorschläge wurden als Aktionen (Events) importiert.")
                 
             return redirect('travel:tracking_ui')
             
