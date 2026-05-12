@@ -998,6 +998,12 @@ def settings_modal(request):
     food_out_m = get_setting('food_out_med', '40')
     food_out_h = get_setting('food_out_high', '70')
 
+    # Tracking Settings
+    trk_dist = get_setting('tracking_stay_distance', '150', user=request.user)
+    trk_dur = get_setting('tracking_stay_duration', '20', user=request.user)
+    trk_clean = get_setting('tracking_cleanup_days', '30', user=request.user)
+    trk_trans = get_setting('tracking_detect_transport', '1', user=request.user)
+
     
     if request.method == 'POST':
         # Vehicles & Profile update
@@ -1007,7 +1013,8 @@ def settings_modal(request):
             'user_home_city', 'user_home_address', 'default_persons_count', 'default_persons_ages',
             'diesel_price', 'petrol_price',
             'food_self_low', 'food_self_med', 'food_self_high',
-            'food_out_low', 'food_out_med', 'food_out_high'
+            'food_out_low', 'food_out_med', 'food_out_high',
+            'tracking_stay_distance', 'tracking_stay_duration', 'tracking_cleanup_days', 'tracking_detect_transport'
         ]:
             val = request.POST.get(k, '').strip()
             GlobalSetting.objects.update_or_create(key=k, user=request.user, defaults={'value': val})
@@ -1030,6 +1037,8 @@ def settings_modal(request):
         'diesel_price': diesel_price, 'petrol_price': petrol_price,
         'food_self_low': food_self_l, 'food_self_med': food_self_m, 'food_self_high': food_self_h,
         'food_out_low': food_out_l, 'food_out_med': food_out_m, 'food_out_high': food_out_h,
+        'tracking_stay_distance': trk_dist, 'tracking_stay_duration': trk_dur,
+        'tracking_cleanup_days': trk_clean, 'tracking_detect_transport': trk_trans,
     })
 
 @login_required
