@@ -90,10 +90,41 @@ class TrackingProcessor:
                 if city and city not in name_parts: name_parts.append(city)
         except: pass
 
-        final_name = ", ".join(name_parts[:3]) if name_parts else "Unbekannter Ort"
+        # Cleanup and Deduplicate
+        clean_parts = []
+        # Radical administrative cleanup
+        admin_patterns = [
+            r"Municipal Unit of\s*", r"Regional Unit of\s*", r"Decentralized Administration of\s*", 
+            r"Prefecture of\s*", r"Region of\s*", r"Community of\s*"
+        ]
+        
+        for p in name_parts:
+            p_clean = str(p)
+            for pattern in admin_patterns:
+                p_clean = re.sub(pattern, "", p_clean, flags=re.IGNORECASE).strip()
+            
+            # Simple Transliteration for Greek characters
+            if any(ord(c) > 127 for c in p_clean):
+                p_clean = cls._transliterate_greek(p_clean)
+            
+            if p_clean and p_clean not in clean_parts:
+                if not any(p_clean.lower() in existing.lower() for existing in clean_parts):
+                    clean_parts.append(p_clean)
+
+        final_name = ", ".join(clean_parts[:3]) if clean_parts else "Unbekannter Ort"
         result = {'name': final_name, 'category': category}
         cls._geocode_cache[cache_key] = result
         return result
+
+    @classmethod
+    def _transliterate_greek(cls, text):
+        """Simple mapping to transliterate Greek characters to Latin if needed."""
+        greek_to_latin = {
+            'Α': 'A', 'Β': 'B', 'Γ': 'G', 'Δ': 'D', 'Ε': 'E', 'Ζ': 'Z', 'Η': 'H', 'Θ': 'Th', 'Ι': 'I', 'Κ': 'K', 'Λ': 'L', 'Μ': 'M', 'Ν': 'N', 'Ξ': 'X', 'Ο': 'O', 'Π': 'P', 'Ρ': 'R', 'Σ': 'S', 'Τ': 'T', 'Υ': 'Y', 'Φ': 'Ph', 'Χ': 'Ch', 'Ψ': 'Ps', 'Ω': 'O',
+            'α': 'a', 'β': 'b', 'γ': 'g', 'δ': 'd', 'ε': 'e', 'ζ': 'z', 'η': 'h', 'θ': 'th', 'ι': 'i', 'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'n', 'ξ': 'x', 'ο': 'o', 'π': 'p', 'ρ': 'r', 'σ': 's', 'τ': 't', 'υ': 'y', 'φ': 'ph', 'χ': 'ch', 'ψ': 'ps', 'ω': 'o', 'ς': 's',
+            'ά': 'a', 'έ': 'e', 'ή': 'h', 'ί': 'i', 'ό': 'o', 'ύ': 'y', 'ώ': 'o', 'ϊ': 'i', 'ϋ': 'y', 'ΐ': 'i', 'ΰ': 'y'
+        }
+        return "".join(greek_to_latin.get(c, c) for c in text)
 
     @classmethod
     def process_raw_points(cls):
@@ -414,7 +445,10 @@ class TrackingProcessor:
         else:
             title = place_name
         
-        notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
+        from django.utils import timezone as django_timezone
+        notes_start = django_timezone.localtime(start_time).strftime("%H:%M")
+        notes_end = django_timezone.localtime(end_time_local).strftime("%H:%M")
+        notes = f'Aufenthalt von {notes_start} bis {notes_end} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
 
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, 
