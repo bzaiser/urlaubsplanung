@@ -12,7 +12,8 @@ from travel.models import TrackingPoint, TrackingSuggestion, Trip, GlobalSetting
 logger = logging.getLogger(__name__)
 
 class TrackingProcessor:
-    
+    _geocode_cache = {}
+
     @classmethod
     def get_setting(cls, user, key, default):
         s = GlobalSetting.objects.filter(user=user, key=key).first()
@@ -25,15 +26,25 @@ class TrackingProcessor:
         return f"https://www.google.com/maps/search/?api=1&query={float(lat):.6f},{float(lon):.6f}"
 
     @classmethod
+    def _clear_cache(cls):
+        cls._geocode_cache = {}
+
+    @classmethod
     def reverse_geocode(cls, lat, lon):
         from geopy.geocoders import Photon, Nominatim
+        
+        # Cache check (Round to 5 decimals ~1 meter precision)
+        cache_key = (round(float(lat), 5), round(float(lon), 5))
+        if cache_key in cls._geocode_cache:
+            return cls._geocode_cache[cache_key]
+
         name_parts = []
         category = 'OTHER'
         
         # 1. Try Nominatim for reliable administrative address and category
         try:
             nom = Nominatim(user_agent="urlaubsplanung_app_v4")
-            loc_nom = nom.reverse((lat, lon), timeout=5, language='de,en', zoom=18)
+            loc_nom = nom.reverse((lat, lon), timeout=2, language='de,en', zoom=18)
             if loc_nom:
                 addr = loc_nom.raw.get('address', {})
                 # Categories mapping
@@ -63,7 +74,7 @@ class TrackingProcessor:
         # 2. Try Photon (Komoot) for better "Outdoor" POIs
         try:
             phot = Photon(user_agent="urlaubsplanung_app_photon")
-            loc_phot = phot.reverse((lat, lon), timeout=5, language='de')
+            loc_phot = phot.reverse((lat, lon), timeout=2, language='de')
             if loc_phot:
                 props = loc_phot.raw.get('properties', {})
                 p_name = props.get('name')
@@ -71,7 +82,6 @@ class TrackingProcessor:
                 
                 if p_name and p_name not in name_parts:
                     name_parts.insert(0, p_name)
-                    # Check Photon category if Nominatim was generic
                     if category == 'OTHER' and p_osm_value:
                         photon_cat_map = {
                             'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT', 'bakery': 'RESTAURANT',
@@ -94,10 +104,15 @@ class TrackingProcessor:
                     clean_parts.append(p_clean)
         
         final_name = ", ".join(clean_parts[:3]) if clean_parts else "Unbekannter Ort"
-        return {'name': final_name, 'category': category}
+        result = {'name': final_name, 'category': category}
+        
+        # Save to cache
+        cls._geocode_cache[cache_key] = result
+        return result
 
     @classmethod
     def process_raw_points(cls):
+        cls._clear_cache()
         trips = Trip.objects.filter(tracking_points__status='RAW').distinct()
         count = 0
         for trip in trips:
@@ -114,6 +129,7 @@ class TrackingProcessor:
 
     @classmethod
     def _process_trip(cls, trip):
+        cls._clear_cache()
         points = TrackingPoint.objects.filter(trip=trip, status='RAW').order_by('timestamp_local')
         if not points.exists(): return 0
         tf = TimezoneFinder()
@@ -284,26 +300,26 @@ class TrackingProcessor:
         duration_mins = int((end_time_local - start_time).total_seconds() / 60)
         
         # HEURISTICS
-        # 1. Hotel detection: Overnight (> 4h and spans across 03:00)
         if duration_mins > 240:
             if start_time.hour <= 3 or end_time_local.hour <= 6:
                 category = 'HOTEL'
         
-        # 2. Restaurant detection: Stay > 15 mins at food POI
         if category == 'RESTAURANT' and duration_mins < 15:
-            category = 'OTHER' # Too short for eating
+            category = 'OTHER'
 
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
         
-        # Narrative Notes: List highlights if it was a merged stay
-        highlights = []
-        # Check if points are spread out (sign of merging)
+        # Smarter Sampling for Highlights
         unique_pois = []
-        for i in range(0, len(points), max(1, len(points)//5)): # Sample some points
-            p_info = cls.reverse_geocode(points[i].lat, points[i].lon)
-            p_name = p_info['name'].split(",")[0]
-            if p_name not in unique_pois and p_name != "Unbekannter Ort":
-                unique_pois.append(p_name)
+        last_sampled_point = first
+        for p in points:
+            # Only sample if we moved significantly (e.g. 200m) from last sample
+            if geodesic((last_sampled_point.lat, last_sampled_point.lon), (p.lat, p.lon)).meters > 200:
+                p_info = cls.reverse_geocode(p.lat, p.lon)
+                p_name = p_info['name'].split(",")[0]
+                if p_name not in unique_pois and p_name != "Unbekannter Ort":
+                    unique_pois.append(p_name)
+                last_sampled_point = p
         
         title = place_name
         if len(unique_pois) > 1:
@@ -329,7 +345,6 @@ class TrackingProcessor:
         start_time = cls._get_local_time(first)
         end_time = cls._get_local_time(last)
         
-        # Prevent swapped times
         if end_time < start_time:
             end_time, start_time = start_time, end_time
 
@@ -349,9 +364,7 @@ class TrackingProcessor:
         start_info = cls.reverse_geocode(first.lat, first.lon)
         dest_info = cls.reverse_geocode(last.lat, last.lon)
         
-        # Distance-based naming: > 5km use only city names
         if dist_km > 5:
-            # Try to extract city from geocode result (it's often the last part)
             start_short = start_info['name'].split(",")[-1].strip()
             dest_short = dest_info['name'].split(",")[-1].strip()
         else:
@@ -364,7 +377,6 @@ class TrackingProcessor:
         title = f"{activity_type} von {start_short} nach {dest_short}"
         notes = f'Von <a href="{start_link}" target="_blank"><b>{start_info["name"]}</b></a> nach <a href="{dest_link}" target="_blank"><b>{dest_info["name"]}</b></a>. Ca. {dist_km:.1f} km in {duration_mins} Minuten.'
         
-        # Set event type
         final_type = 'CAR' if avg_speed_kmh >= 18 else 'ACTIVITY'
 
         TrackingSuggestion.objects.create(
