@@ -45,7 +45,7 @@ class TrackingProcessor:
         if not fast:
             try:
                 time.sleep(1) # Respect rate limits
-                nom = Nominatim(user_agent="urlaubsplanung_app_v5_8")
+                nom = Nominatim(user_agent="urlaubsplanung_app_v5_9")
                 loc_nom = nom.reverse((lat, lon), timeout=5, language='de,en;q=0.5', zoom=18)
                 if loc_nom:
                     addr = loc_nom.raw.get('address', {})
@@ -75,12 +75,13 @@ class TrackingProcessor:
                         street = f"{road} {house_number}".strip() if house_number else road
                         if street not in name_parts: name_parts.append(street)
                     if city and city not in name_parts: name_parts.append(city)
-            except: pass
+            except Exception as e:
+                logger.warning(f"Nominatim Error: {e}")
 
         # 2. Try Photon as fallback (or as primary in fast mode)
         if len(name_parts) < 1:
             try:
-                phot = Photon(user_agent="urlaubsplanung_app_photon_v5_8")
+                phot = Photon(user_agent="urlaubsplanung_app_photon_v5_9")
                 loc_phot = phot.reverse((lat, lon), timeout=3, language='de')
                 if loc_phot:
                     dist = geodesic((lat, lon), (loc_phot.latitude, loc_phot.longitude)).meters
@@ -95,40 +96,23 @@ class TrackingProcessor:
                                 elif p_val in ['restaurant', 'cafe']: category = 'RESTAURANT'
                     if len(name_parts) < 1 and loc_phot.address:
                         name_parts.append(loc_phot.address.split(",")[0])
-            except: pass
-                    
-                    # Fallback to address part from Photon if needed
-                    if len(name_parts) < 1 and loc_phot.address:
-                        name_parts.append(loc_phot.address.split(",")[0])
             except Exception as e:
                 logger.warning(f"Photon Error: {e}")
 
-        # Cleanup and Deduplicate
+        # Cleanup and Transliteration
         clean_parts = []
-        # Radical administrative cleanup
-        admin_patterns = [
-            r"Municipal Unit of\s*", r"Regional Unit of\s*", r"Decentralized Administration of\s*", 
-            r"Prefecture of\s*", r"Region of\s*", r"Community of\s*"
-        ]
-        
+        admin_patterns = [r"Municipal Unit of\s*", r"Regional Unit of\s*", r"Decentralized Administration of\s*", r"Prefecture of\s*", r"Region of\s*", r"Community of\s*"]
         for p in name_parts:
             p_clean = str(p)
-            for pattern in admin_patterns:
-                p_clean = re.sub(pattern, "", p_clean, flags=re.IGNORECASE).strip()
-            
-            # Simple Transliteration for Greek characters
-            if any(ord(c) > 127 for c in p_clean):
-                p_clean = cls._transliterate_greek(p_clean)
-            
+            for pattern in admin_patterns: p_clean = re.sub(pattern, "", p_clean, flags=re.IGNORECASE).strip()
+            if any(ord(c) > 127 for c in p_clean): p_clean = cls._transliterate_greek(p_clean)
             if p_clean and p_clean not in clean_parts:
-                if not any(p_clean.lower() in existing.lower() for existing in clean_parts):
-                    clean_parts.append(p_clean)
-
+                if not any(p_clean.lower() in existing.lower() for existing in clean_parts): clean_parts.append(p_clean)
+        
         final_name = ", ".join(clean_parts[:3]) if clean_parts else "Unbekannter Ort"
         result = {'name': final_name, 'category': category}
         cls._geocode_cache[cache_key] = result
         return result
-
     @classmethod
     def _transliterate_greek(cls, text):
         """Simple mapping to transliterate Greek characters to Latin if needed."""
