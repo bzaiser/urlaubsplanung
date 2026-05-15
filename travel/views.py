@@ -2054,25 +2054,43 @@ def tracking_ui_view(request):
                         defaults={'text': ''}
                     )
                     
-                    # Create Event (Action)
-                    event_type = 'ACTIVITY' if sug.suggestion_type == 'STAY' else 'OTHER'
-                    if 'Fahrt' in sug.title or 'Spaziergang' in sug.title or 'Wanderung' in sug.title:
-                        event_type = 'ACTIVITY'
-                    
-                    from travel.models import Event
-                    Event.objects.create(
+                    # Check for existing event to prevent duplicates
+                    event = Event.objects.filter(
                         day=sug.day,
                         title=sug.title,
-                        type=event_type,
-                        time=sug.start_time.time() if sug.start_time else None,
-                        end_time=sug.end_time.time() if sug.end_time else None,
-                        location=sug.title,
-                        latitude=sug.lat,
-                        longitude=sug.lon,
-                        is_geocoded=True if sug.lat else False,
-                        notes=sug.notes, # Use HTML notes directly from suggestion
-                        distance_km=int(round(sug.distance_km)) if sug.distance_km else None
-                    )
+                        time=sug.start_time.time() if sug.start_time else None
+                    ).first()
+                    
+                    if event:
+                        # Update existing event
+                        event.end_time = sug.end_time.time() if sug.end_time else event.end_time
+                        event.latitude = sug.lat
+                        event.longitude = sug.lon
+                        event.is_geocoded = True if sug.lat else event.is_geocoded
+                        event.distance_km = int(round(sug.distance_km)) if sug.distance_km else event.distance_km
+                        # Optional: merge notes if they differ? For now, we update them if empty or contain links
+                        if not event.notes or '<a href' in sug.notes:
+                            event.notes = sug.notes
+                        event.save()
+                    else:
+                        # Create new Event (Action)
+                        event_type = 'ACTIVITY' if sug.suggestion_type == 'STAY' else 'OTHER'
+                        if 'Fahrt' in sug.title or 'Spaziergang' in sug.title or 'Wanderung' in sug.title:
+                            event_type = 'ACTIVITY'
+                        
+                        event = Event.objects.create(
+                            day=sug.day,
+                            title=sug.title,
+                            type=event_type,
+                            time=sug.start_time.time() if sug.start_time else None,
+                            end_time=sug.end_time.time() if sug.end_time else None,
+                            location=sug.title,
+                            latitude=sug.lat,
+                            longitude=sug.lon,
+                            is_geocoded=True if sug.lat else False,
+                            notes=sug.notes,
+                            distance_km=int(round(sug.distance_km)) if sug.distance_km else None
+                        )
 
                     # Human-readable summary for Diary
                     summary = f"<p>{sug.notes}</p>"
@@ -2080,7 +2098,8 @@ def tracking_ui_view(request):
                     if not diary.text:
                         diary.text = summary.strip()
                     else:
-                        if summary.strip() not in diary.text:
+                        # Check if this specific note is already in the diary to prevent duplicates
+                        if sug.notes.strip() not in diary.text:
                             diary.text += summary
                         
                     diary.save()
