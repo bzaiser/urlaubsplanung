@@ -354,23 +354,29 @@ class TrackingProcessor:
         
         duration_mins = int((end_time_local - start_time).total_seconds() / 60)
         
-        # --- HEURISTICS 3.0 ---
-        # 1. Strong Hotel detection: Overnight (> 6h and spans across late night/early morning)
-        is_overnight = duration_mins > 360 and (start_time.hour <= 2 or end_time_local.hour >= 6)
-        if is_overnight:
+        # --- HEURISTICS 4.1 (Midnight & Distance Aware) ---
+        # 1. Midnight Hotel Bridge:
+        # If it starts at the very beginning of the day (00:00 - 00:30) and lasts > 120m
+        is_midnight_start = start_time.hour == 0 and start_time.minute <= 30 and duration_mins > 120
+        # If it ends at the very end of the day (23:30 - 23:59) and lasts > 120m
+        is_midnight_end = end_time_local.hour == 23 and end_time_local.minute >= 30 and duration_mins > 120
+        # Classic Overnight spans across the night
+        is_classic_overnight = duration_mins > 240 and (start_time.hour <= 3 or end_time_local.hour >= 5)
+        
+        if is_midnight_start or is_midnight_end or is_classic_overnight:
             category = 'HOTEL'
         
-        # 2. Restaurant detection: Stay > 20 mins at food POI
+        # 2. Restaurant detection: Stay > 20 mins at food POI (if not a hotel)
         elif category == 'RESTAURANT' and duration_mins < 20:
-            category = 'OTHER' # Too short for a real meal
+            category = 'OTHER'
 
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
         
-        # Smarter Highlights Sampling
+        # Highlights Sampling
         unique_pois = []
         last_sampled_point = first
         for p in points:
-            if geodesic((last_sampled_point.lat, last_sampled_point.lon), (p.lat, p.lon)).meters > 250:
+            if geodesic((last_sampled_point.lat, last_sampled_point.lon), (p.lat, p.lon)).meters > 300:
                 p_info = cls.reverse_geocode(p.lat, p.lon)
                 p_name = p_info['name'].split(",")[0]
                 if p_name not in unique_pois and p_name != "Unbekannter Ort" and p_name != place_name.split(",")[0]:
@@ -378,7 +384,6 @@ class TrackingProcessor:
                 last_sampled_point = p
         
         # Final Suggestion Setup
-        title = place_name
         if category == 'HOTEL':
             title = f"Übernachtung in {place_name.split(',')[0]}"
         elif category == 'RESTAURANT':
@@ -389,9 +394,10 @@ class TrackingProcessor:
             h_text = ", ".join(unique_pois)
             notes = f'Aktivität von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")}.<br><b>Highlights:</b> {h_text}. <a href="{maps_link}" target="_blank">(Karte)</a>'
         else:
+            title = place_name
             notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
         
-        if not 'notes' in locals(): # Fallback for non-activity notes
+        if not 'notes' in locals():
             notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
 
         TrackingSuggestion.objects.create(
@@ -421,8 +427,16 @@ class TrackingProcessor:
         
         avg_speed_kmh = (dist_km / (duration_mins / 60.0)) if duration_mins > 0 else 0
         
-        # --- TRANSPORT HEURISTICS 3.0 ---
-        if avg_speed_kmh > 15:
+        # --- TRANSPORT HEURISTICS 4.1 (Distance Enforcement) ---
+        if dist_km > 10:
+            # More than 10km is always a CAR drive unless speed is incredibly low (< 3kmh)
+            if avg_speed_kmh > 3:
+                activity_type = "Fahrt"
+                final_type = 'CAR'
+            else:
+                activity_type = "Lange Wanderung"
+                final_type = 'ACTIVITY'
+        elif avg_speed_kmh > 15:
             activity_type = "Fahrt"
             final_type = 'CAR'
         elif avg_speed_kmh > 6:
