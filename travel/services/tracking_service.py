@@ -385,13 +385,25 @@ class TrackingProcessor:
         is_midnight_end = end_time_local.hour == 23 and end_time_local.minute >= 30 and duration_mins > 120
         # Classic Overnight spans across the night
         is_classic_overnight = duration_mins > 240 and (start_time.hour <= 3 or end_time_local.hour >= 5)
-        
+
         if is_midnight_start or is_midnight_end or is_classic_overnight:
             category = 'HOTEL'
         
         # 2. Restaurant detection: Stay > 20 mins at food POI (if not a hotel)
         elif category == 'RESTAURANT' and duration_mins < 20:
             category = 'OTHER'
+
+        # --- Context-Aware POI Search 5.0 ---
+        if category == 'HOTEL':
+            # Try to find a real lodging name nearby
+            special_poi = cls._find_special_poi(avg_lat, avg_lon, "hotel,studio,bungalow,apartment,villa,pension,guest house,camping")
+            if special_poi:
+                place_name = special_poi
+        elif category == 'RESTAURANT':
+            # Try to find a food POI name nearby if current name is generic
+            special_poi = cls._find_special_poi(avg_lat, avg_lon, "restaurant,cafe,bar,tavern")
+            if special_poi:
+                place_name = special_poi
 
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
         
@@ -490,3 +502,23 @@ class TrackingProcessor:
             start_time=start_time, end_time=end_time, lat=last.lat, lon=last.lon,
             notes=notes, distance_km=dist_km
         )
+    @classmethod
+    def _find_special_poi(cls, lat, lon, keywords):
+        """Tries to find a POI matching keywords near the given location."""
+        try:
+            from geopy.geocoders import Photon
+            geolocator = Photon()
+            # We use forward geocoding with a proximity bias to find specific types
+            # searching for "keywords" near lat, lon
+            query = f"{keywords}"
+            locations = geolocator.geocode(query, proximity=(lat, lon), limit=5, exactly_one=False)
+            
+            if locations:
+                for loc in locations:
+                    # Check distance (must be within ~150m)
+                    dist = geodesic((lat, lon), (loc.latitude, loc.longitude)).meters
+                    if dist < 150:
+                        return loc.address.split(",")[0]
+        except:
+            pass
+        return None
