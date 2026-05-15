@@ -43,14 +43,15 @@ class TrackingProcessor:
         
         # 1. Try Nominatim for reliable administrative address and category
         try:
-            # Force latein script using de,en language preference
-            nom = Nominatim(user_agent="urlaubsplanung_app_v5_4")
-            loc_nom = nom.reverse((lat, lon), timeout=4, language='de,en;q=0.5', zoom=18)
+            # Respect rate limits (1 req/sec)
+            time.sleep(1)
+            nom = Nominatim(user_agent="urlaubsplanung_app_v5_6")
+            loc_nom = nom.reverse((lat, lon), timeout=5, language='de,en;q=0.5', zoom=18)
             
             if loc_nom:
                 addr = loc_nom.raw.get('address', {})
                 dist = geodesic((lat, lon), (loc_nom.latitude, loc_nom.longitude)).meters
-                is_far = dist > 40
+                is_far = dist > 50
                 
                 # Enhanced Category Mapping
                 cat_map = {
@@ -88,7 +89,31 @@ class TrackingProcessor:
                     street = f"{road} {house_number}".strip() if house_number else road
                     if street not in name_parts: name_parts.append(street)
                 if city and city not in name_parts: name_parts.append(city)
-        except: pass
+        except Exception as e:
+            logger.warning(f"Nominatim Error: {e}")
+
+        # 2. Try Photon as FAST fallback if Nominatim failed or returned too little
+        if len(name_parts) < 1:
+            try:
+                phot = Photon(user_agent="urlaubsplanung_app_photon_v5_6")
+                loc_phot = phot.reverse((lat, lon), timeout=3, language='de')
+                if loc_phot:
+                    dist = geodesic((lat, lon), (loc_phot.latitude, loc_phot.longitude)).meters
+                    if dist < 50:
+                        props = loc_phot.raw.get('properties', {})
+                        p_name = props.get('name')
+                        if p_name and p_name not in name_parts:
+                            name_parts.insert(0, p_name)
+                            if category == 'OTHER':
+                                p_val = props.get('osm_value')
+                                if p_val in ['hotel', 'apartment', 'guest_house']: category = 'HOTEL'
+                                elif p_val in ['restaurant', 'cafe']: category = 'RESTAURANT'
+                    
+                    # Fallback to address part from Photon if needed
+                    if len(name_parts) < 1 and loc_phot.address:
+                        name_parts.append(loc_phot.address.split(",")[0])
+            except Exception as e:
+                logger.warning(f"Photon Error: {e}")
 
         # Cleanup and Deduplicate
         clean_parts = []
