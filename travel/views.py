@@ -2070,7 +2070,8 @@ def tracking_ui_view(request):
                         latitude=sug.lat,
                         longitude=sug.lon,
                         is_geocoded=True if sug.lat else False,
-                        notes=sug.notes # Use HTML notes directly from suggestion
+                        notes=sug.notes, # Use HTML notes directly from suggestion
+                        distance_km=sug.distance_km
                     )
 
                     # Human-readable summary for Diary

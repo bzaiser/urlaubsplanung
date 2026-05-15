@@ -642,6 +642,7 @@ class TrackingSuggestion(models.Model):
     lon = models.DecimalField(_("Längengrad"), max_digits=9, decimal_places=6, null=True, blank=True)
     
     notes = models.TextField(_("Notizen/Info"), blank=True)
+    distance_km = models.DecimalField(_("Entfernung (km)"), max_digits=8, decimal_places=2, null=True, blank=True)
     
     is_processed = models.BooleanField(_("Bearbeitet"), default=False)
     is_accepted = models.BooleanField(_("Übernommen"), default=False)

@@ -265,5 +265,5 @@ class TrackingProcessor:
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type='TRANSPORT',
             start_time=start_time, end_time=end_time, lat=last.lat, lon=last.lon,
-            notes=notes
+            notes=notes, distance_km=dist_km
         )
