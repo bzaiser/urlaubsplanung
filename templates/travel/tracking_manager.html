@@ -5,58 +5,55 @@
 {% block title %}Tracking Manager{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4" id="tracking-content" hx-target="this" hx-swap="outerHTML">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-geo-alt text-success"></i> Tracking Vorschläge</h2>
         <div>
-            <form method="post" class="d-inline" id="analyze-form">
+            <form method="post" class="d-inline" id="analyze-form" 
+                  hx-post="{% url 'travel:tracking_ui' %}" 
+                  hx-vals='{"action": "process"}'
+                  hx-indicator="#processing-loader"
+                  hx-trigger="submit, continue-analysis from:body">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="process">
-                <button type="submit" class="btn btn-primary shadow-sm" id="btn-analyze">
-                    <i class="bi bi-cpu"></i> Neu analysieren
+                <button type="submit" class="btn btn-primary shadow-sm" id="btn-analyze" {% if is_analyzing %}disabled{% endif %}>
+                    <i class="bi bi-cpu"></i> 
+                    {% if is_analyzing %}Analyse läuft...{% else %}Neu analysieren{% endif %}
                 </button>
             </form>
             <form method="post" class="d-inline ms-2">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="reset">
                 <button type="submit" class="btn btn-outline-danger shadow-sm" onclick="return confirm('Möchtest du wirklich alle Punkte auf NEU setzen und ungenutzte Vorschläge löschen?')">
-                    <i class="bi bi-arrow-counterclockwise"></i> Reset (Alles auf Anfang)
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Cleanup Section [NEW] -->
-    <div class="card bg-dark border-danger border-opacity-25 mb-4">
-        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
-            <div class="text-danger small">
-                <i class="bi bi-trash3 me-1"></i> <strong>Daten aufräumen:</strong> Alle Rohdaten und Vorschläge löschen, die älter sind als
-            </div>
-            <form method="post" class="d-flex align-items-center gap-2">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="cleanup">
-                <input type="number" name="days" value="35" class="form-control form-control-sm bg-dark text-light border-danger" style="width: 70px;">
-                <span class="text-danger small">Tage</span>
-                <button type="submit" class="btn btn-sm btn-danger shadow-sm ms-2" onclick="return confirm('Möchtest du wirklich alle alten Daten unwiderruflich löschen?')">
-                    <i class="bi bi-x-circle"></i> Löschen
-                </button>
-            </form>
-        </div>
+    <!-- Info about raw points -->
+    {% if raw_count > 0 %}
+    <div class="alert alert-info py-2 small d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-database"></i> Noch <strong>{{ raw_count }}</strong> Rohdaten-Punkte zu verarbeiten.</span>
+        {% if is_analyzing %}
+        <span class="spinner-border spinner-border-sm text-info" role="status"></span>
+        {% endif %}
     </div>
+    {% endif %}
 
     <!-- Loading Indicator / Progress Bar -->
-    <div id="processing-loader" style="display: none;" class="mb-4">
-        <div class="p-4 rounded-3 border border-warning border-opacity-25 bg-warning bg-opacity-10 animate__animated animate__fadeIn">
+    <div id="processing-loader" class="mb-4 htmx-indicator" {% if is_analyzing %}style="display: block;"{% endif %}>
+        <div class="p-4 rounded-3 border border-warning border-opacity-25 bg-warning bg-opacity-10">
             <div class="d-flex align-items-center gap-3 mb-3">
                 <div class="spinner-border text-warning spinner-border-sm" role="status"></div>
-                <span class="fw-bold text-warning text-uppercase small">Analyse läuft... Suche präzise Orte über Nominatim & Photon (Komoot)</span>
+                <span class="fw-bold text-warning text-uppercase small">Analyse läuft... Bitte warten (Tag für Tag)</span>
             </div>
             <div class="progress bg-black bg-opacity-50 overflow-hidden" style="height: 10px; position: relative;">
                 <div class="progress-bar-indeterminate bg-warning" style="height: 100%; width: 35%; position: absolute; left: -35%;"></div>
             </div>
-            <p class="text-secondary small mt-3 mb-0 text-italic">
-                <i class="bi bi-info-circle me-1"></i>
-                Dies kann je nach Anzahl der Punkte 1-2 Minuten dauern. Bitte das Fenster nicht schließen.
+            <p class="text-secondary small mt-3 mb-0">
+                <i class="bi bi-shield-check me-1"></i>
+                Wir verarbeiten deine Daten häppchenweise, um Timeouts zu vermeiden.
             </p>
         </div>
     </div>
@@ -71,15 +68,10 @@
             animation: progress-loading 2s infinite linear;
             border-radius: 5px;
         }
+        .htmx-indicator { display: none; }
+        .htmx-request .htmx-indicator { display: block; }
+        .htmx-request.htmx-indicator { display: block; }
     </style>
-
-    <script>
-        document.getElementById('analyze-form').addEventListener('submit', function() {
-            document.getElementById('processing-loader').style.display = 'block';
-            document.getElementById('btn-analyze').disabled = true;
-            document.getElementById('btn-analyze').innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Bitte warten...';
-        });
-    </script>
 
     {% if messages %}
         {% for message in messages %}
@@ -97,11 +89,11 @@
                 <div class="card-header border-secondary d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
                         <input class="form-check-input me-2" type="checkbox" id="selectAll">
-                        <h5 class="mb-0">Offene Vorschläge</h5>
+                        <h5 class="mb-0">Offene Vorschläge ({{ suggestions|length }})</h5>
                     </div>
                     <div>
                         <button type="submit" name="action" value="import" class="btn btn-sm btn-success">
-                            <i class="bi bi-journal-plus"></i> Ins Tagebuch übernehmen
+                            <i class="bi bi-journal-plus"></i> Übernehmen
                         </button>
                         <button type="submit" name="action" value="ignore" class="btn btn-sm btn-outline-danger ms-2">
                             <i class="bi bi-trash"></i> Ignorieren
@@ -110,24 +102,20 @@
                 </div>
                 <div class="list-group list-group-flush">
                     {% for sug in suggestions %}
-                    <div class="list-group-item bg-dark text-light border-secondary">
+                    <div class="list-group-item bg-dark text-light border-secondary animate__animated animate__fadeIn">
                         <div class="form-check">
                             <input class="form-check-input suggestion-checkbox" type="checkbox" name="suggestion_ids" value="{{ sug.id }}" id="sug_{{ sug.id }}">
                             <label class="form-check-label w-100" for="sug_{{ sug.id }}">
                                 <div class="d-flex w-100 justify-content-between">
                                     <h6 class="mb-1 text-info">
-                                        {% if sug.suggestion_type == 'STAY' %}
-                                            <i class="bi bi-house-door"></i>
-                                        {% else %}
-                                            {% if "Wanderung" in sug.title %}<i class="bi bi-person-walking"></i>
-                                            {% elif "Radtour" in sug.title %}<i class="bi bi-bicycle"></i>
-                                            {% else %}<i class="bi bi-car-front"></i>{% endif %}
-                                        {% endif %}
+                                        {% if sug.suggestion_type == 'HOTEL' %}<i class="bi bi-building"></i>
+                                        {% elif sug.suggestion_type == 'RESTAURANT' %}<i class="bi bi-egg-fried"></i>
+                                        {% elif sug.suggestion_type == 'ACTIVITY' %}<i class="bi bi-camera"></i>
+                                        {% elif sug.suggestion_type == 'CAR' %}<i class="bi bi-car-front"></i>
+                                        {% else %}<i class="bi bi-geo-alt"></i>{% endif %}
                                         {{ sug.title|magic_links }}
                                     </h6>
-                                    <small class="text-muted">
-                                        {{ sug.day.date|date:"d.m.Y" }}
-                                    </small>
+                                    <small class="text-muted">{{ sug.day.date|date:"d.m.Y" }}</small>
                                 </div>
                                 <p class="mb-1">
                                     <small>
@@ -139,11 +127,6 @@
                                 {% if sug.notes %}
                                 <small class="text-muted d-block mt-1">{{ sug.notes|magic_links|safe }}</small>
                                 {% endif %}
-                                {% if sug.lat and sug.lon %}
-                                <a href="https://www.google.com/maps/search/?api=1&query={{ sug.lat|stringformat:'f' }},{{ sug.lon|stringformat:'f' }}" target="_blank" class="badge bg-secondary text-decoration-none mt-2">
-                                    <i class="bi bi-map"></i> Karte
-                                </a>
-                                {% endif %}
                             </label>
                         </div>
                     </div>
@@ -152,11 +135,31 @@
             </div>
         </form>
     {% else %}
+        {% if not is_analyzing %}
         <div class="alert alert-secondary bg-dark text-light border-secondary">
             <i class="bi bi-info-circle text-info"></i> Keine neuen Tracking-Vorschläge gefunden. 
             Drücke auf "Neu analysieren", um die neuesten Rohdaten auszuwerten.
         </div>
+        {% endif %}
     {% endif %}
+
+    <!-- Cleanup Section -->
+    <div class="card bg-dark border-danger border-opacity-25 mt-5 mb-4">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+            <div class="text-danger small">
+                <i class="bi bi-trash3 me-1"></i> <strong>Daten aufräumen:</strong> Alle Rohdaten und Vorschläge löschen, die älter sind als
+            </div>
+            <form method="post" class="d-flex align-items-center gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cleanup">
+                <input type="number" name="days" value="35" class="form-control form-control-sm bg-dark text-light border-danger" style="width: 70px;">
+                <span class="text-danger small">Tage</span>
+                <button type="submit" class="btn btn-sm btn-danger shadow-sm ms-2" onclick="return confirm('Möchtest du wirklich alle alten Daten unwiderruflich löschen?')">
+                    <i class="bi bi-x-circle"></i> Löschen
+                </button>
+            </form>
+        </div>
+    </div>
 
     <div class="mt-4">
         <a href="{% url 'travel:dashboard' %}" class="btn btn-outline-warning">
@@ -171,9 +174,7 @@
         if (selectAll) {
             selectAll.addEventListener('change', function() {
                 const checkboxes = document.querySelectorAll('.suggestion-checkbox');
-                for (const cb of checkboxes) {
-                    cb.checked = this.checked;
-                }
+                for (const cb of checkboxes) { cb.checked = this.checked; }
             });
         }
     });

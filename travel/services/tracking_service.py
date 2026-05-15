@@ -112,26 +112,58 @@ class TrackingProcessor:
 
     @classmethod
     def process_raw_points(cls):
+        """
+        Processes raw tracking points. 
+        Returns (suggestions_created, has_more_data_bool)
+        This version processes only ONE day per call to avoid timeouts.
+        """
         cls._clear_cache()
-        trips = Trip.objects.filter(tracking_points__status='RAW').distinct()
-        count = 0
-        for trip in trips:
-            count += cls._process_trip(trip)
-            cls._cleanup_old_data(trip.user)
-        return count
+        # Find the first trip that has any RAW points
+        trip = Trip.objects.filter(tracking_points__status='RAW').first()
+        if not trip:
+            return 0, False
+
+        # Get all RAW points for this trip
+        raw_points = TrackingPoint.objects.filter(trip=trip, status='RAW').order_by('timestamp_local')
+        if not raw_points.exists():
+            return 0, False
+
+        # Group them by day (using the date of the first point)
+        first_point = raw_points.first()
+        # Ensure we have timezone/day info for the points of this first date
+        # We process ALL points for this specific date in this trip
+        target_date = first_point.timestamp_local.date() if first_point.timestamp_local else first_point.timestamp_utc.date()
         
-    @classmethod
-    def _cleanup_old_data(cls, user):
-        days = int(cls.get_setting(user, 'tracking_cleanup_days', '30'))
-        cutoff = timezone.now() - timedelta(days=days)
-        TrackingPoint.objects.filter(trip__user=user, status='PROCESSED', timestamp_utc__lt=cutoff).delete()
-        TrackingSuggestion.objects.filter(user=user, is_accepted=False, created_at__lt=cutoff).delete()
+        # Filter points for this specific trip and date
+        # We need to be careful with timezone shifts, so we use a range
+        day_points = []
+        other_points_exist = False
+        
+        # Quick update of timezone/day for the next batch to identify the day correctly
+        # But for efficiency, we just take the first ~500 points or so that belong to the same "cluster"
+        current_day_points = []
+        for p in raw_points:
+            p_date = p.timestamp_local.date() if p.timestamp_local else p.timestamp_utc.date()
+            if not current_day_points or p_date == target_date:
+                current_day_points.append(p)
+                target_date = p_date # Update target date if it was null
+            else:
+                other_points_exist = True
+                break
+        
+        # Process this day
+        suggestions_created = cls._process_trip_subset(trip, current_day_points)
+        
+        # Check if there's more after this
+        if not other_points_exist:
+            # Check other trips
+            other_points_exist = Trip.objects.filter(tracking_points__status='RAW').exclude(id=trip.id).exists()
+
+        return suggestions_created, other_points_exist
 
     @classmethod
-    def _process_trip(cls, trip):
-        cls._clear_cache()
-        points = TrackingPoint.objects.filter(trip=trip, status='RAW').order_by('timestamp_local')
-        if not points.exists(): return 0
+    def _process_trip_subset(cls, trip, points):
+        if not points: return 0
         tf = TimezoneFinder()
         for p in points:
             updated = False
@@ -153,19 +185,32 @@ class TrackingProcessor:
                     updated = True
             if updated:
                 p.save(update_fields=['timezone', 'timestamp_local', 'day'])
+        
         days_map = {}
         for p in points:
             if p.day_id:
                 days_map.setdefault(p.day_id, []).append(p)
+        
         suggestions_created = 0
         stay_dist = int(cls.get_setting(trip.user, 'tracking_stay_distance', '500'))
         stay_dur = int(cls.get_setting(trip.user, 'tracking_stay_duration', '20'))
         detect_transport = cls.get_setting(trip.user, 'tracking_detect_transport', '1') == '1'
+        
         for day_id, day_points in days_map.items():
             suggestions_created += cls._process_day_points(trip, day_id, day_points, stay_dist, stay_dur, detect_transport)
+            cls._cleanup_old_data(trip.user)
+            
         return suggestions_created
-        
+
     @classmethod
+    def _cleanup_old_data(cls, user):
+        days = int(cls.get_setting(user, 'tracking_cleanup_days', '30'))
+        cutoff = timezone.now() - timedelta(days=days)
+        TrackingPoint.objects.filter(trip__user=user, status='PROCESSED', timestamp_utc__lt=cutoff).delete()
+        TrackingSuggestion.objects.filter(user=user, is_accepted=False, created_at__lt=cutoff).delete()
+
+    @classmethod
+    def _get_local_time(cls, point):
     def _process_day_points(cls, trip, day_id, points, stay_dist, stay_dur, detect_transport):
         if not points: return 0
         
