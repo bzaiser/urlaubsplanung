@@ -211,6 +211,13 @@ class TrackingProcessor:
 
     @classmethod
     def _get_local_time(cls, point):
+        if not point.timezone: return point.timestamp_local
+        try:
+            tz = pytz.timezone(point.timezone)
+            return point.timestamp_utc.astimezone(tz)
+        except: return point.timestamp_local
+
+    @classmethod
     def _process_day_points(cls, trip, day_id, points, stay_dist, stay_dur, detect_transport):
         if not points: return 0
         
