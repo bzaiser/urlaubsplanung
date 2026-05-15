@@ -30,76 +30,61 @@ class TrackingProcessor:
         cls._geocode_cache = {}
 
     @classmethod
-    def reverse_geocode(cls, lat, lon):
+    def reverse_geocode(cls, lat, lon, fast=False):
         from geopy.geocoders import Photon, Nominatim
         
-        # Cache check (Round to 5 decimals ~1 meter precision)
-        cache_key = (round(float(lat), 5), round(float(lon), 5))
+        # Cache check
+        cache_key = (round(float(lat), 5), round(float(lon), 5), fast)
         if cache_key in cls._geocode_cache:
             return cls._geocode_cache[cache_key]
 
         name_parts = []
         category = 'OTHER'
         
-        # 1. Try Nominatim for reliable administrative address and category
-        try:
-            # Respect rate limits (1 req/sec)
-            time.sleep(1)
-            nom = Nominatim(user_agent="urlaubsplanung_app_v5_6")
-            loc_nom = nom.reverse((lat, lon), timeout=5, language='de,en;q=0.5', zoom=18)
-            
-            if loc_nom:
-                addr = loc_nom.raw.get('address', {})
-                dist = geodesic((lat, lon), (loc_nom.latitude, loc_nom.longitude)).meters
-                is_far = dist > 50
-                
-                # Enhanced Category Mapping
-                cat_map = {
-                    'hotel': 'HOTEL', 'guest_house': 'HOTEL', 'apartment': 'HOTEL', 'hostel': 'HOTEL', 'bungalow': 'HOTEL',
-                    'camping_site': 'CAMPING', 'caravan_site': 'CAMPING',
-                    'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT', 'pub': 'RESTAURANT', 'bar': 'RESTAURANT',
-                    'peak': 'ACTIVITY', 'beach': 'ACTIVITY', 'viewpoint': 'ACTIVITY', 'attraction': 'ACTIVITY',
-                    'museum': 'ACTIVITY', 'historic': 'ACTIVITY', 'castle': 'ACTIVITY', 'church': 'ACTIVITY',
-                    'parking': 'STAY'
-                }
-                
-                # Identify POI if close
-                poi_keys = ['hotel', 'guest_house', 'apartment', 'bungalow', 'restaurant', 'cafe', 'peak', 'beach', 'attraction', 'museum', 'historic', 'castle', 'parking', 'amenity', 'tourism']
-                for key in poi_keys:
-                    if key in addr and not is_far:
-                        val = addr[key]
-                        if val not in name_parts:
-                            # Prepend specific types for clarity
-                            if key == 'peak': val = f"Gipfel: {val}"
-                            elif key == 'parking': val = f"Parkplatz {val}" if val != "yes" else "Parkplatz"
-                            elif key == 'castle': val = f"Burg/Schloss: {val}"
-                            name_parts.append(val)
-                        
-                        raw_val = addr.get(key)
-                        if key in cat_map: category = cat_map[key]
-                        elif raw_val in cat_map: category = cat_map[raw_val]
-                        break
-                
-                # Add street/city
-                road = addr.get('road')
-                house_number = addr.get('house_number')
-                city = addr.get('city') or addr.get('town') or addr.get('village')
-                
-                if road:
-                    street = f"{road} {house_number}".strip() if house_number else road
-                    if street not in name_parts: name_parts.append(street)
-                if city and city not in name_parts: name_parts.append(city)
-        except Exception as e:
-            logger.warning(f"Nominatim Error: {e}")
+        # 1. Try Nominatim ONLY if NOT in fast mode
+        if not fast:
+            try:
+                time.sleep(1) # Respect rate limits
+                nom = Nominatim(user_agent="urlaubsplanung_app_v5_8")
+                loc_nom = nom.reverse((lat, lon), timeout=5, language='de,en;q=0.5', zoom=18)
+                if loc_nom:
+                    addr = loc_nom.raw.get('address', {})
+                    dist = geodesic((lat, lon), (loc_nom.latitude, loc_nom.longitude)).meters
+                    is_far = dist > 50
+                    cat_map = {
+                        'hotel': 'HOTEL', 'guest_house': 'HOTEL', 'apartment': 'HOTEL', 'hostel': 'HOTEL', 'bungalow': 'HOTEL',
+                        'camping_site': 'CAMPING', 'caravan_site': 'CAMPING', 'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT',
+                        'peak': 'ACTIVITY', 'beach': 'ACTIVITY', 'viewpoint': 'ACTIVITY', 'attraction': 'ACTIVITY',
+                        'museum': 'ACTIVITY', 'historic': 'ACTIVITY', 'castle': 'ACTIVITY', 'parking': 'STAY'
+                    }
+                    poi_keys = ['hotel', 'guest_house', 'apartment', 'bungalow', 'restaurant', 'cafe', 'peak', 'beach', 'attraction', 'museum', 'historic', 'castle', 'parking', 'amenity', 'tourism']
+                    for key in poi_keys:
+                        if key in addr and not is_far:
+                            val = addr[key]
+                            if val not in name_parts:
+                                if key == 'peak': val = f"Gipfel: {val}"
+                                elif key == 'parking': val = f"Parkplatz {val}" if val != "yes" else "Parkplatz"
+                                elif key == 'castle': val = f"Burg/Schloss: {val}"
+                                name_parts.append(val)
+                            if key in cat_map: category = cat_map[key]
+                            break
+                    road = addr.get('road')
+                    house_number = addr.get('house_number')
+                    city = addr.get('city') or addr.get('town') or addr.get('village')
+                    if road:
+                        street = f"{road} {house_number}".strip() if house_number else road
+                        if street not in name_parts: name_parts.append(street)
+                    if city and city not in name_parts: name_parts.append(city)
+            except: pass
 
-        # 2. Try Photon as FAST fallback if Nominatim failed or returned too little
+        # 2. Try Photon as fallback (or as primary in fast mode)
         if len(name_parts) < 1:
             try:
-                phot = Photon(user_agent="urlaubsplanung_app_photon_v5_6")
+                phot = Photon(user_agent="urlaubsplanung_app_photon_v5_8")
                 loc_phot = phot.reverse((lat, lon), timeout=3, language='de')
                 if loc_phot:
                     dist = geodesic((lat, lon), (loc_phot.latitude, loc_phot.longitude)).meters
-                    if dist < 50:
+                    if dist < 60:
                         props = loc_phot.raw.get('properties', {})
                         p_name = props.get('name')
                         if p_name and p_name not in name_parts:
@@ -108,6 +93,9 @@ class TrackingProcessor:
                                 p_val = props.get('osm_value')
                                 if p_val in ['hotel', 'apartment', 'guest_house']: category = 'HOTEL'
                                 elif p_val in ['restaurant', 'cafe']: category = 'RESTAURANT'
+                    if len(name_parts) < 1 and loc_phot.address:
+                        name_parts.append(loc_phot.address.split(",")[0])
+            except: pass
                     
                     # Fallback to address part from Photon if needed
                     if len(name_parts) < 1 and loc_phot.address:
@@ -237,16 +225,19 @@ class TrackingProcessor:
         
         days_map = {}
         for p in points:
-            if p.day_id:
-                days_map.setdefault(p.day_id, []).append(p)
+            # Group by day_id if exists, otherwise by local date (fallback)
+            group_key = f"day_{p.day_id}" if p.day_id else f"date_{p.timestamp_local.date()}"
+            days_map.setdefault(group_key, []).append(p)
         
         suggestions_created = 0
         stay_dist = int(cls.get_setting(trip.user, 'tracking_stay_distance', '500'))
         stay_dur = int(cls.get_setting(trip.user, 'tracking_stay_duration', '20'))
         detect_transport = cls.get_setting(trip.user, 'tracking_detect_transport', '1') == '1'
         
-        for day_id, day_points in days_map.items():
-            suggestions_created += cls._process_day_points(trip, day_id, day_points, stay_dist, stay_dur, detect_transport, next_day_point=next_day_point)
+        for group_key, day_points in days_map.items():
+            # Extract day_id if it's a day_ key
+            current_day_id = int(group_key.split("_")[1]) if group_key.startswith("day_") else None
+            suggestions_created += cls._process_day_points(trip, current_day_id, day_points, stay_dist, stay_dur, detect_transport, next_day_point=next_day_point)
             cls._cleanup_old_data(trip.user)
         
         # CRITICAL: Mark all points in this batch as PROCESSED, even if they didn't match a Day
@@ -445,12 +436,12 @@ class TrackingProcessor:
 
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
         
-        # Sampling
+        # Sampling (FAST mode)
         unique_pois = []
         last_sampled_point = first
         for p in points:
             if geodesic((last_sampled_point.lat, last_sampled_point.lon), (p.lat, p.lon)).meters > 300:
-                p_info = cls.reverse_geocode(p.lat, p.lon)
+                p_info = cls.reverse_geocode(p.lat, p.lon, fast=True)
                 p_name = p_info['name'].split(",")[0]
                 if p_name not in unique_pois and p_name != "Unbekannter Ort" and p_name != place_name.split(",")[0]:
                     unique_pois.append(p_name)
@@ -521,8 +512,8 @@ class TrackingProcessor:
             activity_type = "Spaziergang / Wanderung"
             final_type = 'ACTIVITY'
         
-        start_info = cls.reverse_geocode(first.lat, first.lon)
-        dest_info = cls.reverse_geocode(last.lat, last.lon)
+        start_info = cls.reverse_geocode(first.lat, first.lon, fast=True)
+        dest_info = cls.reverse_geocode(last.lat, last.lon, fast=True)
         
         if dist_km > 5:
             start_short = start_info['name'].split(",")[-1].strip()
