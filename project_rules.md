@@ -1,5 +1,15 @@
 # Project Rules - Urlaubsplanung
 
+## 🚨 KRITISCHE REGELN
+
+### 1. Erst Planen, dann Handeln
+*   Bei komplexen Aufgaben oder wenn der USER "Überlegen" anfordert, darf Antigravity **nicht** mit der Code-Änderung beginnen.
+*   Ablauf: 1. Problem analysieren -> 2. Gründlich überlegen -> 3. Plan präsentieren -> 4. **Auf explizites "GO" vom USER warten**.
+
+### 2. Verpflichtender Implementation Plan
+*   Für jede komplexe Änderung **muss** zwingend ein `Implementation Plan` als Artefakt erstellt werden.
+*   Dieser Plan dient als Diskussionsgrundlage und Freigabe-Instanz. Keine Code-Änderung ohne diesen Plan.
+
 ## Template Tags
 - **STRICT Single Line Rule**: Every single Django template tag (`{% ... %}` or `{{ ... }}`) MUST be contained entirely on a single line. 
   - **NO EXCEPTIONS**: Even if the line becomes extremely long, do NOT split tags across lines.
