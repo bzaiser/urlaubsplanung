@@ -13,7 +13,7 @@
                   hx-post="{% url 'travel:tracking_ui' %}" 
                   hx-vals='{"action": "process"}'
                   hx-indicator="#processing-loader"
-                  hx-trigger="submit, continue-analysis from:body">
+                  hx-trigger="submit">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="process">
                 <button type="submit" class="btn btn-primary shadow-sm" id="btn-analyze" {% if is_analyzing %}disabled{% endif %}>
@@ -30,6 +30,17 @@
             </form>
         </div>
     </div>
+
+    <!-- Self-Triggering element for chunked processing -->
+    {% if is_analyzing %}
+    <div hx-post="{% url 'travel:tracking_ui' %}" 
+         hx-vals='{"action": "process"}' 
+         hx-trigger="load delay:500ms" 
+         hx-swap="outerHTML" 
+         hx-target="#tracking-content"
+         hx-indicator="#processing-loader">
+    </div>
+    {% endif %}
 
     <!-- Info about raw points -->
     {% if raw_count > 0 %}

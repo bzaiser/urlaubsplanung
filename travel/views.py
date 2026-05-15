@@ -2028,18 +2028,12 @@ def tracking_ui_view(request):
             count, has_more = TrackingProcessor.process_raw_points()
             
             if request.headers.get('HX-Request'):
-                # Return the template but with a trigger to continue if needed
-                response = render(request, 'travel/tracking_manager.html', {
+                # Return the template. If is_analyzing is True, the template will trigger the next step.
+                return render(request, 'travel/tracking_manager.html', {
                     'suggestions': TrackingSuggestion.objects.filter(user=request.user, is_processed=False).order_by('day__date', 'start_time'),
                     'raw_count': TrackingPoint.objects.filter(trip__user=request.user, status='RAW').count(),
                     'is_analyzing': has_more
                 })
-                if has_more:
-                    response['HX-Trigger'] = 'continue-analysis'
-                else:
-                    messages.success(request, "Analyse abgeschlossen.")
-                    response['HX-Trigger'] = 'analysis-finished'
-                return response
 
             messages.success(request, f"{count} neue Vorschläge generiert. {'Noch weitere Daten vorhanden...' if has_more else 'Fertig.'}")
             return redirect('travel:tracking_ui')
