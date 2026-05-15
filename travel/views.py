@@ -2035,6 +2035,16 @@ def tracking_ui_view(request):
             messages.warning(request, "Alle Tracking-Daten wurden zurückgesetzt und können neu analysiert werden.")
             return redirect('travel:tracking_ui')
             
+        elif action == 'cleanup':
+            days = int(request.POST.get('days', 35))
+            cutoff = timezone.now() - timedelta(days=days)
+            
+            points_del = TrackingPoint.objects.filter(trip__user=request.user, timestamp_utc__lt=cutoff).delete()
+            sugs_del = TrackingSuggestion.objects.filter(user=request.user, created_at__lt=cutoff).delete()
+            
+            messages.success(request, f"Aufräumen erfolgreich: {points_del[0]} Punkte und {sugs_del[0]} Vorschläge gelöscht.")
+            return redirect('travel:tracking_ui')
+
         elif action in ['import', 'ignore']:
             suggestion_ids = request.POST.getlist('suggestion_ids')
             suggestions = TrackingSuggestion.objects.filter(id__in=suggestion_ids, user=request.user)

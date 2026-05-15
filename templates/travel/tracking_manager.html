@@ -20,7 +20,25 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="reset">
                 <button type="submit" class="btn btn-outline-danger shadow-sm" onclick="return confirm('Möchtest du wirklich alle Punkte auf NEU setzen und ungenutzte Vorschläge löschen?')">
-                    <i class="bi bi-trash"></i> Reset (Alles auf Anfang)
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset (Alles auf Anfang)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cleanup Section [NEW] -->
+    <div class="card bg-dark border-danger border-opacity-25 mb-4">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+            <div class="text-danger small">
+                <i class="bi bi-trash3 me-1"></i> <strong>Daten aufräumen:</strong> Alle Rohdaten und Vorschläge löschen, die älter sind als
+            </div>
+            <form method="post" class="d-flex align-items-center gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cleanup">
+                <input type="number" name="days" value="35" class="form-control form-control-sm bg-dark text-light border-danger" style="width: 70px;">
+                <span class="text-danger small">Tage</span>
+                <button type="submit" class="btn btn-sm btn-danger shadow-sm ms-2" onclick="return confirm('Möchtest du wirklich alle alten Daten unwiderruflich löschen?')">
+                    <i class="bi bi-x-circle"></i> Löschen
                 </button>
             </form>
         </div>
