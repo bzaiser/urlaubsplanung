@@ -43,52 +43,56 @@ class TrackingProcessor:
         
         # 1. Try Nominatim for reliable administrative address and category
         try:
-            nom = Nominatim(user_agent="urlaubsplanung_app_v4")
-            loc_nom = nom.reverse((lat, lon), timeout=2, language='de,en', zoom=18)
+            nom = Nominatim(user_agent="urlaubsplanung_app_v5_2")
+            loc_nom = nom.reverse((lat, lon), timeout=3, language='de', zoom=18)
             if loc_nom:
                 addr = loc_nom.raw.get('address', {})
-                # Categories mapping
+                # Distance Check (Nominatim reverse is usually exactly at the point, but we check anyway)
+                dist = geodesic((lat, lon), (loc_nom.latitude, loc_nom.longitude)).meters
+                
+                # If the result is a POI and it's too far away (> 30m), we ignore its name
+                is_far = dist > 30
+                
                 cat_map = {
-                    'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT', 'bakery': 'RESTAURANT', 'pub': 'RESTAURANT', 'bar': 'RESTAURANT',
-                    'hotel': 'HOTEL', 'guest_house': 'HOTEL', 'apartment': 'HOTEL', 'hostel': 'HOTEL', 'camping_site': 'CAMPING',
-                    'beach': 'ACTIVITY', 'peak': 'ACTIVITY', 'historic': 'ACTIVITY', 'tourism': 'ACTIVITY', 'cave_entrance': 'ACTIVITY',
-                    'museum': 'ACTIVITY', 'attraction': 'ACTIVITY', 'monument': 'ACTIVITY'
+                    'hotel': 'HOTEL', 'guest_house': 'HOTEL', 'apartment': 'HOTEL', 'hostel': 'HOTEL', 
+                    'camping_site': 'CAMPING', 'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT'
                 }
                 
-                # Get specific POI if available
-                poi_keys = ['beach', 'tourism', 'amenity', 'leisure', 'historic', 'shop', 'restaurant', 'natural', 'peak', 'cave_entrance']
+                # Get POI name ONLY if close
+                poi_keys = ['hotel', 'guest_house', 'apartment', 'restaurant', 'cafe', 'tourism', 'amenity', 'shop']
                 for key in poi_keys:
-                    if key in addr:
+                    if key in addr and not is_far:
                         name_parts.append(addr[key])
                         if key in cat_map: category = cat_map[key]
-                        elif addr.get(key) in cat_map: category = cat_map[addr.get(key)]
                         break
                 
-                # Add road and city/village
+                # Add street and city as fallback/addition
                 road = addr.get('road')
+                house_number = addr.get('house_number')
                 city = addr.get('city') or addr.get('town') or addr.get('village')
-                if road and road not in name_parts: name_parts.append(road)
+                
+                if road:
+                    street_name = f"{road} {house_number}".strip() if house_number else road
+                    if street_name not in name_parts: name_parts.append(street_name)
                 if city and city not in name_parts: name_parts.append(city)
         except: pass
 
-        # 2. Try Photon (Komoot) for better "Outdoor" POIs
+        # 2. Try Photon only as fallback for names, but with STRICT distance check
         try:
-            phot = Photon(user_agent="urlaubsplanung_app_photon")
+            phot = Photon(user_agent="urlaubsplanung_app_photon_v5")
             loc_phot = phot.reverse((lat, lon), timeout=2, language='de')
             if loc_phot:
-                props = loc_phot.raw.get('properties', {})
-                p_name = props.get('name')
-                p_osm_value = props.get('osm_value')
-                
-                if p_name and p_name not in name_parts:
-                    name_parts.insert(0, p_name)
-                    if category == 'OTHER' and p_osm_value:
-                        photon_cat_map = {
-                            'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT', 'bakery': 'RESTAURANT',
-                            'hotel': 'HOTEL', 'guest_house': 'HOTEL', 'apartment': 'HOTEL',
-                            'beach': 'ACTIVITY', 'peak': 'ACTIVITY', 'viewpoint': 'ACTIVITY', 'cave_entrance': 'ACTIVITY'
-                        }
-                        if p_osm_value in photon_cat_map: category = photon_cat_map[p_osm_value]
+                dist = geodesic((lat, lon), (loc_phot.latitude, loc_phot.longitude)).meters
+                if dist < 30: # STRICT 30m limit
+                    props = loc_phot.raw.get('properties', {})
+                    p_name = props.get('name')
+                    if p_name and p_name not in name_parts:
+                        name_parts.insert(0, p_name)
+                        # Update category if still OTHER
+                        if category == 'OTHER':
+                            p_val = props.get('osm_value')
+                            if p_val in ['hotel', 'apartment', 'guest_house']: category = 'HOTEL'
+                            elif p_val in ['restaurant', 'cafe']: category = 'RESTAURANT'
         except: pass
 
         # Cleanup and Deduplicate
