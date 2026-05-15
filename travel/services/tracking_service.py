@@ -142,17 +142,19 @@ class TrackingProcessor:
         # Quick update of timezone/day for the next batch to identify the day correctly
         # But for efficiency, we just take the first ~500 points or so that belong to the same "cluster"
         current_day_points = []
+        next_day_point = None
         for p in raw_points:
             p_date = p.timestamp_local.date() if p.timestamp_local else p.timestamp_utc.date()
             if not current_day_points or p_date == target_date:
                 current_day_points.append(p)
                 target_date = p_date # Update target date if it was null
             else:
+                next_day_point = p
                 other_points_exist = True
                 break
         
         # Process this day
-        suggestions_created = cls._process_trip_subset(trip, current_day_points)
+        suggestions_created = cls._process_trip_subset(trip, current_day_points, next_day_point=next_day_point)
         
         # Check if there's more after this
         if not other_points_exist:
@@ -162,10 +164,16 @@ class TrackingProcessor:
         return suggestions_created, other_points_exist
 
     @classmethod
-    def _process_trip_subset(cls, trip, points):
+    def _process_trip_subset(cls, trip, points, next_day_point=None):
         if not points: return 0
         tf = TimezoneFinder()
-        for p in points:
+        
+        # Prepare timezone info for all points in batch + next point
+        check_points = list(points)
+        if next_day_point:
+            check_points.append(next_day_point)
+            
+        for p in check_points:
             updated = False
             if not p.timezone:
                 p.timezone = tf.timezone_at(lng=float(p.lon), lat=float(p.lat))
@@ -197,7 +205,7 @@ class TrackingProcessor:
         detect_transport = cls.get_setting(trip.user, 'tracking_detect_transport', '1') == '1'
         
         for day_id, day_points in days_map.items():
-            suggestions_created += cls._process_day_points(trip, day_id, day_points, stay_dist, stay_dur, detect_transport)
+            suggestions_created += cls._process_day_points(trip, day_id, day_points, stay_dist, stay_dur, detect_transport, next_day_point=next_day_point)
             cls._cleanup_old_data(trip.user)
         
         # CRITICAL: Mark all points in this batch as PROCESSED, even if they didn't match a Day
@@ -222,7 +230,7 @@ class TrackingProcessor:
         except: return point.timestamp_local
 
     @classmethod
-    def _process_day_points(cls, trip, day_id, points, stay_dist, stay_dur, detect_transport):
+    def _process_day_points(cls, trip, day_id, points, stay_dist, stay_dur, detect_transport, next_day_point=None):
         if not points: return 0
         
         raw_suggestions = []
@@ -261,7 +269,12 @@ class TrackingProcessor:
                     if detect_transport and transport_points:
                         transport_points.append(first_point)
                         raw_suggestions.append({'type': 'TRANSPORT', 'points': list(transport_points)})
-                    raw_suggestions.append({'type': 'STAY', 'points': list(current_cluster)})
+                    # Stretch the stay until the current point (the one that triggered the move)
+                    raw_suggestions.append({
+                        'type': 'STAY', 
+                        'points': list(current_cluster),
+                        'explicit_end_time': point.timestamp_local
+                    })
                     transport_points = [last_point]
                     current_cluster = [point]
                 else:
@@ -274,7 +287,17 @@ class TrackingProcessor:
             if detect_transport and transport_points:
                 transport_points.append(current_cluster[0])
                 raw_suggestions.append({'type': 'TRANSPORT', 'points': list(transport_points)})
-            raw_suggestions.append({'type': 'STAY', 'points': list(current_cluster)})
+            
+            # Stretch the final stay of the day to the first point of the next day if available
+            explicit_end = None
+            if next_day_point:
+                explicit_end = next_day_point.timestamp_local
+                
+            raw_suggestions.append({
+                'type': 'STAY', 
+                'points': list(current_cluster),
+                'explicit_end_time': explicit_end
+            })
 
         # Phase 2: Smarter Merging
         merged_suggestions = []
