@@ -53,7 +53,8 @@ class TrackingProcessor:
                     is_far = dist > 50
                     cat_map = {
                         'hotel': 'HOTEL', 'guest_house': 'HOTEL', 'apartment': 'HOTEL', 'hostel': 'HOTEL', 'bungalow': 'HOTEL',
-                        'camping_site': 'CAMPING', 'caravan_site': 'CAMPING', 'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT',
+                        'camping_site': 'CAMPING', 'caravan_site': 'CAMPING', 'motorhome_stopover': 'CAMPING', 'pitch': 'CAMPING',
+                        'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT', 'pub': 'RESTAURANT', 'bar': 'RESTAURANT',
                         'peak': 'ACTIVITY', 'beach': 'ACTIVITY', 'viewpoint': 'ACTIVITY', 'attraction': 'ACTIVITY',
                         'museum': 'ACTIVITY', 'historic': 'ACTIVITY', 'castle': 'ACTIVITY', 'parking': 'STAY'
                     }
@@ -528,7 +529,7 @@ class TrackingProcessor:
     def _find_special_poi(cls, lat, lon, context):
         """Tries to find a POI matching context near the given location."""
         queries = {
-            'LODGING': "hotel,apartment,guest house,bungalow,villa,camp_site",
+            'LODGING': "hotel,apartment,guest house,bungalow,villa,camp_site,caravan_site,motorhome,pitch",
             'FOOD': "restaurant,cafe,tavern,pub,bar",
             'NATURE': "peak,beach,viewpoint,natural",
             'CULTURE': "attraction,historic,museum,castle,church,monument",
