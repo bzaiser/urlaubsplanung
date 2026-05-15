@@ -168,10 +168,8 @@ class TrackingProcessor:
                         transport_points.append(first_point)
                         cls._create_transport_suggestion(trip, day_id, transport_points)
                         suggestions_created += 1
-                        time.sleep(1) 
                     cls._create_stay_suggestion(trip, day_id, current_cluster, explicit_end_time=end_time)
                     suggestions_created += 1
-                    time.sleep(1)
                     transport_points = [last_point]
                     current_cluster = [point]
                 else:
@@ -187,7 +185,6 @@ class TrackingProcessor:
                     transport_points.append(first_point)
                     cls._create_transport_suggestion(trip, day_id, transport_points)
                     suggestions_created += 1
-                    time.sleep(1)
                 cls._create_stay_suggestion(trip, day_id, current_cluster)
                 suggestions_created += 1
             else:
