@@ -2093,9 +2093,10 @@ def tracking_ui_view(request):
                         event.save()
                     else:
                         # Create new Event (Action)
-                        event_type = 'ACTIVITY' if sug.suggestion_type == 'STAY' else 'OTHER'
-                        if 'Fahrt' in sug.title or 'Spaziergang' in sug.title or 'Wanderung' in sug.title:
-                            event_type = 'ACTIVITY'
+                        # Map suggestion_type directly to Event type (HOTEL, CAR, RESTAURANT, ACTIVITY etc.)
+                        event_type = sug.suggestion_type
+                        if event_type == 'STAY': event_type = 'ACTIVITY' # Fallback
+                        if event_type == 'NONE': event_type = 'ACTIVITY' # Fallback
                         
                         event = Event.objects.create(
                             day=sug.day,
