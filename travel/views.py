@@ -2028,8 +2028,8 @@ def tracking_ui_view(request):
             count, has_more = TrackingProcessor.process_raw_points()
             
             if request.headers.get('HX-Request'):
-                # Return the template. If is_analyzing is True, the template will trigger the next step.
-                return render(request, 'travel/tracking_manager.html', {
+                # Return only the partial content for HTMX requests
+                return render(request, 'travel/tracking_manager_content.html', {
                     'suggestions': TrackingSuggestion.objects.filter(user=request.user, is_processed=False).order_by('day__date', 'start_time'),
                     'raw_count': TrackingPoint.objects.filter(trip__user=request.user, status='RAW').count(),
                     'is_analyzing': has_more
