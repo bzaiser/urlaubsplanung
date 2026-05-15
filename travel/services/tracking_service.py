@@ -199,6 +199,10 @@ class TrackingProcessor:
         for day_id, day_points in days_map.items():
             suggestions_created += cls._process_day_points(trip, day_id, day_points, stay_dist, stay_dur, detect_transport)
             cls._cleanup_old_data(trip.user)
+        
+        # CRITICAL: Mark all points in this batch as PROCESSED, even if they didn't match a Day
+        # otherwise we get stuck in an infinite loop for points outside the trip range.
+        TrackingPoint.objects.filter(id__in=[p.id for p in points]).update(status='PROCESSED')
             
         return suggestions_created
 
@@ -319,7 +323,6 @@ class TrackingProcessor:
                     cls._create_transport_suggestion(trip, day_id, sug['points'])
                     suggestions_created += 1
                     
-        TrackingPoint.objects.filter(id__in=processed_ids).update(status='PROCESSED')
         return suggestions_created
 
     @classmethod
