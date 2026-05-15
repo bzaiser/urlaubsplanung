@@ -101,9 +101,16 @@ class TrackingProcessor:
 
         # Cleanup and Transliteration
         clean_parts = []
+        # Name Blacklist (Exorcism)
+        name_blacklist = ["car rental", "rental car", "mietwagen", "rent a car", "parking", "parkplatz"]
+        
         admin_patterns = [r"Municipal Unit of\s*", r"Regional Unit of\s*", r"Decentralized Administration of\s*", r"Prefecture of\s*", r"Region of\s*", r"Community of\s*"]
         for p in name_parts:
             p_clean = str(p)
+            # Skip blacklisted names for stays
+            if any(b in p_clean.lower() for b in name_blacklist):
+                continue
+                
             for pattern in admin_patterns: p_clean = re.sub(pattern, "", p_clean, flags=re.IGNORECASE).strip()
             if any(ord(c) > 127 for c in p_clean): p_clean = cls._transliterate_greek(p_clean)
             if p_clean and p_clean not in clean_parts:
@@ -528,6 +535,8 @@ class TrackingProcessor:
             'GENERAL': "tourism,amenity"
         }
         query = queries.get(context, "tourism,amenity")
+        # RADIUS BOOST for LODGING (V6.1)
+        radius = 200 if context == 'LODGING' else 120
         
         try:
             from geopy.geocoders import Photon
@@ -537,9 +546,12 @@ class TrackingProcessor:
             if locations:
                 for loc in locations:
                     dist = geodesic((lat, lon), (loc.latitude, loc.longitude)).meters
-                    if dist < 120:
+                    if dist < radius:
                         name = loc.address.split(",")[0]
-                        # Clean prefix if already present in result
+                        # Blacklist check even here
+                        if any(b in name.lower() for b in ["car rental", "rental car", "mietwagen", "parking"]):
+                            continue
+                        
                         if context == 'NATURE' and any(x in str(loc.raw).lower() for x in ['peak', 'natural=peak']):
                             return f"Gipfel: {name}"
                         return name
