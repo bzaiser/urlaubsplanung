@@ -354,37 +354,46 @@ class TrackingProcessor:
         
         duration_mins = int((end_time_local - start_time).total_seconds() / 60)
         
-        # HEURISTICS
-        if duration_mins > 240:
-            if start_time.hour <= 3 or end_time_local.hour <= 6:
-                category = 'HOTEL'
+        # --- HEURISTICS 3.0 ---
+        # 1. Strong Hotel detection: Overnight (> 6h and spans across late night/early morning)
+        is_overnight = duration_mins > 360 and (start_time.hour <= 2 or end_time_local.hour >= 6)
+        if is_overnight:
+            category = 'HOTEL'
         
-        if category == 'RESTAURANT' and duration_mins < 15:
-            category = 'OTHER'
+        # 2. Restaurant detection: Stay > 20 mins at food POI
+        elif category == 'RESTAURANT' and duration_mins < 20:
+            category = 'OTHER' # Too short for a real meal
 
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
         
-        # Smarter Sampling for Highlights
+        # Smarter Highlights Sampling
         unique_pois = []
         last_sampled_point = first
         for p in points:
-            # Only sample if we moved significantly (e.g. 200m) from last sample
-            if geodesic((last_sampled_point.lat, last_sampled_point.lon), (p.lat, p.lon)).meters > 200:
+            if geodesic((last_sampled_point.lat, last_sampled_point.lon), (p.lat, p.lon)).meters > 250:
                 p_info = cls.reverse_geocode(p.lat, p.lon)
                 p_name = p_info['name'].split(",")[0]
-                if p_name not in unique_pois and p_name != "Unbekannter Ort":
+                if p_name not in unique_pois and p_name != "Unbekannter Ort" and p_name != place_name.split(",")[0]:
                     unique_pois.append(p_name)
                 last_sampled_point = p
         
+        # Final Suggestion Setup
         title = place_name
-        if len(unique_pois) > 1:
-            title = f"Wanderung / Besichtigung in {place_name.split(',')[-1].strip()}"
+        if category == 'HOTEL':
+            title = f"Übernachtung in {place_name.split(',')[0]}"
+        elif category == 'RESTAURANT':
+            title = f"Essen in {place_name.split(',')[0]}"
+        elif len(unique_pois) > 1:
+            title = f"Besichtigung / Wanderung in {place_name.split(',')[-1].strip()}"
             category = 'ACTIVITY'
             h_text = ", ".join(unique_pois)
-            notes = f'Wanderung von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")}.<br><b>Highlights:</b> {h_text}. <a href="{maps_link}" target="_blank">(Karte)</a>'
+            notes = f'Aktivität von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")}.<br><b>Highlights:</b> {h_text}. <a href="{maps_link}" target="_blank">(Karte)</a>'
         else:
             notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
         
+        if not 'notes' in locals(): # Fallback for non-activity notes
+            notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
+
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, 
             suggestion_type=category if category != 'OTHER' else 'STAY',
@@ -412,9 +421,16 @@ class TrackingProcessor:
         
         avg_speed_kmh = (dist_km / (duration_mins / 60.0)) if duration_mins > 0 else 0
         
-        if avg_speed_kmh < 6: activity_type = "Spaziergang / Wanderung"
-        elif avg_speed_kmh < 18: activity_type = "Jogging / Radtour"
-        else: activity_type = "Fahrt"
+        # --- TRANSPORT HEURISTICS 3.0 ---
+        if avg_speed_kmh > 15:
+            activity_type = "Fahrt"
+            final_type = 'CAR'
+        elif avg_speed_kmh > 6:
+            activity_type = "Radtour / Jogging"
+            final_type = 'ACTIVITY'
+        else:
+            activity_type = "Spaziergang / Wanderung"
+            final_type = 'ACTIVITY'
         
         start_info = cls.reverse_geocode(first.lat, first.lon)
         dest_info = cls.reverse_geocode(last.lat, last.lon)
@@ -432,8 +448,6 @@ class TrackingProcessor:
         title = f"{activity_type} von {start_short} nach {dest_short}"
         notes = f'Von <a href="{start_link}" target="_blank"><b>{start_info["name"]}</b></a> nach <a href="{dest_link}" target="_blank"><b>{dest_info["name"]}</b></a>. Ca. {dist_km:.1f} km in {duration_mins} Minuten.'
         
-        final_type = 'CAR' if avg_speed_kmh >= 18 else 'ACTIVITY'
-
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type=final_type,
             start_time=start_time, end_time=end_time, lat=last.lat, lon=last.lon,
