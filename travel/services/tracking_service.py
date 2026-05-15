@@ -276,7 +276,6 @@ class TrackingProcessor:
 
         avg_lat = sum(float(p.lat) for p in points) / len(points)
         avg_lon = sum(float(p.lon) for p in points) / len(points)
-        avg_alt = sum(int(p.alt) if p.alt else 0 for p in points) / len(points)
         
         geo_info = cls.reverse_geocode(avg_lat, avg_lon)
         place_name = geo_info['name']
@@ -285,7 +284,6 @@ class TrackingProcessor:
         duration_mins = int((end_time_local - start_time).total_seconds() / 60)
         
         # HEURISTICS
-        suggestion_type = 'STAY'
         # 1. Hotel detection: Overnight (> 4h and spans across 03:00)
         if duration_mins > 240:
             if start_time.hour <= 3 or end_time_local.hour <= 6:
@@ -295,18 +293,30 @@ class TrackingProcessor:
         if category == 'RESTAURANT' and duration_mins < 15:
             category = 'OTHER' # Too short for eating
 
-        alt_str = f" ({int(avg_alt)}m)" if avg_alt > 50 else ""
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
         
-        title = f"{place_name}{alt_str}"
-        # Use detected category in the title for better recognition in import
-        if category != 'OTHER':
-            title = f"[{category}] {title}"
-
-        notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
+        # Narrative Notes: List highlights if it was a merged stay
+        highlights = []
+        # Check if points are spread out (sign of merging)
+        unique_pois = []
+        for i in range(0, len(points), max(1, len(points)//5)): # Sample some points
+            p_info = cls.reverse_geocode(points[i].lat, points[i].lon)
+            p_name = p_info['name'].split(",")[0]
+            if p_name not in unique_pois and p_name != "Unbekannter Ort":
+                unique_pois.append(p_name)
+        
+        title = place_name
+        if len(unique_pois) > 1:
+            title = f"Wanderung / Besichtigung in {place_name.split(',')[-1].strip()}"
+            category = 'ACTIVITY'
+            h_text = ", ".join(unique_pois)
+            notes = f'Wanderung von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")}.<br><b>Highlights:</b> {h_text}. <a href="{maps_link}" target="_blank">(Karte)</a>'
+        else:
+            notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
         
         TrackingSuggestion.objects.create(
-            user=trip.user, trip=trip, day_id=day_id, title=title, suggestion_type=category if category != 'OTHER' else 'STAY',
+            user=trip.user, trip=trip, day_id=day_id, title=title, 
+            suggestion_type=category if category != 'OTHER' else 'STAY',
             start_time=start_time, end_time=end_time_local, lat=avg_lat, lon=avg_lon,
             notes=notes
         )
