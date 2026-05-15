@@ -43,74 +43,55 @@ class TrackingProcessor:
         
         # 1. Try Nominatim for reliable administrative address and category
         try:
-            nom = Nominatim(user_agent="urlaubsplanung_app_v5_2")
-            loc_nom = nom.reverse((lat, lon), timeout=3, language='de', zoom=18)
+            # Force latein script using de,en language preference
+            nom = Nominatim(user_agent="urlaubsplanung_app_v5_4")
+            loc_nom = nom.reverse((lat, lon), timeout=4, language='de,en;q=0.5', zoom=18)
+            
             if loc_nom:
                 addr = loc_nom.raw.get('address', {})
-                # Distance Check (Nominatim reverse is usually exactly at the point, but we check anyway)
                 dist = geodesic((lat, lon), (loc_nom.latitude, loc_nom.longitude)).meters
+                is_far = dist > 40
                 
-                # If the result is a POI and it's too far away (> 30m), we ignore its name
-                is_far = dist > 30
-                
+                # Enhanced Category Mapping
                 cat_map = {
-                    'hotel': 'HOTEL', 'guest_house': 'HOTEL', 'apartment': 'HOTEL', 'hostel': 'HOTEL', 
-                    'camping_site': 'CAMPING', 'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT'
+                    'hotel': 'HOTEL', 'guest_house': 'HOTEL', 'apartment': 'HOTEL', 'hostel': 'HOTEL', 'bungalow': 'HOTEL',
+                    'camping_site': 'CAMPING', 'caravan_site': 'CAMPING',
+                    'restaurant': 'RESTAURANT', 'cafe': 'RESTAURANT', 'pub': 'RESTAURANT', 'bar': 'RESTAURANT',
+                    'peak': 'ACTIVITY', 'beach': 'ACTIVITY', 'viewpoint': 'ACTIVITY', 'attraction': 'ACTIVITY',
+                    'museum': 'ACTIVITY', 'historic': 'ACTIVITY', 'castle': 'ACTIVITY', 'church': 'ACTIVITY',
+                    'parking': 'STAY'
                 }
                 
-                # Get POI name ONLY if close
-                poi_keys = ['hotel', 'guest_house', 'apartment', 'restaurant', 'cafe', 'tourism', 'amenity', 'shop']
+                # Identify POI if close
+                poi_keys = ['hotel', 'guest_house', 'apartment', 'bungalow', 'restaurant', 'cafe', 'peak', 'beach', 'attraction', 'museum', 'historic', 'castle', 'parking', 'amenity', 'tourism']
                 for key in poi_keys:
                     if key in addr and not is_far:
-                        name_parts.append(addr[key])
+                        val = addr[key]
+                        if val not in name_parts:
+                            # Prepend specific types for clarity
+                            if key == 'peak': val = f"Gipfel: {val}"
+                            elif key == 'parking': val = f"Parkplatz {val}" if val != "yes" else "Parkplatz"
+                            elif key == 'castle': val = f"Burg/Schloss: {val}"
+                            name_parts.append(val)
+                        
+                        raw_val = addr.get(key)
                         if key in cat_map: category = cat_map[key]
+                        elif raw_val in cat_map: category = cat_map[raw_val]
                         break
                 
-                # Add street and city as fallback/addition
+                # Add street/city
                 road = addr.get('road')
                 house_number = addr.get('house_number')
                 city = addr.get('city') or addr.get('town') or addr.get('village')
                 
                 if road:
-                    street_name = f"{road} {house_number}".strip() if house_number else road
-                    if street_name not in name_parts: name_parts.append(street_name)
+                    street = f"{road} {house_number}".strip() if house_number else road
+                    if street not in name_parts: name_parts.append(street)
                 if city and city not in name_parts: name_parts.append(city)
         except: pass
 
-        # 2. Try Photon only as fallback for names, but with STRICT distance check
-        try:
-            phot = Photon(user_agent="urlaubsplanung_app_photon_v5")
-            loc_phot = phot.reverse((lat, lon), timeout=2, language='de')
-            if loc_phot:
-                dist = geodesic((lat, lon), (loc_phot.latitude, loc_phot.longitude)).meters
-                if dist < 30: # STRICT 30m limit
-                    props = loc_phot.raw.get('properties', {})
-                    p_name = props.get('name')
-                    if p_name and p_name not in name_parts:
-                        name_parts.insert(0, p_name)
-                        # Update category if still OTHER
-                        if category == 'OTHER':
-                            p_val = props.get('osm_value')
-                            if p_val in ['hotel', 'apartment', 'guest_house']: category = 'HOTEL'
-                            elif p_val in ['restaurant', 'cafe']: category = 'RESTAURANT'
-        except: pass
-
-        # Cleanup and Deduplicate
-        clean_parts = []
-        blacklist = [r"Municipal Unit of", r"Regional Unit of", r"Decentralized Administration"]
-        for p in name_parts:
-            p_clean = str(p)
-            for pattern in blacklist:
-                p_clean = re.sub(pattern, "", p_clean, flags=re.IGNORECASE).strip()
-            
-            if p_clean and p_clean not in clean_parts:
-                if not any(p_clean.lower() in existing.lower() for existing in clean_parts):
-                    clean_parts.append(p_clean)
-        
-        final_name = ", ".join(clean_parts[:3]) if clean_parts else "Unbekannter Ort"
+        final_name = ", ".join(name_parts[:3]) if name_parts else "Unbekannter Ort"
         result = {'name': final_name, 'category': category}
-        
-        # Save to cache
         cls._geocode_cache[cache_key] = result
         return result
 
@@ -381,37 +362,34 @@ class TrackingProcessor:
         
         duration_mins = int((end_time_local - start_time).total_seconds() / 60)
         
-        # --- HEURISTICS 4.1 (Midnight & Distance Aware) ---
-        # 1. Midnight Hotel Bridge:
-        # If it starts at the very beginning of the day (00:00 - 00:30) and lasts > 120m
+        # --- SMART CONTEXT LOGIC 5.4 ---
+        # 1. Detect Midnight/Overnight
         is_midnight_start = start_time.hour == 0 and start_time.minute <= 30 and duration_mins > 120
-        # If it ends at the very end of the day (23:30 - 23:59) and lasts > 120m
         is_midnight_end = end_time_local.hour == 23 and end_time_local.minute >= 30 and duration_mins > 120
-        # Classic Overnight spans across the night
         is_classic_overnight = duration_mins > 240 and (start_time.hour <= 3 or end_time_local.hour >= 5)
-
+        
+        context = 'GENERAL'
         if is_midnight_start or is_midnight_end or is_classic_overnight:
             category = 'HOTEL'
-        
-        # 2. Restaurant detection: Stay > 20 mins at food POI (if not a hotel)
-        elif category == 'RESTAURANT' and duration_mins < 20:
-            category = 'OTHER'
+            context = 'LODGING'
+        elif (11 <= start_time.hour <= 14) or (18 <= start_time.hour <= 21):
+            if category == 'RESTAURANT' or duration_mins > 30:
+                context = 'FOOD'
+        elif duration_mins > 60:
+            # Nature vs Culture based on name hints or remote location (simple heuristic)
+            if any(x in place_name.lower() for x in ['berg', 'gipfel', 'strand', 'beach', 'peak', 'wald']):
+                context = 'NATURE'
+            else:
+                context = 'CULTURE'
 
-        # --- Context-Aware POI Search 5.0 ---
-        if category == 'HOTEL':
-            # Try to find a real lodging name nearby
-            special_poi = cls._find_special_poi(avg_lat, avg_lon, "hotel,studio,bungalow,apartment,villa,pension,guest house,camping")
-            if special_poi:
-                place_name = special_poi
-        elif category == 'RESTAURANT':
-            # Try to find a food POI name nearby if current name is generic
-            special_poi = cls._find_special_poi(avg_lat, avg_lon, "restaurant,cafe,bar,tavern")
-            if special_poi:
-                place_name = special_poi
+        # Special POI Search based on context
+        special_poi = cls._find_special_poi(avg_lat, avg_lon, context)
+        if special_poi:
+            place_name = special_poi
 
         maps_link = cls._get_maps_link(avg_lat, avg_lon)
         
-        # Highlights Sampling
+        # Sampling
         unique_pois = []
         last_sampled_point = first
         for p in points:
@@ -422,22 +400,21 @@ class TrackingProcessor:
                     unique_pois.append(p_name)
                 last_sampled_point = p
         
-        # Final Suggestion Setup
+        # Final Title
         if category == 'HOTEL':
             title = f"Übernachtung in {place_name.split(',')[0]}"
-        elif category == 'RESTAURANT':
+        elif category == 'RESTAURANT' or context == 'FOOD':
             title = f"Essen in {place_name.split(',')[0]}"
-        elif len(unique_pois) > 1:
-            title = f"Besichtigung / Wanderung in {place_name.split(',')[-1].strip()}"
+            category = 'RESTAURANT'
+        elif category == 'ACTIVITY' or context in ['NATURE', 'CULTURE']:
+            title = place_name
+            if len(unique_pois) > 1:
+                title = f"Besichtigung / Wanderung in {place_name.split(',')[-1].strip()}"
             category = 'ACTIVITY'
-            h_text = ", ".join(unique_pois)
-            notes = f'Aktivität von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")}.<br><b>Highlights:</b> {h_text}. <a href="{maps_link}" target="_blank">(Karte)</a>'
         else:
             title = place_name
-            notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
         
-        if not 'notes' in locals():
-            notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
+        notes = f'Aufenthalt von {start_time.strftime("%H:%M")} bis {end_time_local.strftime("%H:%M")} in <a href="{maps_link}" target="_blank"><b>{place_name}</b></a>.'
 
         TrackingSuggestion.objects.create(
             user=trip.user, trip=trip, day_id=day_id, title=title, 
@@ -507,22 +484,30 @@ class TrackingProcessor:
             notes=notes, distance_km=dist_km
         )
     @classmethod
-    def _find_special_poi(cls, lat, lon, keywords):
-        """Tries to find a POI matching keywords near the given location."""
+    def _find_special_poi(cls, lat, lon, context):
+        """Tries to find a POI matching context near the given location."""
+        queries = {
+            'LODGING': "hotel,apartment,guest house,bungalow,villa,camp_site",
+            'FOOD': "restaurant,cafe,tavern,pub,bar",
+            'NATURE': "peak,beach,viewpoint,natural",
+            'CULTURE': "attraction,historic,museum,castle,church,monument",
+            'GENERAL': "tourism,amenity"
+        }
+        query = queries.get(context, "tourism,amenity")
+        
         try:
             from geopy.geocoders import Photon
             geolocator = Photon()
-            # We use forward geocoding with a proximity bias to find specific types
-            # searching for "keywords" near lat, lon
-            query = f"{keywords}"
-            locations = geolocator.geocode(query, proximity=(lat, lon), limit=5, exactly_one=False)
+            locations = geolocator.geocode(query, proximity=(lat, lon), limit=5, exactly_one=False, language='de')
             
             if locations:
                 for loc in locations:
-                    # Check distance (must be within ~150m)
                     dist = geodesic((lat, lon), (loc.latitude, loc.longitude)).meters
-                    if dist < 150:
-                        return loc.address.split(",")[0]
-        except:
-            pass
+                    if dist < 120:
+                        name = loc.address.split(",")[0]
+                        # Clean prefix if already present in result
+                        if context == 'NATURE' and any(x in str(loc.raw).lower() for x in ['peak', 'natural=peak']):
+                            return f"Gipfel: {name}"
+                        return name
+        except: pass
         return None
